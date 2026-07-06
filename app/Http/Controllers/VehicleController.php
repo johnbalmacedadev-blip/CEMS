@@ -41,16 +41,7 @@ class VehicleController extends Controller
         $yearTo = $request->get('year_to');
 
         $query = Vehicle::with(['make', 'vehicleModel', 'forfeitDetails']);
-
-        if ($status !== 'all') {
-            if ($status === 'Forfeited') {
-                $query->where(function ($q) {
-                    $q->where('status', 'Forfeited')->orWhereHas('forfeitDetails');
-                });
-            } else {
-                $query->where('status', $status);
-            }
-        }
+        $query->forUnitReportStatus($status);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -85,16 +76,7 @@ class VehicleController extends Controller
         $yearTo = $request->get('year_to');
 
         $query = Vehicle::with(['make', 'vehicleModel', 'forfeitDetails']);
-
-        if ($status !== 'all') {
-            if ($status === 'Forfeited') {
-                $query->where(function ($q) {
-                    $q->where('status', 'Forfeited')->orWhereHas('forfeitDetails');
-                });
-            } else {
-                $query->where('status', $status);
-            }
-        }
+        $query->forUnitReportStatus($status);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -313,16 +295,7 @@ class VehicleController extends Controller
         $reservationDate = $request->get('reservation_date');
 
         $query = Vehicle::with(['make', 'vehicleModel', 'primaryImage', 'forfeitDetails']);
-
-        if ($status !== 'all') {
-            if ($status === 'Forfeited') {
-                $query->where(function ($q) {
-                    $q->where('status', 'Forfeited')->orWhereHas('forfeitDetails');
-                });
-            } else {
-                $query->where('status', $status);
-            }
-        }
+        $query->forUnitReportStatus($status);
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -469,8 +442,10 @@ class VehicleController extends Controller
         $purchasedFrom = $request->get('purchased_from');
         $reservationDate = $request->get('reservation_date');
 
-        // Sync status to Forfeited for any vehicle that has forfeit details
-        Vehicle::whereHas('forfeitDetails')->where('status', '!=', 'Forfeited')->update(['status' => 'Forfeited']);
+        // Sync status to Forfeited for any vehicle that has forfeit details (skip archived)
+        Vehicle::whereHas('forfeitDetails')
+            ->whereNotIn('status', ['Forfeited', 'Archived'])
+            ->update(['status' => 'Forfeited']);
 
         $vehicles = $this->vehiclesIndexBaseQuery($request)->paginate(10)->withQueryString();
 
@@ -479,7 +454,11 @@ class VehicleController extends Controller
         $reservedCount = Vehicle::where('status', 'Reserved')->count();
         $releasedCount = Vehicle::where('status', 'Released')->count();
         $underMaintenanceCount = Vehicle::where('status', 'Under Maintenance')->count();
-        $forfeitedCount = Vehicle::where('status', 'Forfeited')->orWhereHas('forfeitDetails')->count();
+        $forfeitedCount = Vehicle::where('status', '!=', 'Archived')
+            ->where(function ($q) {
+                $q->where('status', 'Forfeited')->orWhereHas('forfeitDetails');
+            })
+            ->count();
 
         return view('vehicles.index', compact(
             'vehicles',
@@ -849,6 +828,137 @@ class VehicleController extends Controller
 
         return redirect()->route('vehicles.index')
             ->with('success', 'Vehicle updated successfully!');
+    }
+
+    /**
+     * Search vehicles that can be moved to Archived (for the Archived tab modal).
+     *
+     * Returns units in Available, Released, or Forfeited status. Excludes already-archived vehicles.
+     *
+     * @group Unit Report
+     * @authenticated
+     *
+     * @queryParam q string optional Search by plate, make, model, or variant. Example: Toyota
+     *
+     * @response 200 [{"id":1,"plate_number":"ABC 1234","label":"2020 Toyota Vios (ABC 1234)","status":"Available","archive_url":"http://localhost/vehicles/1/archive"}]
+     */
+    public function searchArchiveable(Request $request)
+    {
+        $search = trim((string) $request->get('q', ''));
+
+        $vehicles = Vehicle::with('forfeitDetails')
+            ->archiveable()
+            ->when($search !== '', function ($query) use ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('plate_number', 'LIKE', "%{$search}%")
+                        ->orWhere('make', 'LIKE', "%{$search}%")
+                        ->orWhere('model', 'LIKE', "%{$search}%")
+                        ->orWhere('variant', 'LIKE', "%{$search}%")
+                        ->orWhereHas('make', fn ($mq) => $mq->where('name', 'LIKE', "%{$search}%"))
+                        ->orWhereHas('vehicleModel', fn ($mq) => $mq->where('name', 'LIKE', "%{$search}%"));
+                });
+            })
+            ->orderByDesc('year')
+            ->orderBy('make')
+            ->limit(25)
+            ->get(['id', 'plate_number', 'make', 'model', 'year', 'status']);
+
+        return response()->json($vehicles->map(function (Vehicle $vehicle) {
+            $displayStatus = ($vehicle->status === 'Forfeited' || $vehicle->forfeitDetails->isNotEmpty())
+                ? 'Forfeited'
+                : $vehicle->status;
+
+            return [
+                'id' => $vehicle->id,
+                'plate_number' => $vehicle->plate_number,
+                'label' => trim("{$vehicle->year} {$vehicle->make} {$vehicle->model}") . " ({$vehicle->plate_number})",
+                'status' => $displayStatus,
+                'archive_url' => route('vehicles.archive', $vehicle),
+            ];
+        }));
+    }
+
+    /**
+     * Move a unit to Archived (Available, Released, or Forfeited only).
+     */
+    /**
+     * Archive a vehicle
+     *
+     * Moves an Available, Released, or Forfeited unit to Archived status.
+     *
+     * @group Unit Report
+     * @authenticated
+     *
+     * @urlParam vehicle integer required The vehicle ID. Example: 1
+     *
+     * @response 200 scenario="JSON request" {"success":true,"message":"Vehicle moved to Archived successfully.","swal_title":"Archived","vehicle_id":1}
+     * @response 422 scenario="Not archiveable" {"success":false,"message":"This vehicle cannot be archived.","swal_title":"Cannot Archive"}
+     */
+    public function archive(Request $request, Vehicle $vehicle)
+    {
+        if (! $vehicle->isArchiveable()) {
+            $message = 'This vehicle cannot be archived. Only Available, Released, or Forfeited units can be archived.';
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                    'swal_title' => 'Cannot Archive',
+                ], 422);
+            }
+
+            return redirect()->back()
+                ->with('error', $message)
+                ->with('swal_title', 'Cannot Archive');
+        }
+
+        $previousStatus = $vehicle->status;
+
+        $vehicle->update([
+            'status_before_archive' => $previousStatus,
+            'archived_at' => now(),
+            'status' => 'Archived',
+        ]);
+
+        if ($vehicle->statusDetail) {
+            $vehicle->statusDetail->update(['sale_status' => 'Archived']);
+        }
+
+        $this->logUpdate($vehicle, [
+            'status' => ['from' => $previousStatus, 'to' => 'Archived'],
+        ]);
+
+        Cache::flush();
+
+        $vehicle->load(['primaryImage', 'forfeitDetails']);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Vehicle moved to Archived successfully.',
+                'swal_title' => 'Archived',
+                'vehicle_id' => $vehicle->id,
+                'vehicle' => [
+                    'id' => $vehicle->id,
+                    'show_url' => route('vehicles.show', $vehicle),
+                    'full_name' => $vehicle->full_name,
+                    'year' => $vehicle->year,
+                    'make' => $vehicle->make,
+                    'model' => $vehicle->model,
+                    'plate_number' => $vehicle->plate_number,
+                    'colour' => $vehicle->colour,
+                    'purchase_price' => $vehicle->formatted_purchase_price,
+                    'transmission' => $vehicle->transmission,
+                    'fuel_type' => $vehicle->fuel_type,
+                    'archived_at' => $vehicle->archived_at?->format('M d, Y'),
+                    'thumbnail_url' => $vehicle->primaryImage?->thumbnail_url,
+                ],
+            ]);
+        }
+
+        return redirect()->route('vehicles.index', ['status' => 'Archived'])
+            ->with('success', 'Vehicle moved to Archived successfully.')
+            ->with('swal_title', 'Archived');
     }
 
     /**

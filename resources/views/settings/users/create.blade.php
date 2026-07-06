@@ -30,12 +30,11 @@
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label for="password" class="form-label">Password</label>
-                        <input type="password" class="form-control @error('password') is-invalid @enderror" id="password" name="password" required>
-                        @error('password')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                        @include('partials.password-input', ['id' => 'password', 'name' => 'password', 'required' => true, 'autocomplete' => 'new-password'])
                     </div>
                     <div class="col-md-6 mb-3">
                         <label for="password_confirmation" class="form-label">Confirm Password</label>
-                        <input type="password" class="form-control" id="password_confirmation" name="password_confirmation" required>
+                        @include('partials.password-input', ['id' => 'password_confirmation', 'name' => 'password_confirmation', 'required' => true, 'autocomplete' => 'new-password'])
                     </div>
                 </div>
                 <div class="mb-3">
@@ -53,4 +52,5 @@
         </div>
     </div>
 </div>
+@include('partials.password-toggle-script')
 @endsection

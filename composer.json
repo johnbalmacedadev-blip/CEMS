@@ -15,6 +15,7 @@
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
+        "knuckleswtf/scribe": "^5.11",
         "laravel/pint": "^1.0",
         "laravel/sail": "^1.18",
         "mockery/mockery": "^1.4.4",
@@ -47,7 +48,12 @@
         ],
         "post-create-project-cmd": [
             "@php artisan key:generate --ansi"
-        ]
+        ],
+        "docs:api": "@php artisan scribe:generate",
+        "docs:build": "npm run build:laravel --prefix documentation",
+        "docs:export": "npm run export:offline --prefix documentation",
+        "docs:pdf": "npm run export:pdf --prefix documentation",
+        "docs:word": "npm run export:word --prefix documentation"
     },
     "extra": {
         "laravel": {

@@ -222,6 +222,16 @@
                     <a href="{{ route('vehicles.export', ['vehicle' => $vehicle, 'format' => 'csv']) }}" class="btn btn-outline-success me-2">
                         <i class="fas fa-file-excel me-1"></i>Export Excel (CSV)
                     </a>
+                    @canPage('vehicles', 'update')
+                    @if($vehicle->isArchiveable())
+                    <form action="{{ route('vehicles.archive', $vehicle) }}" method="POST" class="d-inline me-2" id="archiveVehicleForm">
+                        @csrf
+                        <button type="button" class="btn btn-outline-secondary" onclick="archiveVehicle()">
+                            <i class="fas fa-archive me-1"></i>Archive This Unit
+                        </button>
+                    </form>
+                    @endif
+                    @endcanPage
                     @canPage('vehicles', 'delete')
                     @if($vehicle->status !== 'Reserved' && $vehicle->status !== 'Released')
                     <button type="button" class="btn btn-outline-danger" onclick="deleteVehicle()">
@@ -3636,6 +3646,69 @@ document.addEventListener('DOMContentLoaded', openCollapseFromHash);
 window.addEventListener('hashchange', openCollapseFromHash);
 
 // Delete vehicle function
+function archiveVehicle() {
+    const form = document.getElementById('archiveVehicleForm');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+    Swal.fire({
+        title: 'Archive this unit?',
+        text: 'Move "{{ $vehicle->full_name }}" to Archived? It will no longer appear in active status tabs.',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#6c757d',
+        cancelButtonColor: '#adb5bd',
+        confirmButtonText: 'Yes, archive',
+        cancelButtonText: 'Cancel',
+        reverseButtons: true
+    }).then((result) => {
+        if (!result.isConfirmed || !form) {
+            return;
+        }
+
+        Swal.fire({
+            title: 'Archiving…',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(response => response.json().then(data => {
+                if (!response.ok || !data.success) {
+                    throw data;
+                }
+                return data;
+            }))
+            .then(data => {
+                Swal.fire({
+                    icon: 'success',
+                    title: data.swal_title || 'Archived',
+                    text: data.message,
+                    confirmButtonColor: '#198754',
+                    timer: 2500,
+                    timerProgressBar: true
+                }).then(() => {
+                    window.location.href = @json(route('vehicles.index', ['status' => 'Archived']));
+                });
+            })
+            .catch(error => {
+                Swal.fire({
+                    icon: 'error',
+                    title: error.swal_title || 'Error',
+                    text: error.message || 'Could not archive this vehicle.',
+                    confirmButtonColor: '#dc3545'
+                });
+            });
+    });
+}
+
 function deleteVehicle() {
     Swal.fire({
         title: 'Delete Vehicle?',

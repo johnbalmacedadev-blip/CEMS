@@ -561,258 +561,54 @@
     
     <div class="welcome-section">
         <h1 class="h2 mb-2">Welcome, {{ Auth::user()->name }}</h1>
-        <p class="mb-0">Select a category to get started or <a href="{{ route('dashboard') }}" class="text-decoration-none" style="color: #dc3545; font-weight: 600;">go to dashboard</a></p>
+        <p class="mb-0">
+            @if(count($homeCategories) > 0)
+                Select a category to get started
+            @else
+                No modules are assigned to your account yet
+            @endif
+            @if($canViewDashboard ?? false)
+                or <a href="{{ route('dashboard') }}" class="text-decoration-none" style="color: #dc3545; font-weight: 600;">go to dashboard</a>
+            @endif
+        </p>
     </div>
 
+    @if(count($homeCategories) === 0)
+        <div class="text-center py-5">
+            <p class="text-white-50 mb-0">Contact your administrator to request access to features.</p>
+        </div>
+    @endif
+
     <div class="row g-4">
-        <!-- 1. CAR REPORTS -->
+        @foreach($homeCategories as $category)
         <div class="col-12 col-sm-6 col-lg-4 category-card">
-            <div class="card h-100 home-card border-primary">
+            <div class="card h-100 home-card {{ $category['border'] ?? '' }}"
+                 @if(!empty($category['border_style'])) style="{{ $category['border_style'] }}" @endif>
                 <div class="card-body">
                     <div class="card-header-link" role="button" tabindex="0" aria-haspopup="dialog">
-                        <div class="icon-circle text-primary me-3">
-                            <i class="fas fa-car"></i>
+                        <div class="icon-circle me-3 {{ $category['icon_class'] ?? '' }}"
+                             @if(!empty($category['icon_style'])) style="{{ $category['icon_style'] }}" @endif>
+                            <i class="fas {{ $category['icon'] }}"></i>
                         </div>
                         <div>
-                            <h5 class="card-title mb-1">CAR REPORTS</h5>
-                            <p class="card-text small mb-0">Unit reports, photos, pricelist</p>
+                            <h5 class="card-title mb-1">{{ $category['title'] }}</h5>
+                            <p class="card-text small mb-0">{{ $category['description'] }}</p>
                         </div>
                     </div>
                     <ul class="category-sublinks">
-                        <li><a href="{{ route('car-photos-folder') }}" class="home-sublink-item"><i class="fas fa-images fa-fw home-sublink-icon" aria-hidden="true"></i><span>CAR PHOTOS FOLDER</span></a></li>
-                        <li><a href="{{ route('vehicles.index') }}" class="home-sublink-item"><i class="fas fa-car fa-fw home-sublink-icon" aria-hidden="true"></i><span>UNIT REPORT</span></a></li>
-                        <li><a href="{{ route('pricelist') }}" class="home-sublink-item"><i class="fas fa-tags fa-fw home-sublink-icon" aria-hidden="true"></i><span>PRICELIST</span></a></li>
+                        @foreach($category['items'] as $item)
+                        <li>
+                            <a href="{{ $item['url'] }}" class="home-sublink-item">
+                                <i class="fas {{ $item['icon'] }} fa-fw home-sublink-icon" aria-hidden="true"></i>
+                                <span>{{ $item['label'] }}</span>
+                            </a>
+                        </li>
+                        @endforeach
                     </ul>
                 </div>
             </div>
         </div>
-
-        <!-- 2. STAFF REPORTS -->
-        <div class="col-12 col-sm-6 col-lg-4 category-card">
-            <div class="card h-100 home-card border-success">
-                <div class="card-body">
-                    <div class="card-header-link" role="button" tabindex="0" aria-haspopup="dialog">
-                        <div class="icon-circle text-success me-3">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div>
-                            <h5 class="card-title mb-1">STAFF REPORTS</h5>
-                            <p class="card-text small mb-0">Trackers and recommendations</p>
-                        </div>
-                    </div>
-                    <ul class="category-sublinks">
-                        <li><a href="{{ route('buffing-tracker.index') }}" class="home-sublink-item"><i class="fas fa-spray-can fa-fw home-sublink-icon" aria-hidden="true"></i><span>BUFFING TRACKER</span></a></li>
-                        <li><a href="{{ route('insurance-tracker.index') }}" class="home-sublink-item"><i class="fas fa-shield-alt fa-fw home-sublink-icon" aria-hidden="true"></i><span>INSURANCE TRACKER</span></a></li>
-                        <li><a href="{{ route('expenses-inventory', ['section' => 'tools-purchase']) }}" class="home-sublink-item"><i class="fas fa-wrench fa-fw home-sublink-icon" aria-hidden="true"></i><span>MECHANIC TRACKER</span></a></li>
-                        <li><a href="{{ route('expenses-inventory', ['section' => 'tools-purchase']) }}" class="home-sublink-item"><i class="fas fa-id-card fa-fw home-sublink-icon" aria-hidden="true"></i><span>DRIVER ACTIVITY TRACKER</span></a></li>
-                        <li><a href="{{ route('recommendation-tracker.index') }}" class="home-sublink-item"><i class="fas fa-clipboard-check fa-fw home-sublink-icon" aria-hidden="true"></i><span>RECOMMENDATION TRACKER</span></a></li>
-                        <li><a href="{{ route('staff-reports.sales-agents') }}" class="home-sublink-item"><i class="fas fa-user-tie fa-fw home-sublink-icon" aria-hidden="true"></i><span>SALES AGENTS</span></a></li>
-                        <li><a href="{{ route('staff-reports.executive-agents') }}" class="home-sublink-item"><i class="fas fa-user-shield fa-fw home-sublink-icon" aria-hidden="true"></i><span>EXECUTIVE AGENTS</span></a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- 3. PAYMENTS/EXPENSES REPORTS -->
-        <div class="col-12 col-sm-6 col-lg-4 category-card">
-            <div class="card h-100 home-card border-warning">
-                <div class="card-body">
-                    <div class="card-header-link" role="button" tabindex="0" aria-haspopup="dialog">
-                        <div class="icon-circle text-warning me-3">
-                            <i class="fas fa-file-invoice-dollar"></i>
-                        </div>
-                        <div>
-                            <h5 class="card-title mb-1">PAYMENTS/EXPENSES REPORTS</h5>
-                            <p class="card-text small mb-0">Expenses, SOA, payroll, commission</p>
-                        </div>
-                    </div>
-                    <ul class="category-sublinks">
-                        <li><a href="{{ route('expenses-inventory') }}" class="home-sublink-item"><i class="fas fa-receipt fa-fw home-sublink-icon" aria-hidden="true"></i><span>EXPENSES REPORT</span></a></li>
-                        <li><a href="{{ route('soa.create') }}" class="home-sublink-item"><i class="fas fa-piggy-bank fa-fw home-sublink-icon" aria-hidden="true"></i><span>SOA CASH VAULT </span></a></li>
-                        <li><a href="{{ route('sales-agent-commissions.index') }}" class="home-sublink-item"><i class="fas fa-percent fa-fw home-sublink-icon" aria-hidden="true"></i><span>SALES AGENT COMMISSION</span></a></li>
-                        <li><a href="{{ route('gas-expense-po-tracker.index') }}" class="home-sublink-item"><i class="fas fa-gas-pump fa-fw home-sublink-icon" aria-hidden="true"></i><span>GAS EXPENSES/P.O. TRACKER</span></a></li>
-                        <li><a href="{{ route('payroll.index') }}" class="home-sublink-item"><i class="fas fa-money-check fa-fw home-sublink-icon" aria-hidden="true"></i><span>PAYROLL</span></a></li>
-                        <li><a href="{{ route('sales-agent-commissions.index') }}" class="home-sublink-item"><i class="fas fa-hand-holding-usd fa-fw home-sublink-icon" aria-hidden="true"></i><span>COMMISSION</span></a></li>
-                        <li><a href="{{ route('source-screenshots.index') }}" class="home-sublink-item"><i class="fas fa-camera fa-fw home-sublink-icon" aria-hidden="true"></i><span>SOURCE SCREENSHOTS</span></a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- 4. VLOGS AND POSTS REPORTS -->
-        <div class="col-12 col-sm-6 col-lg-4 category-card">
-            <div class="card h-100 home-card border-info">
-                <div class="card-body">
-                    <div class="card-header-link" role="button" tabindex="0" aria-haspopup="dialog">
-                        <div class="icon-circle text-info me-3">
-                            <i class="fas fa-video"></i>
-                        </div>
-                        <div>
-                            <h5 class="card-title mb-1">VLOGS AND POSTS REPORTS</h5>
-                            <p class="card-text small mb-0">Video and posting trackers</p>
-                        </div>
-                    </div>
-                    <ul class="category-sublinks">
-                        <li><a href="{{ route('car-video-boost-report.index') }}" class="home-sublink-item"><i class="fas fa-video fa-fw home-sublink-icon" aria-hidden="true"></i><span>CAR VIDEO BOOST REPORT</span></a></li>
-                        <li><a href="{{ route('video-posting-tracker.index') }}" class="home-sublink-item"><i class="fas fa-photo-video fa-fw home-sublink-icon" aria-hidden="true"></i><span>VIDEO AND POSTING TRACKER</span></a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- 5. TRANSFERS/PAPERS REPORTS -->
-        <div class="col-12 col-sm-6 col-lg-4 category-card">
-            <div class="card h-100 home-card border-secondary">
-                <div class="card-body">
-                    <div class="card-header-link" role="button" tabindex="0" aria-haspopup="dialog">
-                        <div class="icon-circle text-secondary me-3">
-                            <i class="fas fa-file-contract"></i>
-                        </div>
-                        <div>
-                            <h5 class="card-title mb-1">TRANSFERS/PAPERS REPORTS</h5>
-                            <p class="card-text small mb-0">Documents and transfer OR/CR</p>
-                        </div>
-                    </div>
-                    <ul class="category-sublinks">
-                        <li><a href="{{ route('follow-up-documents.index') }}" class="home-sublink-item"><i class="fas fa-file-alt fa-fw home-sublink-icon" aria-hidden="true"></i><span>FOLLOW UP DOCUMENTS</span></a></li>
-                        <li><a href="{{ route('transfer-orcr.index') }}" class="home-sublink-item"><i class="fas fa-right-left fa-fw home-sublink-icon" aria-hidden="true"></i><span>TRANSFER ORCR</span></a></li>
-                        <li><a href="{{ route('vehicle-registration.index') }}" class="home-sublink-item"><i class="fas fa-id-card fa-fw home-sublink-icon" aria-hidden="true"></i><span>VEHICLE REGISTRATION</span></a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- 6. CUSTOMER LISTS -->
-        <div class="col-12 col-sm-6 col-lg-4 category-card">
-            <div class="card h-100 home-card" style="border-color: #0d6efd;">
-                <div class="card-body">
-                    <div class="card-header-link" role="button" tabindex="0" aria-haspopup="dialog">
-                        <div class="icon-circle me-3" style="color: #0d6efd; border-color: #0d6efd;">
-                            <i class="fas fa-address-book"></i>
-                        </div>
-                        <div>
-                            <h5 class="card-title mb-1">CUSTOMER LISTS</h5>
-                            <p class="card-text small mb-0">Client and trail form lists</p>
-                        </div>
-                    </div>
-                    <ul class="category-sublinks">
-                        <li><a href="{{ route('client-follow-up-list.index') }}" class="home-sublink-item"><i class="fas fa-user-friends fa-fw home-sublink-icon" aria-hidden="true"></i><span>CLIENT FOLLOW UP LIST</span></a></li>
-                        <li><a href="{{ route('appointment-list.index') }}" class="home-sublink-item"><i class="fas fa-calendar-check fa-fw home-sublink-icon" aria-hidden="true"></i><span>APPOINTMENT LIST</span></a></li>
-                        <li><a href="{{ route('admin-docs') }}" class="home-sublink-item"><i class="fas fa-clipboard-list fa-fw home-sublink-icon" aria-hidden="true"></i><span>TRAIL FORM LIST</span></a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- 7. EQUIPMENT LISTS -->
-        <div class="col-12 col-sm-6 col-lg-4 category-card">
-            <div class="card h-100 home-card" style="border-color: #fd7e14;">
-                <div class="card-body">
-                    <div class="card-header-link" role="button" tabindex="0" aria-haspopup="dialog">
-                        <div class="icon-circle me-3" style="color: #fd7e14; border-color: #fd7e14;">
-                            <i class="fas fa-tools"></i>
-                        </div>
-                        <div>
-                            <h5 class="card-title mb-1">EQUIPMENT LISTS</h5>
-                            <p class="card-text small mb-0">Mechanic tools and expenses</p>
-                        </div>
-                    </div>
-                    <ul class="category-sublinks">
-                        <li><a href="{{ route('mechanic-tools-expenses') }}" class="home-sublink-item"><i class="fas fa-toolbox fa-fw home-sublink-icon" aria-hidden="true"></i><span>MECHANIC TOOLS/EXPENSES</span></a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- 8. COMPANY DOCUMENTS (with SETTINGS as last link) -->
-        <div class="col-12 col-sm-6 col-lg-4 category-card">
-            <div class="card h-100 home-card" style="border-color: #e91e63;">
-                <div class="card-body">
-                    <div class="card-header-link" role="button" tabindex="0" aria-haspopup="dialog">
-                        <div class="icon-circle me-3" style="color: #e91e63; border-color: #e91e63;">
-                            <i class="fas fa-folder-open"></i>
-                        </div>
-                        <div>
-                            <h5 class="card-title mb-1">COMPANY DOCUMENTS</h5>
-                            <p class="card-text small mb-0">Employee list, contracts, memos, BOLO, settings</p>
-                        </div>
-                    </div>
-                    <ul class="category-sublinks">
-                        <li><a href="{{ route('employees.index') }}" class="home-sublink-item"><i class="fas fa-users fa-fw home-sublink-icon" aria-hidden="true"></i><span>EMPLOYEE LIST</span></a></li>
-                        <li><a href="{{ route('contracts.index') }}" class="home-sublink-item"><i class="fas fa-file-contract fa-fw home-sublink-icon" aria-hidden="true"></i><span>CONTRACTS</span></a></li>
-                        <li><a href="{{ route('admin-docs') }}" class="home-sublink-item"><i class="fas fa-file-signature fa-fw home-sublink-icon" aria-hidden="true"></i><span>MEMORANDUMS</span></a></li>
-                        <li><a href="{{ route('admin-docs') }}" class="home-sublink-item"><i class="fas fa-sticky-note fa-fw home-sublink-icon" aria-hidden="true"></i><span>MEMOS</span></a></li>
-                        <li><a href="{{ route('document-templates.index') }}" class="home-sublink-item"><i class="fas fa-file-invoice fa-fw home-sublink-icon" aria-hidden="true"></i><span>AR FORM TEMPLATES</span></a></li>
-                        <li><a href="{{ route('ar-template.index') }}" class="home-sublink-item"><i class="fas fa-file-code fa-fw home-sublink-icon" aria-hidden="true"></i><span>AR TEMPLATE</span></a></li>
-                        <li><a href="{{ route('online-ar-bolo.index') }}" class="home-sublink-item"><i class="fas fa-globe fa-fw home-sublink-icon" aria-hidden="true"></i><span>ONLINE AR BOLO</span></a></li>
-                        <li><a href="{{ route('agent-bolo.index') }}" class="home-sublink-item"><i class="fas fa-user-secret fa-fw home-sublink-icon" aria-hidden="true"></i><span>AGENT BOLO</span></a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- 9. ANALYTICS REPORT -->
-        <div class="col-12 col-sm-6 col-lg-4 category-card">
-            <div class="card h-100 home-card" style="border-color: #20c997;">
-                <div class="card-body">
-                    <div class="card-header-link" role="button" tabindex="0" aria-haspopup="dialog">
-                        <div class="icon-circle me-3" style="color: #20c997; border-color: #20c997;">
-                            <i class="fas fa-chart-pie"></i>
-                        </div>
-                        <div>
-                            <h5 class="card-title mb-1">ANALYTICS REPORT</h5>
-                            <p class="card-text small mb-0">Financial and sales analytics pages</p>
-                        </div>
-                    </div>
-                    <ul class="category-sublinks">
-                        <li><a href="{{ route('analytics-report.financial') }}" class="home-sublink-item"><i class="fas fa-chart-line fa-fw home-sublink-icon" aria-hidden="true"></i><span>FINANCIAL REPORT</span></a></li>
-                        <li><a href="{{ route('analytics-report.sales') }}" class="home-sublink-item"><i class="fas fa-chart-bar fa-fw home-sublink-icon" aria-hidden="true"></i><span>SALES REPORT</span></a></li>
-                        <li><a href="{{ route('analytics-report.sales-executive') }}" class="home-sublink-item"><i class="fas fa-user-tie fa-fw home-sublink-icon" aria-hidden="true"></i><span>SALES EXECUTIVE REPORT</span></a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Settings (after Company Documents) -->
-        <div class="col-12 col-sm-6 col-lg-4 category-card">
-            <div class="card h-100 home-card" style="border-color: #6c757d;">
-                <div class="card-body">
-                    <div class="card-header-link" role="button" tabindex="0" aria-haspopup="dialog">
-                        <div class="icon-circle me-3" style="color: #6c757d; border-color: #6c757d;">
-                            <i class="fas fa-cog"></i>
-                        </div>
-                        <div>
-                            <h5 class="card-title mb-1">SETTINGS</h5>
-                            <p class="card-text small mb-0">System and application settings</p>
-                        </div>
-                    </div>
-                    <ul class="category-sublinks">
-                        <li><a href="{{ route('settings') }}" class="home-sublink-item"><i class="fas fa-cog fa-fw home-sublink-icon" aria-hidden="true"></i><span>APPLICATION SETTINGS</span></a></li>
-                        <li><a href="{{ route('admin-docs') }}" class="home-sublink-item"><i class="fas fa-history fa-fw home-sublink-icon" aria-hidden="true"></i><span>USER ACTIVITY LOGS</span></a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-
-        <!-- Compare -->
-        <div class="col-12 col-sm-6 col-lg-4 category-card">
-            <div class="card h-100 home-card" style="border-color: #6610f2;">
-                <div class="card-body">
-                    <div class="card-header-link" role="button" tabindex="0" aria-haspopup="dialog">
-                        <div class="icon-circle me-3" style="color: #6610f2; border-color: #6610f2;">
-                            <i class="fas fa-balance-scale"></i>
-                        </div>
-                        <div>
-                            <h5 class="card-title mb-1">COMPARE</h5>
-                            <p class="card-text small mb-0">Compare listings across competitor websites</p>
-                        </div>
-                    </div>
-                    <ul class="category-sublinks">
-                        <li><a href="{{ route('compare.index') }}" class="home-sublink-item"><i class="fas fa-balance-scale fa-fw home-sublink-icon" aria-hidden="true"></i><span>COMPARE CARS</span></a></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
+        @endforeach
     </div>
 
     <!-- Category sub-menu modal -->

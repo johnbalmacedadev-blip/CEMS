@@ -13,11 +13,19 @@
                     <a href="{{ route('home') }}" class="btn btn-outline-secondary me-2">
                         <i class="fas fa-home me-1"></i>Back to Main Menu
                     </a>
+                    @if($status === 'Archived')
+                    @canPage('vehicles', 'update')
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#archiveVehicleModal">
+                        <i class="fas fa-archive me-1"></i>Add to Archive
+                    </button>
+                    @endcanPage
+                    @else
                     @canPage('vehicles', 'create')
                     <a href="{{ route('vehicles.create') }}" class="btn btn-primary">
                         <i class="fas fa-plus me-1"></i>Add New Vehicle
                     </a>
                     @endcanPage
+                    @endif
                 </div>
             </div>
 
@@ -29,12 +37,27 @@
             @endif
 
             <!-- Search & filters -->
+            @php
+                $hasExtraFilters = ($yearFrom ?? null) || ($yearTo ?? null) || ($transmission ?? null) || ($fuelType ?? null) || ($bodyType ?? null) || ($purchasedFrom ?? null) || ($reservationDate ?? null);
+                $hasActiveFilters = $search || $status !== 'all' || $hasExtraFilters;
+            @endphp
             <div class="card mb-4">
-                <div class="card-header py-2">
-                    <span class="small text-muted"><i class="fas fa-sliders-h me-1"></i>Filters apply to the list and to exports</span>
-                </div>
-                <div class="card-body">
-                    <form method="GET" action="{{ route('vehicles.index') }}" class="row g-3">
+                <div class="accordion accordion-flush" id="vehicleFiltersAccordion">
+                    <div class="accordion-item border-0">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed py-3 shadow-none" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#vehicleFiltersCollapse"
+                                aria-expanded="false" aria-controls="vehicleFiltersCollapse">
+                                <i class="fas fa-sliders-h me-2"></i>Search &amp; Filters
+                                @if($hasActiveFilters)
+                                    <span class="badge bg-primary ms-2">Active</span>
+                                @endif
+                                <span class="text-muted small fw-normal ms-2 d-none d-md-inline">Apply to list and exports</span>
+                            </button>
+                        </h2>
+                        <div id="vehicleFiltersCollapse" class="accordion-collapse collapse" data-bs-parent="#vehicleFiltersAccordion">
+                            <div class="accordion-body pt-0">
+                                <form method="GET" action="{{ route('vehicles.index') }}" class="row g-3">
                         <div class="col-lg-4 col-md-6">
                             <label class="form-label small mb-0">Keywords</label>
                             <div class="input-group">
@@ -53,6 +76,7 @@
                                 <option value="Released" {{ $status === 'Released' ? 'selected' : '' }}>Released</option>
                                 <option value="Under Maintenance" {{ $status === 'Under Maintenance' ? 'selected' : '' }}>Under Maintenance</option>
                                 <option value="Forfeited" {{ $status === 'Forfeited' ? 'selected' : '' }}>Forfeited</option>
+                                <option value="Archived" {{ $status === 'Archived' ? 'selected' : '' }}>Archived</option>
                             </select>
                         </div>
                         <div class="col-lg-2 col-md-3">
@@ -113,12 +137,14 @@
                                 <i class="fas fa-file-pdf me-1"></i>PDF
                             </a>
                         </div>
-                    </form>
-                    @php
-                        $hasExtraFilters = ($yearFrom ?? null) || ($yearTo ?? null) || ($transmission ?? null) || ($fuelType ?? null) || ($bodyType ?? null) || ($purchasedFrom ?? null) || ($reservationDate ?? null);
-                    @endphp
-                    @if($search || $status !== 'all' || $hasExtraFilters)
-                        <div class="mt-3 d-flex flex-wrap gap-2">
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                @if($hasActiveFilters)
+                    <div class="card-body py-2 border-top">
+                        <div class="d-flex flex-wrap gap-2">
                             @if($search)
                                 <span class="badge badge-neutral">
                                     <i class="fas fa-search me-1"></i>{{ $search }}
@@ -153,8 +179,8 @@
                                 <span class="badge badge-neutral">Reservation: {{ date('M d, Y', strtotime($reservationDate)) }} <a href="{{ route('vehicles.index', request()->except('reservation_date', 'page')) }}" class="text-white ms-1">&times;</a></span>
                             @endif
                         </div>
-                    @endif
-                </div>
+                    </div>
+                @endif
             </div>
 
             <!-- Vehicles list -->
@@ -166,7 +192,6 @@
                                href="{{ route('vehicles.index', array_merge(request()->except('page', 'status'), ['status' => 'Available'])) }}" 
                                role="tab">
                                 <i class="fas fa-check-circle me-1"></i>Available
-                                <span class="badge badge-green ms-1">{{ $availableCount }}</span>
                             </a>
                         </li>
                         <li class="nav-item" role="presentation">
@@ -174,7 +199,6 @@
                                href="{{ route('vehicles.index', array_merge(request()->except('page', 'status'), ['status' => 'Reserved'])) }}" 
                                role="tab">
                                 <i class="fas fa-clock me-1"></i>Reserved
-                                <span class="badge badge-red ms-1">{{ $reservedCount }}</span>
                             </a>
                         </li>
                         <li class="nav-item" role="presentation">
@@ -182,7 +206,6 @@
                                href="{{ route('vehicles.index', array_merge(request()->except('page', 'status'), ['status' => 'Released'])) }}" 
                                role="tab">
                                 <i class="fas fa-check-double me-1"></i>Released
-                                <span class="badge badge-green ms-1">{{ $releasedCount }}</span>
                             </a>
                         </li>
                         <li class="nav-item" role="presentation">
@@ -190,7 +213,6 @@
                                href="{{ route('vehicles.index', array_merge(request()->except('page', 'status'), ['status' => 'Forfeited'])) }}" 
                                role="tab">
                                 <i class="fas fa-times-circle me-1"></i>Forfeited
-                                <span class="badge badge-red ms-1">{{ $forfeitedCount }}</span>
                             </a>
                         </li>
                         <li class="nav-item" role="presentation">
@@ -198,7 +220,13 @@
                                href="{{ route('vehicles.index', array_merge(request()->except('page', 'status'), ['status' => 'Under Maintenance'])) }}" 
                                role="tab">
                                 <i class="fas fa-tools me-1"></i>Under Maintenance
-                                <span class="badge badge-neutral ms-1">{{ $underMaintenanceCount }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link {{ $status === 'Archived' ? 'active' : '' }}" 
+                               href="{{ route('vehicles.index', array_merge(request()->except('page', 'status'), ['status' => 'Archived'])) }}" 
+                               role="tab">
+                                <i class="fas fa-archive me-1"></i>Archived
                             </a>
                         </li>
                         <li class="nav-item" role="presentation">
@@ -206,7 +234,6 @@
                                href="{{ route('vehicles.index', array_merge(request()->except('page', 'status'), ['status' => 'all'])) }}" 
                                role="tab">
                                 <i class="fas fa-list me-1"></i>All Units
-                                <span class="badge badge-all-units ms-1">{{ $availableCount + $reservedCount + $releasedCount + $underMaintenanceCount + $forfeitedCount }}</span>
                             </a>
                         </li>
                     </ul>
@@ -226,11 +253,11 @@
                             $totalBadgeClass = match ($status) {
                                 'Available', 'Released' => 'badge-green',
                                 'Reserved', 'Forfeited' => 'badge-red',
-                                'Under Maintenance' => 'badge-neutral',
+                                'Under Maintenance', 'Archived' => 'badge-neutral',
                                 default => 'badge-all-units',
                             };
                         @endphp
-                        <span class="badge {{ $totalBadgeClass }} ms-2">{{ $vehicles->total() }} total</span>
+                        <span class="badge {{ $totalBadgeClass }} ms-2" data-vehicle-count-badge>{{ $vehicles->total() }} total</span>
                         @if($search)
                             <span class="badge badge-neutral ms-1">for "{{ $search }}"</span>
                         @endif
@@ -239,8 +266,8 @@
                         @endif
                     </h5>
                     @if($vehicles->count() > 0)
-                        <div class="table-responsive">
-                            <table class="table table-striped table-hover">
+                        <div class="table-responsive" id="vehiclesTableWrap">
+                            <table class="table table-striped table-hover" id="vehiclesTable">
                                 <thead class="table-dark">
                                     <tr>
                                         <th>#</th>
@@ -255,9 +282,9 @@
                                         <th>Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="vehiclesTableBody">
                                     @foreach($vehicles as $vehicle)
-                                    <tr>
+                                    <tr data-vehicle-id="{{ $vehicle->id }}">
                                         <td>{{ ($vehicles->currentPage() - 1) * $vehicles->perPage() + $loop->iteration }}</td>
                                         <td>
                                             <div class="d-flex align-items-center">
@@ -282,7 +309,12 @@
                                         <td>{{ $vehicle->colour }}</td>
                                         <td>{{ $vehicle->formatted_purchase_price }}</td>
                                         <td>
-                                            @if($vehicle->status === 'Forfeited' || $vehicle->forfeitDetails->count() > 0)
+                                            @if($vehicle->status === 'Archived')
+                                                <span class="badge badge-neutral">Archived</span>
+                                                @if($vehicle->archived_at)
+                                                    <small class="text-muted d-block">{{ $vehicle->archived_at->format('M d, Y') }}</small>
+                                                @endif
+                                            @elseif($vehicle->status === 'Forfeited' || $vehicle->forfeitDetails->count() > 0)
                                                 <span class="badge badge-red">Forfeited</span>
                                             @elseif($vehicle->status === 'Available')
                                                 <span class="badge badge-green">{{ $vehicle->status }}</span>
@@ -301,6 +333,17 @@
                                                 <a href="{{ route('vehicles.show', $vehicle) }}" class="btn btn-sm btn-outline-primary" title="View Details">
                                                     <i class="fas fa-eye me-1"></i>View Details
                                                 </a>
+                                                @canPage('vehicles', 'update')
+                                                @if(in_array($status, ['Available', 'Released', 'Forfeited'], true) && $vehicle->isArchiveable())
+                                                <form action="{{ route('vehicles.archive', $vehicle) }}" method="POST" class="d-inline archive-vehicle-form">
+                                                    @csrf
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary ms-1 archive-vehicle-btn" title="Archive this unit"
+                                                            data-label="{{ $vehicle->year }} {{ $vehicle->make }} {{ $vehicle->model }} ({{ $vehicle->plate_number }})">
+                                                        <i class="fas fa-archive me-1"></i>Archive
+                                                    </button>
+                                                </form>
+                                                @endif
+                                                @endcanPage
                                             </div>
                                         </td>
                                     </tr>
@@ -343,17 +386,38 @@
                                     <a href="{{ route('vehicles.index') }}" class="btn btn-outline-info">
                                         <i class="fas fa-list me-1"></i>Reset all filters
                                     </a>
+                                    @canPage('vehicles', 'update')
+                                    @if($status === 'Archived')
+                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#archiveVehicleModal">
+                                        <i class="fas fa-archive me-1"></i>Add to Archive
+                                    </button>
+                                    @else
+                                    @canPage('vehicles', 'create')
                                     <a href="{{ route('vehicles.create') }}" class="btn btn-primary">
                                         <i class="fas fa-plus me-1"></i>Add New Vehicle
                                     </a>
+                                    @endcanPage
+                                    @endif
+                                    @endcanPage
                                 </div>
                             @else
-                                <i class="fas fa-car fa-3x text-muted mb-3"></i>
+                                <i class="fas fa-{{ $status === 'Archived' ? 'archive' : 'car' }} fa-3x text-muted mb-3"></i>
                                 <h4 class="text-muted">No vehicles found</h4>
+                                @if($status === 'Archived')
+                                <p class="text-muted">Search for Available, Released, or Forfeited units to add them to the archived list.</p>
+                                @canPage('vehicles', 'update')
+                                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#archiveVehicleModal">
+                                    <i class="fas fa-archive me-1"></i>Add to Archive
+                                </button>
+                                @endcanPage
+                                @else
                                 <p class="text-muted">Start by adding your first vehicle to the inventory.</p>
+                                @canPage('vehicles', 'create')
                                 <a href="{{ route('vehicles.create') }}" class="btn btn-primary">
                                     <i class="fas fa-plus me-1"></i>Add New Vehicle
                                 </a>
+                                @endcanPage
+                                @endif
                             @endif
                         </div>
                     @endif
@@ -362,6 +426,39 @@
         </main>
     </div>
 </div>
+
+@canPage('vehicles', 'update')
+<div class="modal fade" id="archiveVehicleModal" tabindex="-1" aria-labelledby="archiveVehicleModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="archiveVehicleModalLabel">
+                    <i class="fas fa-archive me-2"></i>Add to Archive
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted small mb-3">Search for units in <strong>Available</strong>, <strong>Released</strong>, or <strong>Forfeited</strong> to move them into the archived list. Archived units only appear on this tab.</p>
+                <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                    <input type="search" class="form-control" id="archiveVehicleSearch" placeholder="Search by plate, make, model…" autocomplete="off">
+                </div>
+                <div id="archiveVehicleLoading" class="text-center py-4 text-muted d-none">
+                    <i class="fas fa-spinner fa-spin me-2"></i>Searching…
+                </div>
+                <div id="archiveVehicleEmpty" class="text-center py-4 text-muted d-none">
+                    <i class="fas fa-car-side fa-2x mb-2 d-block opacity-50"></i>
+                    No matching units found. Only Available, Released, or Forfeited units can be archived.
+                </div>
+                <div id="archiveVehicleResults" class="list-group list-group-flush mt-3"></div>
+            </div>
+        </div>
+    </div>
+</div>
+<form id="archiveVehicleModalForm" method="POST" class="d-none" aria-hidden="true">
+    @csrf
+</form>
+@endcanPage
 
 <style>
 .stat-card {
@@ -394,26 +491,9 @@
 #statusTabs .nav-link {
     color: #212529;
 }
-#statusTabs .nav-link .badge {
-    background-color: #6c757d !important;
-    color: #fff !important;
-}
 #statusTabs .nav-link.active {
     color: #212529;
     border-color: #dee2e6 #dee2e6 #fff;
-}
-#statusTabs .nav-link.active .badge-green {
-    background-color: #198754 !important;
-}
-#statusTabs .nav-link.active .badge-red {
-    background-color: #dc3545 !important;
-}
-#statusTabs .nav-link.active .badge-neutral {
-    background-color: #6c757d !important;
-}
-#statusTabs .nav-link.active .badge-all-units {
-    background-color: #212529 !important;
-    color: #fff !important;
 }
 .pagination .page-link {
     color: #212529;
@@ -450,28 +530,295 @@
 
 @section('scripts')
 <script>
+(function () {
+    const currentStatus = @json($status);
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-// Show success message if redirected from form submission
-@if(session('success'))
-    Swal.fire({
-        icon: 'success',
-        title: 'Success!',
-        text: '{{ session('success') }}',
-        confirmButtonColor: '#28a745',
-        timer: 3000,
-        timerProgressBar: true
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function showArchiveSuccess(data) {
+        return Swal.fire({
+            icon: 'success',
+            title: data.swal_title || 'Archived',
+            text: data.message || 'Vehicle moved to Archived successfully.',
+            confirmButtonColor: '#198754',
+            timer: 2500,
+            timerProgressBar: true
+        });
+    }
+
+    function showArchiveError(data) {
+        return Swal.fire({
+            icon: 'error',
+            title: data.swal_title || 'Error',
+            text: data.message || 'Could not archive this vehicle.',
+            confirmButtonColor: '#dc3545'
+        });
+    }
+
+    function updateVehicleCount(delta) {
+        const badge = document.querySelector('[data-vehicle-count-badge]');
+        if (!badge) {
+            return;
+        }
+
+        const match = badge.textContent.match(/(\d+)/);
+        if (match) {
+            const next = Math.max(0, parseInt(match[1], 10) + delta);
+            badge.textContent = next + ' total';
+        }
+    }
+
+    function archiveVehicleRequest(url) {
+        return fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': csrfToken,
+                'Accept': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        }).then(function (response) {
+            return response.json().then(function (data) {
+                if (!response.ok || !data.success) {
+                    throw data;
+                }
+                return data;
+            });
+        });
+    }
+
+    function buildArchivedTableRow(vehicle, rowNumber) {
+        const thumb = vehicle.thumbnail_url
+            ? '<img src="' + escapeHtml(vehicle.thumbnail_url) + '" alt="Vehicle" class="me-3" style="width: 60px; height: 40px; object-fit: cover; border-radius: 4px;">'
+            : '<div class="me-3 d-flex align-items-center justify-content-center bg-light" style="width: 60px; height: 40px; border-radius: 4px;"><i class="fas fa-car text-muted"></i></div>';
+
+        const archivedDate = vehicle.archived_at
+            ? '<small class="text-muted d-block">' + escapeHtml(vehicle.archived_at) + '</small>'
+            : '';
+
+        return '<tr data-vehicle-id="' + vehicle.id + '">' +
+            '<td>' + rowNumber + '</td>' +
+            '<td><div class="d-flex align-items-center">' + thumb +
+                '<div><strong>' + escapeHtml(vehicle.full_name) + '</strong><br>' +
+                '<small class="text-muted">' + escapeHtml(vehicle.transmission) + ' • ' + escapeHtml(vehicle.fuel_type) + '</small></div></div></td>' +
+            '<td>' + escapeHtml(vehicle.year) + '</td>' +
+            '<td>' + escapeHtml(vehicle.make) + '</td>' +
+            '<td>' + escapeHtml(vehicle.model) + '</td>' +
+            '<td><span class="badge bg-secondary">' + escapeHtml(vehicle.plate_number) + '</span></td>' +
+            '<td>' + escapeHtml(vehicle.colour) + '</td>' +
+            '<td>' + escapeHtml(vehicle.purchase_price) + '</td>' +
+            '<td><span class="badge badge-neutral">Archived</span>' + archivedDate + '</td>' +
+            '<td><div class="btn-group" role="group">' +
+                '<a href="' + escapeHtml(vehicle.show_url) + '" class="btn btn-sm btn-outline-primary" title="View Details">' +
+                '<i class="fas fa-eye me-1"></i>View Details</a></div></td>' +
+        '</tr>';
+    }
+
+    function prependArchivedVehicleRow(vehicle) {
+        const tbody = document.getElementById('vehiclesTableBody');
+        if (!tbody) {
+            window.location.reload();
+            return;
+        }
+
+        const existingRows = tbody.querySelectorAll('tr[data-vehicle-id]');
+        tbody.insertAdjacentHTML('afterbegin', buildArchivedTableRow(vehicle, existingRows.length + 1));
+        updateVehicleCount(1);
+    }
+
+    function removeVehicleRow(vehicleId) {
+        const row = document.querySelector('tr[data-vehicle-id="' + vehicleId + '"]');
+        if (!row) {
+            return;
+        }
+
+        row.remove();
+        updateVehicleCount(-1);
+
+        const tbody = document.getElementById('vehiclesTableBody');
+        if (tbody && tbody.querySelectorAll('tr[data-vehicle-id]').length === 0) {
+            window.location.reload();
+        }
+    }
+
+    function handleArchiveSuccess(data, options) {
+        if (currentStatus === 'Archived') {
+            if (document.getElementById('vehiclesTableBody')) {
+                prependArchivedVehicleRow(data.vehicle);
+                if (options && typeof options.onArchivedTab === 'function') {
+                    options.onArchivedTab(data);
+                }
+                showArchiveSuccess(data);
+            } else {
+                showArchiveSuccess(data).then(function () {
+                    window.location.reload();
+                });
+            }
+            return;
+        }
+
+        if (['Available', 'Released', 'Forfeited'].includes(currentStatus)) {
+            removeVehicleRow(data.vehicle_id);
+            showArchiveSuccess(data);
+            return;
+        }
+
+        showArchiveSuccess(data).then(function () {
+            window.location.reload();
+        });
+    }
+
+    function confirmAndArchive(url, label, options) {
+        Swal.fire({
+            title: 'Archive this unit?',
+            text: 'Move ' + label + ' to Archived? It will no longer appear in Available, Reserved, Released, or Forfeited.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#6c757d',
+            cancelButtonColor: '#adb5bd',
+            confirmButtonText: 'Yes, archive',
+            cancelButtonText: 'Cancel',
+            reverseButtons: true
+        }).then(function (result) {
+            if (!result.isConfirmed) {
+                return;
+            }
+
+            Swal.fire({
+                title: 'Archiving…',
+                allowOutsideClick: false,
+                showConfirmButton: false,
+                didOpen: function () {
+                    Swal.showLoading();
+                }
+            });
+
+            archiveVehicleRequest(url)
+                .then(function (data) {
+                    Swal.close();
+                    handleArchiveSuccess(data, options);
+                })
+                .catch(function (error) {
+                    Swal.close();
+                    showArchiveError(error || {});
+                });
+        });
+    }
+
+    document.querySelectorAll('.archive-vehicle-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const form = btn.closest('form');
+            const label = btn.getAttribute('data-label') || 'this vehicle';
+            if (!form) {
+                return;
+            }
+
+            confirmAndArchive(form.action, label);
+        });
     });
-@endif
 
-// Show error message if there was an error
-@if(session('error'))
-    Swal.fire({
-        icon: 'error',
-        title: 'Error!',
-        text: '{{ session('error') }}',
-        confirmButtonColor: '#dc3545'
-    });
-@endif
+@canPage('vehicles', 'update')
+    const searchInput = document.getElementById('archiveVehicleSearch');
+    const resultsEl = document.getElementById('archiveVehicleResults');
+    const loadingEl = document.getElementById('archiveVehicleLoading');
+    const emptyEl = document.getElementById('archiveVehicleEmpty');
+    const modalEl = document.getElementById('archiveVehicleModal');
+    const searchUrl = @json(route('vehicles.search-archiveable'));
+    let searchTimer = null;
 
+    if (searchInput && resultsEl) {
+        function statusBadgeClass(status) {
+            if (status === 'Available' || status === 'Released') return 'bg-success';
+            if (status === 'Forfeited' || status === 'Reserved') return 'bg-danger';
+            return 'bg-secondary';
+        }
+
+        function renderResults(items) {
+            loadingEl.classList.add('d-none');
+
+            if (!items.length) {
+                resultsEl.innerHTML = '';
+                emptyEl.classList.remove('d-none');
+                return;
+            }
+
+            emptyEl.classList.add('d-none');
+            resultsEl.innerHTML = items.map(function (item) {
+                return '<div class="list-group-item d-flex justify-content-between align-items-center px-0" data-archive-result-id="' + item.id + '">' +
+                    '<div class="me-3">' +
+                        '<div class="fw-semibold">' + escapeHtml(item.label) + '</div>' +
+                        '<span class="badge ' + statusBadgeClass(item.status) + '">' + escapeHtml(item.status) + '</span>' +
+                    '</div>' +
+                    '<button type="button" class="btn btn-sm btn-outline-secondary archive-from-modal-btn" ' +
+                        'data-url="' + escapeHtml(item.archive_url) + '" data-label="' + escapeHtml(item.label) + '">' +
+                        '<i class="fas fa-archive me-1"></i>Archive</button>' +
+                '</div>';
+            }).join('');
+        }
+
+        function searchArchiveable(query) {
+            loadingEl.classList.remove('d-none');
+            emptyEl.classList.add('d-none');
+            resultsEl.innerHTML = '';
+
+            fetch(searchUrl + '?q=' + encodeURIComponent(query), {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
+                .then(function (response) { return response.json(); })
+                .then(renderResults)
+                .catch(function () {
+                    loadingEl.classList.add('d-none');
+                    emptyEl.classList.remove('d-none');
+                    emptyEl.innerHTML = '<i class="fas fa-car-side fa-2x mb-2 d-block opacity-50"></i>Could not load vehicles. Please try again.';
+                });
+        }
+
+        searchInput.addEventListener('input', function () {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(function () {
+                searchArchiveable(searchInput.value.trim());
+            }, 300);
+        });
+
+        if (modalEl) {
+            modalEl.addEventListener('shown.bs.modal', function () {
+                searchInput.value = '';
+                searchArchiveable('');
+                searchInput.focus();
+            });
+        }
+
+        resultsEl.addEventListener('click', function (event) {
+            const btn = event.target.closest('.archive-from-modal-btn');
+            if (!btn) {
+                return;
+            }
+
+            const label = btn.getAttribute('data-label') || 'this vehicle';
+            const url = btn.getAttribute('data-url');
+            const resultItem = btn.closest('[data-archive-result-id]');
+            const resultId = resultItem ? resultItem.getAttribute('data-archive-result-id') : null;
+
+            confirmAndArchive(url, label, {
+                onArchivedTab: function () {
+                    if (resultItem) {
+                        resultItem.remove();
+                    }
+                    if (!resultsEl.querySelector('[data-archive-result-id]')) {
+                        emptyEl.classList.remove('d-none');
+                    }
+                    searchArchiveable(searchInput.value.trim());
+                }
+            });
+        });
+    }
+@endcanPage
+})();
 </script>
 @endsection

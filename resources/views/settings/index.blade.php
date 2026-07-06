@@ -90,7 +90,7 @@
                     </div>
                     <h5 class="card-title mb-3">User Activity Logs</h5>
                     <p class="text-muted mb-4">View all user activity: login, logout, create, edit, update, and delete actions across the system.</p>
-                    <a href="{{ route('admin-docs') }}" class="btn btn-primary" style="background-color: #6f42c1; border-color: #6f42c1;">
+                    <a href="{{ route('admin-docs') }}" class="btn btn-settings-purple">
                         <i class="fas fa-list me-2"></i>View Activity Logs
                     </a>
                 </div>
@@ -108,7 +108,7 @@
                     </div>
                     <h5 class="card-title mb-3">Branch / Location</h5>
                     <p class="text-muted mb-4">Create and manage a list of branch or office locations (e.g. Muntinlupa, NCR, Laguna).</p>
-                    <a href="{{ route('settings.branch-locations.index') }}" class="btn btn-primary" style="background-color: #fd7e14; border-color: #fd7e14;">
+                    <a href="{{ route('settings.branch-locations.index') }}" class="btn btn-settings-orange">
                         <i class="fas fa-list me-2"></i>Manage Locations
                     </a>
                 </div>
@@ -129,6 +129,26 @@
     align-items: center; 
     justify-content: center; 
     font-size: 1.5rem; 
+}
+.btn-settings-purple {
+    color: #6f42c1;
+    background-color: transparent;
+    border-color: #6f42c1;
+}
+.btn-settings-purple:hover {
+    background-color: #6f42c1;
+    color: #fff;
+    border-color: #6f42c1;
+}
+.btn-settings-orange {
+    color: #fd7e14;
+    background-color: transparent;
+    border-color: #fd7e14;
+}
+.btn-settings-orange:hover {
+    background-color: #fd7e14;
+    color: #fff;
+    border-color: #fd7e14;
 }
 </style>
 @endsection

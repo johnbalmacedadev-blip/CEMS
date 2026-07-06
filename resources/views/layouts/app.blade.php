@@ -887,5 +887,9 @@
     </style>
 
     @include('partials.flash-alert')
+
+    @auth
+        @include('partials.live-chat')
+    @endauth
 </body>
 </html>

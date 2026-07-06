@@ -13,8 +13,9 @@ class CompanyDocument extends Model
     public const TYPE_ONLINE_AR_BOLO = 'online_ar_bolo';
     public const TYPE_AGENT_BOLO = 'agent_bolo';
     public const TYPE_AR_TEMPLATE = 'ar_template';
+    public const TYPE_MEMO = 'memo';
 
-    protected $fillable = ['type', 'title', 'file_path', 'link_url', 'sort_order', 'agent_bolo_agent_id'];
+    protected $fillable = ['type', 'title', 'body', 'file_path', 'link_url', 'sort_order', 'agent_bolo_agent_id'];
 
     public function agentBoloAgent()
     {
@@ -27,12 +28,18 @@ class CompanyDocument extends Model
             self::TYPE_ONLINE_AR_BOLO => 'Online AR BOLO',
             self::TYPE_AGENT_BOLO => 'Agent BOLO',
             self::TYPE_AR_TEMPLATE => 'AR Template',
+            self::TYPE_MEMO => 'Memo',
         ];
     }
 
     public function getTypeLabelAttribute(): string
     {
         return self::typeLabels()[$this->type] ?? $this->type;
+    }
+
+    public function hasBody(): bool
+    {
+        return ! empty(trim((string) $this->body));
     }
 
     public function isFile(): bool

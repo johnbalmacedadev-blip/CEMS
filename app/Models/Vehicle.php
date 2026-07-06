@@ -43,10 +43,13 @@ class Vehicle extends Model
         'spare_key',
         'notes',
         'status',
+        'archived_at',
+        'status_before_archive',
     ];
 
     protected $casts = [
         'purchase_date' => 'date',
+        'archived_at' => 'datetime',
         'purchase_price' => 'decimal:2',
         'posted_price' => 'decimal:2',
         'sold_price' => 'decimal:2',
@@ -113,6 +116,68 @@ class Vehicle extends Model
     public function scopeReleased($query)
     {
         return $query->where('status', 'Released');
+    }
+
+    /**
+     * Scope for archived vehicles
+     */
+    public function scopeArchived($query)
+    {
+        return $query->where('status', 'Archived');
+    }
+
+    /**
+     * Units that can be moved to Archived (Available, Released, or Forfeited).
+     */
+    public function scopeArchiveable($query)
+    {
+        return $query->where('status', '!=', 'Archived')
+            ->where(function ($q) {
+                $q->whereIn('status', ['Available', 'Released', 'Forfeited'])
+                    ->orWhereHas('forfeitDetails');
+            });
+    }
+
+    /**
+     * Filter vehicles for Unit Report / pricelist status tabs.
+     */
+    public function scopeForUnitReportStatus($query, string $status)
+    {
+        if ($status === 'Archived') {
+            return $query->where('status', 'Archived');
+        }
+
+        $query->where('status', '!=', 'Archived');
+
+        if ($status === 'all') {
+            return $query;
+        }
+
+        if ($status === 'Forfeited') {
+            return $query->where(function ($q) {
+                $q->where('status', 'Forfeited')->orWhereHas('forfeitDetails');
+            });
+        }
+
+        return $query->where('status', $status);
+    }
+
+    /**
+     * Whether this unit can be moved to Archived (Available, Released, or Forfeited only).
+     */
+    public function isArchiveable(): bool
+    {
+        if ($this->status === 'Archived') {
+            return false;
+        }
+
+        if (in_array($this->status, ['Available', 'Released', 'Forfeited'], true)) {
+            return true;
+        }
+
+        return $this->relationLoaded('forfeitDetails')
+            ? $this->forfeitDetails->isNotEmpty()
+            : $this->forfeitDetails()->exists();
     }
 
     /**

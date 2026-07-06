@@ -105,15 +105,11 @@ class User extends Authenticatable
      */
     public function getPagePermission(string $pageSlug): array
     {
-        $perm = $this->pagePermissions()->where('page_slug', $pageSlug)->first();
-        if (! $perm) {
-            return ['can_view' => false, 'can_create' => false, 'can_update' => false, 'can_delete' => false];
-        }
         return [
-            'can_view' => $perm->can_view,
-            'can_create' => $perm->can_create,
-            'can_update' => $perm->can_update,
-            'can_delete' => $perm->can_delete,
+            'can_view' => $this->canAccessPage($pageSlug, 'view'),
+            'can_create' => $this->canAccessPage($pageSlug, 'create'),
+            'can_update' => $this->canAccessPage($pageSlug, 'update'),
+            'can_delete' => $this->canAccessPage($pageSlug, 'delete'),
         ];
     }
 }

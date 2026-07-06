@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Support\PermissionGroups;
 use App\Models\UserPagePermission;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -32,7 +33,11 @@ class UserManagementController extends Controller
         ]);
         $data['password'] = Hash::make($data['password']);
         User::create($data);
-        return redirect()->route('settings.users.index')->with('success', 'User created successfully.');
+
+        return redirect()
+            ->route('settings.users.index')
+            ->with('success', 'User created successfully.')
+            ->with('swal_title', 'Saved');
     }
 
     public function edit(User $user)
@@ -57,26 +62,38 @@ class UserManagementController extends Controller
             unset($data['password']);
         }
         $user->update($data);
-        return redirect()->route('settings.users.index')->with('success', 'User updated successfully.');
+
+        return redirect()
+            ->route('settings.users.index')
+            ->with('success', 'User updated successfully.')
+            ->with('swal_title', 'Saved');
     }
 
     public function destroy(User $user)
     {
         if ($user->id === auth()->id()) {
-            return redirect()->route('settings.users.index')->with('error', 'You cannot delete your own account.');
+            return redirect()
+                ->route('settings.users.index')
+                ->with('error', 'You cannot delete your own account.')
+                ->with('swal_title', 'Error');
         }
         $user->delete();
-        return redirect()->route('settings.users.index')->with('success', 'User deleted successfully.');
+
+        return redirect()
+            ->route('settings.users.index')
+            ->with('success', 'User deleted successfully.')
+            ->with('swal_title', 'Deleted');
     }
 
     public function permissions(User $user)
     {
         $pages = config('pages.list', []);
+        $permissionGroups = PermissionGroups::forPermissionsMatrix();
         $permissions = [];
         foreach (array_keys($pages) as $slug) {
             $permissions[$slug] = $user->getPagePermission($slug);
         }
-        return view('settings.users.permissions', compact('user', 'pages', 'permissions'));
+        return view('settings.users.permissions', compact('user', 'pages', 'permissions', 'permissionGroups'));
     }
 
     public function updatePermissions(Request $request, User $user)
@@ -102,6 +119,9 @@ class UserManagementController extends Controller
             );
         }
 
-        return redirect()->route('settings.users.index')->with('success', 'Permissions updated for ' . $user->name . '.');
+        return redirect()
+            ->route('settings.users.index')
+            ->with('success', 'Permissions updated for ' . $user->name . '.')
+            ->with('swal_title', 'Saved');
     }
 }

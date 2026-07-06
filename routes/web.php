@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CompareController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\VehicleController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\GasExpenseController;
 
 /*
@@ -132,8 +133,15 @@ Route::get('/logout', function(\Illuminate\Http\Request $request) {
     return redirect('/login')->with('success', 'You have been logged out successfully.');
 })->middleware('auth');
 
+// Live team chat (all authenticated users)
+Route::middleware('auth')->prefix('api/chat')->group(function () {
+    Route::get('/sync', [App\Http\Controllers\ChatController::class, 'sync'])->name('chat.sync');
+    Route::post('/messages', [App\Http\Controllers\ChatController::class, 'store'])->name('chat.store');
+    Route::post('/heartbeat', [App\Http\Controllers\ChatController::class, 'heartbeat'])->name('chat.heartbeat');
+});
+
 // Protected routes: admin-only user management (no page permission check)
-Route::middleware(['auth', 'admin'])->group(function () {
+Route::middleware(['auth', 'admin', 'log.activity'])->group(function () {
     Route::get('/settings/users', [UserManagementController::class, 'index'])->name('settings.users.index');
     Route::get('/settings/users/create', [UserManagementController::class, 'create'])->name('settings.users.create');
     Route::post('/settings/users', [UserManagementController::class, 'store'])->name('settings.users.store');
@@ -145,9 +153,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
 });
 
 // Protected routes: page-level permissions applied for non-admins
-Route::middleware(['auth', 'page.permission'])->group(function () {
+Route::middleware(['auth', 'page.permission', 'log.activity'])->group(function () {
     // Main home page after login
-    Route::get('/home', function() { return view('home'); })->name('home');
+    Route::get('/home', [HomeController::class, 'index'])->name('home');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/compare', [CompareController::class, 'index'])->name('compare.index');
     // Placeholder section routes (to be implemented)
@@ -179,6 +187,7 @@ Route::middleware(['auth', 'page.permission'])->group(function () {
     Route::resource('follow-up-documents', App\Http\Controllers\FollowUpDocumentsController::class)->names('follow-up-documents');
     Route::resource('client-follow-up-list', App\Http\Controllers\ClientFollowUpListController::class)->names('client-follow-up-list');
     Route::resource('appointment-list', App\Http\Controllers\AppointmentListController::class)->parameters(['appointment-list' => 'appointment_list'])->names('appointment-list');
+    Route::resource('trail-form-list', App\Http\Controllers\TrailFormListController::class)->parameters(['trail-form-list' => 'trail_form_list'])->names('trail-form-list');
     Route::get('/api/contracts/vehicles/search', [App\Http\Controllers\ContractController::class, 'searchVehicles'])->name('contracts.vehicles.search');
     Route::get('/api/sales-agent-commissions/agents/search', [App\Http\Controllers\SalesAgentCommissionController::class, 'searchAgents'])->name('sales-agent-commissions.agents.search');
     Route::resource('contracts', App\Http\Controllers\ContractController::class)->names('contracts');
@@ -255,7 +264,9 @@ Route::middleware(['auth', 'page.permission'])->group(function () {
     
     // Vehicle routes (export-list must be registered before vehicles/{vehicle})
     Route::get('vehicles/export-list', [VehicleController::class, 'exportIndex'])->name('vehicles.export-list');
+    Route::get('vehicles/search-archiveable', [VehicleController::class, 'searchArchiveable'])->name('vehicles.search-archiveable');
     Route::resource('vehicles', VehicleController::class);
+    Route::post('vehicles/{vehicle}/archive', [VehicleController::class, 'archive'])->name('vehicles.archive');
     Route::get('vehicles/{vehicle}/export', [VehicleController::class, 'export'])->name('vehicles.export');
     
     // Vehicle posted price routes
@@ -368,6 +379,9 @@ Route::middleware(['auth', 'page.permission'])->group(function () {
         Route::delete('agent-bolo/{agent}', [App\Http\Controllers\AgentBoloController::class, 'destroy'])->name('agent-bolo.destroy');
         Route::post('agent-bolo/{agent}/documents', [App\Http\Controllers\AgentBoloController::class, 'storeDocument'])->name('agent-bolo.documents.store');
         Route::delete('agent-bolo/{agent}/documents/{document}', [App\Http\Controllers\AgentBoloController::class, 'destroyDocument'])->name('agent-bolo.documents.destroy');
+
+        Route::bind('memo', fn ($value) => \App\Models\CompanyDocument::where('type', \App\Models\CompanyDocument::TYPE_MEMO)->findOrFail($value));
+        Route::resource('memos', App\Http\Controllers\MemoController::class)->except(['show']);
 
         // Sales Agents routes
         Route::get('/staff-reports/sales-agents', [App\Http\Controllers\SalesAgentController::class, 'staffReport'])->name('staff-reports.sales-agents');

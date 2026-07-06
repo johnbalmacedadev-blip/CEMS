@@ -1,4 +1,12 @@
 /node_modules
+/documentation/node_modules
+/documentation/build
+/documentation/export
+/.scribe
+/public/vendor/scribe
+/public/documentation
+/storage/app/scribe
+/resources/docs
 /public/build
 /public/hot
 /public/storage

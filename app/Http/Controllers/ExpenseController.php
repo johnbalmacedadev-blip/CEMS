@@ -580,7 +580,14 @@ class ExpenseController extends Controller
     }
 
     /**
-     * Search vehicles for the autocomplete.
+     * Search vehicles for expense autocomplete
+     *
+     * @group Expenses
+     * @authenticated
+     *
+     * @queryParam q string optional Search plate, make, or model. Example: ABC
+     *
+     * @response 200 [{"id":1,"plate_number":"ABC 1234","make":"Toyota","model":"Vios","year":2020,"full_name":"2020 Toyota Vios"}]
      */
     public function searchVehicles(Request $request)
     {

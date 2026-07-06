@@ -1,0 +1,8 @@
+{
+  "label": "SETTINGS",
+  "position": 10,
+  "link": {
+    "type": "generated-index",
+    "description": "Application settings, users, branches, and activity logs."
+  }
+}

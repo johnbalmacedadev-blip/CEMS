@@ -3,6 +3,7 @@
 namespace App\Traits;
 
 use App\Models\ActivityLog;
+use App\Support\ActivityLogger;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Request;
 
@@ -42,6 +43,8 @@ trait LogsActivity
             'ip_address' => Request::ip(),
             'user_agent' => Request::userAgent(),
         ]);
+
+        ActivityLogger::markLogged(request());
     }
 
     /**

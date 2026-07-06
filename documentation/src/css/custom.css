@@ -1,0 +1,26 @@
+/**
+ * You can override the default Infima variables here.
+ * CEMS brand: dark navbar/footer in app, red accent (#dc3545).
+ */
+:root {
+  --ifm-color-primary: #dc3545;
+  --ifm-color-primary-dark: #c82333;
+  --ifm-color-primary-darker: #bd2130;
+  --ifm-color-primary-darkest: #a71d2a;
+  --ifm-color-primary-light: #e4606d;
+  --ifm-color-primary-lighter: #ea868f;
+  --ifm-color-primary-lightest: #f1b0b7;
+  --ifm-code-font-size: 95%;
+  --docusaurus-highlighted-code-line-bg: rgba(220, 53, 69, 0.1);
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #ea868f;
+  --ifm-color-primary-dark: #e4606d;
+  --ifm-color-primary-darker: #dc3545;
+  --ifm-color-primary-darkest: #c82333;
+  --ifm-color-primary-light: #f1b0b7;
+  --ifm-color-primary-lighter: #f5c2c7;
+  --ifm-color-primary-lightest: #f8d7da;
+  --docusaurus-highlighted-code-line-bg: rgba(234, 134, 143, 0.15);
+}

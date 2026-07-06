@@ -111,6 +111,7 @@ class AnalyticsReportController extends Controller
             'dateTo' => $window['to'] ? $window['to']->format('Y-m-d') : '',
             'activeRangeLabel' => $this->rangeLabel($window),
             'result' => $result,
+            'statusCountMeta' => $this->statusCountMeta(),
         ];
     }
 
@@ -170,16 +171,34 @@ class AnalyticsReportController extends Controller
             return $result;
         }
 
+        $hasStatus = ($result['table_kind'] ?? '') === 'reservations'
+            || ($result['table_kind'] ?? '') === 'releases'
+            || $rows->contains(fn ($r) => array_key_exists('status', $r) && ($r['status'] ?? '') !== '');
+
+        $monthlyStatusConfig = $this->monthlyGroupedStatusConfig((string) ($result['table_kind'] ?? ''));
+
         $groups = $rows
             ->filter(fn ($r) => ! empty($r[$dateKey]))
             ->groupBy(fn ($r) => Carbon::parse($r[$dateKey])->format('Y-m'))
-            ->map(function ($group, $ym) use ($result) {
+            ->map(function ($group, $ym) use ($result, $hasStatus, $monthlyStatusConfig) {
                 $label = Carbon::createFromFormat('Y-m', $ym)->format('F Y');
                 $entry = [
                     'month' => $label,
                     'month_key' => $ym,
                     'count' => $group->count(),
                 ];
+                if ($hasStatus) {
+                    if ($monthlyStatusConfig !== null) {
+                        $statusCounts = $this->filterStatusCounts(
+                            $this->buildMonthlyFleetStatusCounts($ym),
+                            $monthlyStatusConfig['keys']
+                        );
+                        $entry['count'] = $statusCounts[$monthlyStatusConfig['keys'][0]] ?? 0;
+                    } else {
+                        $statusCounts = $this->buildStatusCounts($group);
+                    }
+                    $entry['status_counts'] = $statusCounts;
+                }
                 if (($result['type'] ?? '') === 'value_table') {
                     $entry['total'] = (float) $group->sum('value');
                 }
@@ -188,8 +207,32 @@ class AnalyticsReportController extends Controller
             ->values()
             ->all();
 
+        if ($hasStatus && $monthlyStatusConfig !== null && $groups !== []) {
+            $result['summary'] = $this->applyStatusSummaryToCards(
+                $result['summary'] ?? [],
+                $this->filterStatusCounts($this->sumStatusCounts(collect($groups)), $monthlyStatusConfig['keys']),
+                $monthlyStatusConfig['summary_label']
+            );
+        }
+
         $result['monthly_groups'] = $groups;
+        $result['monthly_groups_has_status'] = $hasStatus;
+        if ($monthlyStatusConfig !== null) {
+            $result['monthly_groups_status_keys'] = $monthlyStatusConfig['keys'];
+        }
         return $result;
+    }
+
+    /**
+     * @return array{keys: array<int, string>, summary_label: string}|null
+     */
+    protected function monthlyGroupedStatusConfig(string $tableKind): ?array
+    {
+        return match ($tableKind) {
+            'reservations' => ['keys' => ['R'], 'summary_label' => 'Reservation Sales'],
+            'releases' => ['keys' => ['RL'], 'summary_label' => 'Released Units'],
+            default => null,
+        };
     }
 
     protected function applyFinancialTablePresentation(Request $request, array $result, string $selectedReport): array
@@ -210,11 +253,20 @@ class AnalyticsReportController extends Controller
         }
 
         $defaultColumn = array_key_first($defs);
+        $defaultSortDir = 'asc';
+        $perPage = 20;
+
+        if ($selectedReport === 'reservations') {
+            $defaultColumn = 'age_days';
+            $defaultSortDir = 'desc';
+            $perPage = 5;
+        }
+
         $sortColumn = (string) $request->get('sort_column', $defaultColumn);
         if (! isset($defs[$sortColumn])) {
             $sortColumn = $defaultColumn;
         }
-        $sortDir = strtolower((string) $request->get('sort_dir', 'asc')) === 'desc' ? 'desc' : 'asc';
+        $sortDir = strtolower((string) $request->get('sort_dir', $defaultSortDir)) === 'desc' ? 'desc' : 'asc';
 
         usort($rows, function (array $a, array $b) use ($sortColumn, $sortDir, $defs): int {
             $cmp = $this->compareFinancialRowsForSort($a, $b, $sortColumn, $defs[$sortColumn]);
@@ -223,7 +275,6 @@ class AnalyticsReportController extends Controller
         });
 
         $total = count($rows);
-        $perPage = 20;
         $page = max(1, (int) $request->get('page', 1));
         $slice = array_slice($rows, ($page - 1) * $perPage, $perPage);
 
@@ -436,6 +487,184 @@ class AnalyticsReportController extends Controller
         return $va <=> $vb;
     }
 
+    /**
+     * @return array<int, array{key: string, label: string, pill_class: string, dot_class: string}>
+     */
+    protected function statusCountMeta(): array
+    {
+        return [
+            ['key' => 'A', 'label' => 'Available', 'pill_class' => 'fin-status-pill--available', 'dot_class' => 'fin-status-dot--available'],
+            ['key' => 'R', 'label' => 'Reserved', 'pill_class' => 'fin-status-pill--reserved', 'dot_class' => 'fin-status-dot--reserved'],
+            ['key' => 'RL', 'label' => 'Released', 'pill_class' => 'fin-status-pill--released', 'dot_class' => 'fin-status-dot--released'],
+            ['key' => 'F', 'label' => 'Forfeited', 'pill_class' => 'fin-status-pill--forfeited', 'dot_class' => 'fin-status-dot--forfeited'],
+        ];
+    }
+
+    protected function fleetVehicles(): Collection
+    {
+        static $cache = null;
+        if ($cache === null) {
+            $cache = Vehicle::with(['statusDetail', 'forfeitDetails'])->get();
+        }
+
+        return $cache;
+    }
+
+    /**
+     * Monthly fleet counts. Available = units encoded in month minus reserved/released same month.
+     *
+     * @return array{A: int, R: int, RL: int, F: int}
+     */
+    protected function buildMonthlyFleetStatusCounts(string $ym): array
+    {
+        $monthStart = Carbon::createFromFormat('Y-m', $ym)->startOfMonth()->startOfDay();
+        $monthEnd = Carbon::createFromFormat('Y-m', $ym)->endOfMonth()->endOfDay();
+        $vehicles = $this->fleetVehicles();
+
+        $r = $vehicles->filter(function (Vehicle $v) use ($monthStart, $monthEnd) {
+            $d = $v->statusDetail?->sale_date;
+
+            return $d && Carbon::parse($d)->between($monthStart, $monthEnd);
+        })->count();
+
+        $rl = $vehicles->filter(function (Vehicle $v) use ($monthStart, $monthEnd) {
+            $d = $v->statusDetail?->release_date;
+
+            return $d && Carbon::parse($d)->between($monthStart, $monthEnd);
+        })->count();
+
+        $f = $vehicles->filter(function (Vehicle $v) use ($monthStart, $monthEnd) {
+            if ($v->forfeitDetails->isNotEmpty()) {
+                return $v->forfeitDetails->contains(
+                    fn ($fd) => $fd->forfeit_date && Carbon::parse($fd->forfeit_date)->between($monthStart, $monthEnd)
+                );
+            }
+
+            return $v->status === 'Forfeited'
+                && $v->updated_at
+                && Carbon::parse($v->updated_at)->between($monthStart, $monthEnd);
+        })->count();
+
+        $availableGross = $vehicles->filter(function (Vehicle $v) use ($monthStart, $monthEnd) {
+            if ($v->status !== 'Available') {
+                return false;
+            }
+            $encoded = $v->created_at ?? $v->purchase_date;
+
+            return $encoded && Carbon::parse($encoded)->between($monthStart, $monthEnd);
+        })->count();
+
+        $a = max(0, $availableGross - $r - $rl);
+
+        return ['A' => $a, 'R' => $r, 'RL' => $rl, 'F' => $f];
+    }
+
+    /**
+     * @param  array{A: int, R: int, RL: int, F: int}  $counts
+     */
+    protected function sumStatusCounts(Collection $groups): array
+    {
+        $totals = ['A' => 0, 'R' => 0, 'RL' => 0, 'F' => 0];
+        foreach ($groups as $group) {
+            $counts = $group['status_counts'] ?? [];
+            foreach ($totals as $key => $_) {
+                $totals[$key] += (int) ($counts[$key] ?? 0);
+            }
+        }
+
+        return $totals;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $summaryCards
+     * @param  array{A: int, R: int, RL: int, F: int}  $counts
+     * @return array<int, array<string, mixed>>
+     */
+    protected function applyStatusSummaryToCards(array $summaryCards, array $counts, string $targetLabel): array
+    {
+        foreach ($summaryCards as $index => $card) {
+            if (($card['label'] ?? '') === $targetLabel) {
+                $summaryCards[$index] = [
+                    'label' => $targetLabel,
+                    'status_counts' => $counts,
+                    'is_status_summary' => true,
+                ];
+                break;
+            }
+        }
+
+        return $summaryCards;
+    }
+
+    /**
+     * @param  array{A?: int, R?: int, RL?: int, F?: int}  $counts
+     * @param  array<int, string>  $keys
+     * @return array<string, int>
+     */
+    protected function filterStatusCounts(array $counts, array $keys): array
+    {
+        $filtered = [];
+        foreach ($keys as $key) {
+            $filtered[$key] = (int) ($counts[$key] ?? 0);
+        }
+
+        return $filtered;
+    }
+
+    /**
+     * @param  array<int, string>  $keys
+     * @return array<int, array{key: string, label: string, pill_class: string, dot_class: string}>
+     */
+    protected function statusCountMetaForKeys(array $keys): array
+    {
+        return array_values(array_filter(
+            $this->statusCountMeta(),
+            fn (array $item) => in_array($item['key'], $keys, true)
+        ));
+    }
+
+    /**
+     * @return array{A: int, R: int, RL: int, F: int}
+     */
+    protected function buildStatusCounts(Collection $rows): array
+    {
+        $counts = ['A' => 0, 'R' => 0, 'RL' => 0, 'F' => 0];
+
+        foreach ($rows as $row) {
+            $abbrev = $this->statusToAbbrev(is_array($row) ? ($row['status'] ?? '') : ($row->status ?? ''));
+            if ($abbrev !== null) {
+                $counts[$abbrev]++;
+            }
+        }
+
+        return $counts;
+    }
+
+    protected function statusToAbbrev(?string $status): ?string
+    {
+        return match ($status) {
+            'Available' => 'A',
+            'Reserved' => 'R',
+            'Released' => 'RL',
+            'Forfeited' => 'F',
+            default => null,
+        };
+    }
+
+    /**
+     * @param  array{A: int, R: int, RL: int, F: int}  $counts
+     */
+    protected function formatStatusCountSummary(array $counts): string
+    {
+        return sprintf(
+            'Available: %d | Reserved: %d | Released: %d | Forfeited: %d',
+            $counts['A'],
+            $counts['R'],
+            $counts['RL'],
+            $counts['F']
+        );
+    }
+
     protected function rangeLabel(array $window): string
     {
         $from = $window['from'] ?? null;
@@ -565,7 +794,7 @@ class AnalyticsReportController extends Controller
         $unknownCount = max($vehicles->count() - $cashCount - $financingCount, 0);
 
         return [
-            'title' => 'List and Count of Reservations',
+            'title' => 'List of vehicle based on older age',
             'type' => 'table',
             'table_kind' => 'reservations',
             'count' => count($rows),
@@ -581,7 +810,7 @@ class AnalyticsReportController extends Controller
             ],
             'rows' => $rows,
             'summary' => [
-                ['label' => 'Reservation Sales', 'value' => (float) count($rows), 'is_currency' => false],
+                ['label' => 'Reservation Sales', 'status_counts' => ['R' => 0], 'is_status_summary' => true],
                 ['label' => 'Sales Amount', 'value' => $reservationAmount, 'is_currency' => true],
                 ['label' => 'Purchase Price', 'value' => $purchasePriceTotal, 'is_currency' => true],
             ],
@@ -624,6 +853,7 @@ class AnalyticsReportController extends Controller
                 'release_date_raw' => $event ? Carbon::parse($event)->toDateString() : null,
                 'sold_date' => $event ? Carbon::parse($event)->format('M d, Y') : '-',
                 'sold_date_raw' => $event ? Carbon::parse($event)->toDateString() : null,
+                'status' => 'Released',
                 'age_days' => $ageDays,
             ];
         })->values()->all();
@@ -657,7 +887,7 @@ class AnalyticsReportController extends Controller
             ],
             'rows' => $rows,
             'summary' => [
-                ['label' => 'Released Units', 'value' => (float) count($rows), 'is_currency' => false],
+                ['label' => 'Released Units', 'status_counts' => ['RL' => 0], 'is_status_summary' => true],
                 ['label' => 'Sales Amount', 'value' => (float) collect($rows)->sum('sold_price'), 'is_currency' => true],
                 ['label' => 'Purchase Price', 'value' => (float) collect($rows)->sum('purchase_price'), 'is_currency' => true],
             ],

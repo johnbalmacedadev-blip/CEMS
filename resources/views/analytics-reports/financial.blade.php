@@ -89,7 +89,24 @@
                                 <div class="card-body py-3">
                                     <div class="text-muted small mb-1">{{ $card['label'] ?? 'Summary' }}</div>
                                     <div class="h5 mb-0">
-                                        @if(!empty($card['is_currency']))
+                                        @if(!empty($card['is_status_summary']) && !empty($card['status_counts']))
+                                            @php
+                                                $summaryStatusKeys = match ($selectedReport ?? '') {
+                                                    'reservations' => ['R'],
+                                                    'releases' => ['RL'],
+                                                    default => null,
+                                                };
+                                                $summaryStatusMeta = $summaryStatusKeys
+                                                    ? collect($statusCountMeta ?? [])->filter(fn ($item) => in_array($item['key'] ?? '', $summaryStatusKeys, true))->values()->all()
+                                                    : ($statusCountMeta ?? []);
+                                            @endphp
+                                            @include('analytics-reports.partials.status-count-badges', [
+                                                'counts' => $card['status_counts'],
+                                                'statusMeta' => $summaryStatusMeta,
+                                            ])
+                                        @elseif(!empty($card['is_text']))
+                                            {{ $card['value'] ?? '' }}
+                                        @elseif(!empty($card['is_currency']))
                                             ₱{{ number_format((float) ($card['value'] ?? 0), 2) }}
                                         @else
                                             {{ number_format((float) ($card['value'] ?? 0), 0) }}
@@ -121,12 +138,46 @@
                 @php
                     $mgUi = $result['monthly_groups_ui'] ?? null;
                     $mgType = $result['type'] ?? '';
+                    $mgHasStatus = !empty($result['monthly_groups_has_status']);
+                    $mgStatusKeys = $result['monthly_groups_status_keys'] ?? null;
+                    $mgStatusMeta = $mgStatusKeys
+                        ? collect($statusCountMeta ?? [])->filter(fn ($item) => in_array($item['key'], $mgStatusKeys, true))->values()->all()
+                        : ($statusCountMeta ?? []);
+                    $mgCountLabel = match ($selectedReport ?? '') {
+                        'reservations' => 'Reserved Count',
+                        'releases' => 'Released Count',
+                        default => $mgHasStatus ? 'Status Count' : 'Count',
+                    };
                 @endphp
                 <div class="card border-info mb-3">
                     <div class="card-body py-2">
-                        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                        <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between mb-2">
                             <strong class="text-info">Monthly Grouped Result</strong>
+                            @if($mgHasStatus && !empty($mgStatusMeta))
+                                <div class="fin-status-legend d-flex flex-wrap align-items-center gap-2">
+                                    <span class="small text-muted me-1">Legend:</span>
+                                    @foreach($mgStatusMeta as $item)
+                                        <span class="fin-status-legend-item">
+                                            <span class="fin-status-dot {{ $item['dot_class'] ?? '' }}" aria-hidden="true"></span>
+                                            <span class="small">{{ $item['label'] ?? '' }}</span>
+                                        </span>
+                                    @endforeach
+                                </div>
+                            @endif
                         </div>
+                        @if($mgHasStatus && ($selectedReport ?? '') === 'reservations')
+                            <p class="small text-muted mb-2 mb-md-3">
+                                Count of units reserved in each month (by reserve date).
+                            </p>
+                        @elseif($mgHasStatus && ($selectedReport ?? '') === 'releases')
+                            <p class="small text-muted mb-2 mb-md-3">
+                                Count of units released in each month (by release date).
+                            </p>
+                        @elseif($mgHasStatus && empty($mgStatusKeys))
+                            <p class="small text-muted mb-2 mb-md-3">
+                                Available = units encoded that month with Available status, minus Reserved and Released in the same month.
+                            </p>
+                        @endif
                         <div class="table-responsive">
                             <table class="table table-sm table-bordered mb-0">
                                 <thead class="table-light">
@@ -134,7 +185,7 @@
                                         @if($mgUi && !empty($mgUi['column_keys']))
                                             @foreach($mgUi['column_keys'] as $mgKey)
                                                 @php
-                                                    $mgLabels = ['month' => 'Month', 'count' => 'Count', 'total' => 'Total'];
+                                                    $mgLabels = ['month' => 'Month', 'count' => $mgCountLabel, 'total' => 'Total'];
                                                     $mgLabel = $mgLabels[$mgKey] ?? $mgKey;
                                                     $mgActive = ($mgUi['sort_column'] ?? '') === $mgKey;
                                                     $mgNewDir = $mgActive && ($mgUi['sort_dir'] ?? 'asc') === 'asc' ? 'desc' : 'asc';
@@ -153,7 +204,7 @@
                                             @endforeach
                                         @else
                                             <th>Month</th>
-                                            <th>Count</th>
+                                            <th>{{ $mgCountLabel }}</th>
                                             @if($mgType === 'value_table')
                                                 <th>Total</th>
                                             @endif
@@ -164,7 +215,16 @@
                                     @foreach($result['monthly_groups'] as $g)
                                         <tr>
                                             <td>{{ $g['month'] }}</td>
-                                            <td>{{ $g['count'] }}</td>
+                                            <td>
+                                                @if(!empty($g['status_counts']))
+                                                    @include('analytics-reports.partials.status-count-badges', [
+                                                        'counts' => $g['status_counts'],
+                                                        'statusMeta' => $mgStatusMeta,
+                                                    ])
+                                                @else
+                                                    {{ $g['count'] }}
+                                                @endif
+                                            </td>
                                             @if($mgType === 'value_table')
                                                 <td>₱{{ number_format((float) ($g['total'] ?? 0), 2) }}</td>
                                             @endif
@@ -321,6 +381,87 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('styles')
+<style>
+.fin-status-dot {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.fin-status-dot--available { background-color: #198754; }
+.fin-status-dot--reserved { background-color: #ffc107; }
+.fin-status-dot--released { background-color: #0d6efd; }
+.fin-status-dot--forfeited { background-color: #dc3545; }
+
+.fin-status-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.fin-status-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.fin-status-badges--compact {
+    gap: 0.35rem;
+}
+
+.fin-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    line-height: 1.2;
+    border: 1px solid transparent;
+    white-space: nowrap;
+}
+.fin-status-pill__label {
+    font-weight: 500;
+}
+.fin-status-pill__count {
+    font-weight: 700;
+    min-width: 1.25rem;
+    text-align: right;
+}
+
+.fin-status-pill--available {
+    background: rgba(25, 135, 84, 0.12);
+    border-color: rgba(25, 135, 84, 0.35);
+    color: #146c43;
+}
+.fin-status-pill--reserved {
+    background: rgba(255, 193, 7, 0.18);
+    border-color: rgba(255, 193, 7, 0.45);
+    color: #856404;
+}
+.fin-status-pill--released {
+    background: rgba(13, 110, 253, 0.12);
+    border-color: rgba(13, 110, 253, 0.35);
+    color: #084298;
+}
+.fin-status-pill--forfeited {
+    background: rgba(220, 53, 69, 0.12);
+    border-color: rgba(220, 53, 69, 0.35);
+    color: #b02a37;
+}
+
+.fin-status-badges--compact .fin-status-pill {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.78rem;
+}
+.fin-status-badges--compact .fin-status-pill__label {
+    display: none;
+}
+</style>
 @endsection
 
 @section('scripts')

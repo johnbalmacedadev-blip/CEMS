@@ -28,6 +28,7 @@
                     <option value="all" {{ request('action') == 'all' || !request('action') ? 'selected' : '' }}>All Actions</option>
                     <option value="login" {{ request('action') == 'login' ? 'selected' : '' }}>Login</option>
                     <option value="logout" {{ request('action') == 'logout' ? 'selected' : '' }}>Logout</option>
+                    <option value="view" {{ request('action') == 'view' ? 'selected' : '' }}>View</option>
                     <option value="create" {{ request('action') == 'create' ? 'selected' : '' }}>Create</option>
                     <option value="update" {{ request('action') == 'update' ? 'selected' : '' }}>Edit / Update</option>
                     <option value="delete" {{ request('action') == 'delete' ? 'selected' : '' }}>Delete</option>
@@ -96,6 +97,10 @@
                                             <span class="badge bg-secondary">
                                                 <i class="fas fa-sign-out-alt"></i> Logout
                                             </span>
+                                        @elseif($log->action == 'view')
+                                            <span class="badge bg-primary">
+                                                <i class="fas fa-eye"></i> View
+                                            </span>
                                         @elseif($log->action == 'create')
                                             <span class="badge bg-success">
                                                 <i class="fas fa-plus"></i> Create
@@ -115,6 +120,8 @@
                                     <td>
                                         @if($log->model_type === 'Auth' || empty($log->model_type))
                                             <small class="text-muted">—</small>
+                                        @elseif($log->model_type === 'Page')
+                                            <small>Page</small>
                                         @else
                                             <small>{{ class_basename($log->model_type) }}</small>
                                         @endif
