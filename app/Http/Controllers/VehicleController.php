@@ -6,6 +6,7 @@ use App\Models\Vehicle;
 use App\Models\VehicleIncentive;
 use App\Models\CarFinancingSetting;
 use App\Models\FinancingScheme;
+use App\Models\BranchLocation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -293,8 +294,11 @@ class VehicleController extends Controller
         $bodyType = $request->get('body_type');
         $purchasedFrom = $request->get('purchased_from');
         $reservationDate = $request->get('reservation_date');
+        $releaseDateFrom = $request->get('release_date_from');
+        $releaseDateTo = $request->get('release_date_to');
+        $branchLocationId = $request->get('branch_location_id');
 
-        $query = Vehicle::with(['make', 'vehicleModel', 'primaryImage', 'forfeitDetails']);
+        $query = Vehicle::with(['make', 'vehicleModel', 'primaryImage', 'forfeitDetails', 'branchLocation']);
         $query->forUnitReportStatus($status);
 
         if ($search) {
@@ -335,9 +339,26 @@ class VehicleController extends Controller
             $query->where('purchased_from', 'like', '%' . trim($purchasedFrom) . '%');
         }
 
+        if ($branchLocationId !== null && $branchLocationId !== '' && is_numeric($branchLocationId)) {
+            $query->where('branch_location_id', (int) $branchLocationId);
+        }
+
         if (is_string($reservationDate) && trim($reservationDate) !== '') {
             $query->whereHas('statusDetail', function ($q) use ($reservationDate) {
                 $q->whereDate('sale_date', $reservationDate);
+            });
+        }
+
+        $hasReleaseFrom = is_string($releaseDateFrom) && trim($releaseDateFrom) !== '';
+        $hasReleaseTo = is_string($releaseDateTo) && trim($releaseDateTo) !== '';
+        if ($hasReleaseFrom || $hasReleaseTo) {
+            $query->whereHas('statusDetail', function ($q) use ($hasReleaseFrom, $hasReleaseTo, $releaseDateFrom, $releaseDateTo) {
+                if ($hasReleaseFrom) {
+                    $q->whereDate('release_date', '>=', trim($releaseDateFrom));
+                }
+                if ($hasReleaseTo) {
+                    $q->whereDate('release_date', '<=', trim($releaseDateTo));
+                }
             });
         }
 
@@ -441,6 +462,9 @@ class VehicleController extends Controller
         $bodyType = $request->get('body_type');
         $purchasedFrom = $request->get('purchased_from');
         $reservationDate = $request->get('reservation_date');
+        $releaseDateFrom = $request->get('release_date_from');
+        $releaseDateTo = $request->get('release_date_to');
+        $branchLocationId = $request->get('branch_location_id');
 
         // Sync status to Forfeited for any vehicle that has forfeit details (skip archived)
         Vehicle::whereHas('forfeitDetails')
@@ -460,6 +484,23 @@ class VehicleController extends Controller
             })
             ->count();
 
+        $branches = BranchLocation::ordered()->get();
+
+        // Location totals for current filters (ignore branch filter so all locations are shown)
+        $summaryParams = $request->all();
+        unset($summaryParams['branch_location_id'], $summaryParams['page']);
+        $locationSummaryBase = $this->vehiclesIndexBaseQuery(new Request($summaryParams));
+
+        $locationCounts = $branches->map(function ($branch) use ($locationSummaryBase) {
+            return [
+                'id' => $branch->id,
+                'name' => $branch->name,
+                'count' => (clone $locationSummaryBase)->where('branch_location_id', $branch->id)->count(),
+            ];
+        })->values();
+
+        $unassignedLocationCount = (clone $locationSummaryBase)->whereNull('branch_location_id')->count();
+
         return view('vehicles.index', compact(
             'vehicles',
             'status',
@@ -471,11 +512,17 @@ class VehicleController extends Controller
             'bodyType',
             'purchasedFrom',
             'reservationDate',
+            'releaseDateFrom',
+            'releaseDateTo',
+            'branchLocationId',
+            'branches',
             'availableCount',
             'reservedCount',
             'releasedCount',
             'underMaintenanceCount',
-            'forfeitedCount'
+            'forfeitedCount',
+            'locationCounts',
+            'unassignedLocationCount'
         ));
     }
 
@@ -484,7 +531,9 @@ class VehicleController extends Controller
      */
     public function create()
     {
-        return view('vehicles.create');
+        $branches = BranchLocation::active()->ordered()->get();
+
+        return view('vehicles.create', compact('branches'));
     }
 
     /**
@@ -511,7 +560,8 @@ class VehicleController extends Controller
             'purchase_date' => 'required|date',
             'spare_key' => 'boolean',
             'notes' => 'nullable|string',
-                'status' => 'required|in:Available,Under Maintenance,Reserved,Released,Forfeited',
+            'status' => 'required|in:Available,Under Maintenance,Reserved,Released,Forfeited',
+            'branch_location_id' => 'required|exists:branch_locations,id',
         ]);
 
         // Get the make and model names for backward compatibility
@@ -521,6 +571,7 @@ class VehicleController extends Controller
         $vehicleData = $request->all();
         $vehicleData['make'] = $make ? $make->name : '';
         $vehicleData['model'] = $model ? $model->name : '';
+        $vehicleData['branch_location_id'] = $request->branch_location_id;
         
         $vehicle = Vehicle::create($vehicleData);
 
@@ -747,8 +798,18 @@ class VehicleController extends Controller
      */
     public function edit(Vehicle $vehicle)
     {
-        $vehicle->load(['make', 'vehicleModel']);
-        return view('vehicles.edit', compact('vehicle'));
+        $vehicle->load(['make', 'vehicleModel', 'branchLocation']);
+        $branches = BranchLocation::active()->ordered()->get();
+
+        // Keep the vehicle's current branch in the list even if inactive
+        if ($vehicle->branch_location_id && ! $branches->contains('id', $vehicle->branch_location_id)) {
+            $current = BranchLocation::find($vehicle->branch_location_id);
+            if ($current) {
+                $branches = $branches->prepend($current)->unique('id')->values();
+            }
+        }
+
+        return view('vehicles.edit', compact('vehicle', 'branches'));
     }
 
     /**
@@ -776,6 +837,7 @@ class VehicleController extends Controller
             'spare_key' => 'boolean',
             'notes' => 'nullable|string',
             'status' => 'required|in:Available,Under Maintenance,Reserved,Released,Forfeited',
+            'branch_location_id' => 'required|exists:branch_locations,id',
             'option1_cash_out' => 'nullable|numeric|min:0',
             'option1_12mos' => 'nullable|numeric|min:0',
             'option1_24mos' => 'nullable|numeric|min:0',
@@ -798,6 +860,7 @@ class VehicleController extends Controller
         $vehicleData = $request->all();
         $vehicleData['make'] = $make ? $make->name : '';
         $vehicleData['model'] = $model ? $model->name : '';
+        $vehicleData['branch_location_id'] = $request->branch_location_id;
         
         $vehicle->update($vehicleData);
         
@@ -930,7 +993,7 @@ class VehicleController extends Controller
 
         Cache::flush();
 
-        $vehicle->load(['primaryImage', 'forfeitDetails']);
+        $vehicle->load(['primaryImage', 'forfeitDetails', 'branchLocation']);
 
         if ($request->expectsJson()) {
             return response()->json([
@@ -950,6 +1013,7 @@ class VehicleController extends Controller
                     'purchase_price' => $vehicle->formatted_purchase_price,
                     'transmission' => $vehicle->transmission,
                     'fuel_type' => $vehicle->fuel_type,
+                    'location' => $vehicle->branchLocation?->name,
                     'archived_at' => $vehicle->archived_at?->format('M d, Y'),
                     'thumbnail_url' => $vehicle->primaryImage?->thumbnail_url,
                 ],

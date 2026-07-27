@@ -202,7 +202,7 @@
     </ul>
 
     <ul class="toc-footer" id="last-updated">
-        <li>Last updated: June 14, 2026</li>
+        <li>Last updated: July 21, 2026</li>
     </ul>
 </div>
 
@@ -703,7 +703,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     --header "Accept: application/json" \
     --form "body=Good morning team!"\
     --form "link_url=https://example.com"\
-    --form "attachment=@C:\Users\VJ Kyle\AppData\Local\Temp\php829D.tmp" </code></pre></div>
+    --form "attachment=@C:\Users\VJ Kyle\AppData\Local\Temp\php851B.tmp" </code></pre></div>
 
 
 <div class="javascript-example">
@@ -859,7 +859,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
                value=""
                data-component="body">
     <br>
-<p>optional File attachment (jpg, png, pdf, doc, xls, zip — max 10MB). Example: <code>C:\Users\VJ Kyle\AppData\Local\Temp\php829D.tmp</code></p>
+<p>optional File attachment (jpg, png, pdf, doc, xls, zip — max 10MB). Example: <code>C:\Users\VJ Kyle\AppData\Local\Temp\php851B.tmp</code></p>
         </div>
         </form>
 
@@ -1329,7 +1329,7 @@ fetch(url, {
             </summary>
             <pre><code class="language-http">cache-control: no-cache, private
 content-type: application/json
-set-cookie: XSRF-TOKEN=eyJpdiI6Ii9wa0dqZ05QcTU2c25veHgxT1BZdFE9PSIsInZhbHVlIjoiSGlKL2V0Q1FyQUJVM2k0VExkcm9TMmVkQXZaOWR1U1Y0TmZDVWl3SG50cTlQVFEwbHpmNnpsWjBqM3N1YVFxQTE0MjFRWlgzMzlTUXV6WUdtYWhTYTZwbkJPaTgvZE11YVRSVEpoZXJTTmgvQ0NSRkdNeW9UQS9PZlJ3clJaSGEiLCJtYWMiOiI0OGU0MTYzMmJmODdkMDEyZDgwYTRmYWQzM2E1NDIyYThlY2M5YTJmMDlkMTVlYTBkY2JiZGY3NGFhNjY1NjY4IiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:22 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IkczcFkyUmE0bFdDQkRDam9yWFZPQmc9PSIsInZhbHVlIjoiMXJvb1ZlMUw0RWRSVDZxREd0NDlKMnpqdXROOGFyOWZHUmhCb01Vd2Y3N01JVklNZ2czcmMwUFJwZVJ4VzR2VGQ5MGM4bkhoOEJ6YmF5NElxekZwNWZjM1oxcmdaejJ3VTlDeFQwVW9kNk1hMXpWSTBNaVg5Z3lrQTFoaFlHK1oiLCJtYWMiOiIzNDBkMmM4YWRiY2NjNWI3MDRkMGM4ODI3Mjc5ZjlmNTdiNzI0Y2Y0ZGUyNzkyMzEwZDk4YzRhOGQwMDgwZjg0IiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:22 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6IlllbVhqcE1wNlZRR09mZ0V2WFdLb3c9PSIsInZhbHVlIjoibXdEdExXdkw2MGloc21BUWRSSGMrWjRkUnpuRHFVeTlEZXByaFNhQXZnRWRwOGJ6UFF6R2RKQmxLOTVRLzRONm5zRHowazBVSElBcHhBYnBocEt0YjlWaTFyWVEwY25laEhNTVM0ZUdqcXpjT056TjJkNmh4U3Jjc0l2R2hRZTUiLCJtYWMiOiIwYmM1MDZhZjQ4YzRmYmI2ODQ1MzY2MjNlMmY2NWQ0M2I5MWVlMjkxY2Q5MTBjNzJkM2E3NjkyNTI5ZDBmYjcyIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6Ilk5d2lUOWE2ZHRjazMvUjg4ZFlwZ3c9PSIsInZhbHVlIjoiSVBKSFl6c1NmbFcwU0pSMVRrQXdxd01nWHdsR0U3RFpWaUJSeFM5U2doTVZmRE84ekF5d1FlaHFEdE5aSnljdUN3QWZuSUFiS1pzRFF0dmV6ZmU1OUZSNUY1c2V2OHF6RXZLSTd3Y2RVZDUrdnM2VWdCN2x1Z011ZHlTSFQzSDUiLCJtYWMiOiJkZjMwNjM3OGM4MTU5NjNiM2M0YjllYzBjMWI4YTA4YjNkNjdjYzU2ZjhhZDk3NmQyMTdjNzQ3Y2VkODI2ZDU4IiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">[]</code>
@@ -1454,7 +1454,7 @@ fetch(url, {
             </summary>
             <pre><code class="language-http">cache-control: no-cache, private
 content-type: application/json
-set-cookie: XSRF-TOKEN=eyJpdiI6Iit0MWxFZ0swNjFGK3ZWa2tuSEp4QUE9PSIsInZhbHVlIjoidVJIWlRjSmhNM29QcEJsZkFmVy9hRDIvVkJHOUluckRsWkk4L09vajFXU0s4Rk1GTUw1UVoxSjAzeFRWRjZUejMxb3VJb0d5blZHVElpVjIza3k4WlRJMHQ0MDdJNUtGOXM0cEdhRDFneHNGU1k1MXNDWWJrRUtMZUVPaVltYTkiLCJtYWMiOiI3MjY0ODcwZDNhZTk3NDM2OWIwYjI2MmZiMThlYzQ4NWE1MjZmYjY4ZDUyMTRkMzM5MDY1YzkwNWYxOWZiM2RjIiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:22 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IitwU2VMR2laUm5ERGV0KzR4QmR3b2c9PSIsInZhbHVlIjoiTGFxbFloejNRcFdzYSsrQ01SclhQb200U2FKdS83cjVNbHZEZ0s0aWZIU0dXam45QWVWaHkxa1FvZVN3SFVjUXNxRlIvNFk3cWF1SnFiTDJvKzFBVWVVMkdBbG1BZUg5MTNlVFB0cnBvOU5qei9iQkRBT090QjY3N3RhekcyK2YiLCJtYWMiOiIwNjE3MDJjMGU5YThkMjhmOWE5YTAwMDI1M2NlNmFkYmEwZTVhNmRiMTQ0M2ViMmQ2ZGYwY2JmMjVjMWI1ZGJlIiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:22 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6IjlHTFF0OEFmekVrLy80UXcvTmhJdHc9PSIsInZhbHVlIjoiWk1iMmJEMXNvdGhyTFc2ams1c0NqMU83N1lTTVgzTWJIT2VjUHVVZ1JXNTRaYzJHTDBzYW9FRmVITG5HS2k2Kzk1OFA4ZjlkQWlJQkRpNk1vRmsrTWViTld0eHVOOTZUSVRRYU1ibEs5NW5KZjRiR0ZXMHZwVjFBN1h4cjZDdGQiLCJtYWMiOiI1NDA2ZjRjYmM4MGUyZWFlYzc1ZDVlYmIwYTJjYzIxYWNiMjgwYzI4NGEyNGQ3ZjgzOTI0MTQ1MjU5MTc2MjYzIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IlhrVndjRzlUdXkvLzFRSnhIMXRiQ0E9PSIsInZhbHVlIjoiN1dZMTJzL2JQMjR1WDMwL2c4NEg4M3ZYV0E1eFBKTlc4REVPMmg2cDF0UWpkQWJReENHTFM0MkdVSk5jS1VsOHhqa0cxU2lnNTdXajFjZi9RNGpGcTRTV3NtaitjMjIxdVFFNVczbk8rdEY1WFJSTmhXeStxMzcwd0tJOEoyVXkiLCJtYWMiOiI2MWNkN2E4ZDc5ODc3NjRiMWU2NDRiZjE1OTJlZDBhY2RkOWY3MTBiODBiYWVhNTI1OWI3OGE5NzZmNDZlZmY1IiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">[]</code>
@@ -1580,7 +1580,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6Inh1RWs5cG1mM2krSXlvN1hoNUovSkE9PSIsInZhbHVlIjoiRmR3dm5YR3AvRG9ySGZzRWJIMngySDErNENpL3Y5eVVEMHpzMk9GRTlQUG1IZlBNN0ZxQ2RiczBtTHlZZWVOR0Eyb3FoUTdlNzBteEpkaXAxODRqNXFlTGFlazRmUUlrZDhVaGlSLy9HaEMyQmhSU0d1bGRRbXJGQ3RxN09sVmgiLCJtYWMiOiJlOTU1M2FiYWQ5M2VjMmUzZGJkYjA1YzAyNWIxMTY3Y2MwZTBiYzE1MjA3MzcxMDE5MTU5ZTYzOGYyYzQ5OTc0IiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:23 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IkM3bnhLdGdHUndFRkx2VDdJdUl1a3c9PSIsInZhbHVlIjoiTVo0MitYbjdIdkkxR3JyVm50MnBXODI3ZEFmUEtkbityWWl6OGwyR0U3cnRlTkQ5bFdMMFJHQkdaVFVwV0FrdEZaL2pXc21JSEV1L1NLZzhiamt0U0dKVkszc0xuUlJRMDNCdWFsNU45NVlTZEptcitRTGNHMmZQeGx3d01hajIiLCJtYWMiOiI2YzIzYzAwMzkzYTg1ZWJjZDQzZWM2M2IwNmUzMGE2OTgwZGI0NmY2N2Q5NWJhNTMwMDkwNGQyOTVmZmFjZTVmIiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:23 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6Ik1nUkd1Z2xEWFM5ODBrdDVubmthTkE9PSIsInZhbHVlIjoiNC9yclZCaW13WEFQVnNRcHQvY2hTcjR1SkpNWk50VFFqcjRCSGk1V1BBOWxCU1g2WEJnaVN4cEozN3pNeGxTLzhKRVU4TmRTZFo3WHFZWlFUQ3F6NUo4a2orZ2hVS0dnSVBrNW9QWmo1UmlWTW1PMlFSbnVhUnpZbExJeGovRisiLCJtYWMiOiI5YjVhZDcwYzMwOGVhNjE2ODc3NTc2MzVlYjA2NmQxZjg5YTg1NDM1YzAxMDdiODM2YTJmZTA5MTFiYWI4ZDA1IiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IlVtdGcvUW1ZV0JhS09jQjV5dHhhRkE9PSIsInZhbHVlIjoiM1RTOTVvVHZwMXgwWjRFNm05VUQvMUY4WnlxajVvNHc0RXF5V1phNTRhRFVDdzdrMzIxT3Rua1N3aDZkc2hZc3FvNGRSL3dIRmxPUUxUOVVSSFBhQUpGOFM3VDhsYVljKzVUbmVZaHFMTzdKMUNFVjNEbTB2UUlKT1ZqeTFZMC8iLCJtYWMiOiI0NTRlYTA3MzE2YzUwMDc5OGNkYWY0Zjg4ZmFiYmY2OGQ0NjhhNGUxNTQ2ZDcxNmEzMjRkY2UwMjU1ZTJkODc4IiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -1717,7 +1717,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6IlN4YTRjRU1nQW0yd2R3aDZKV2ZXWnc9PSIsInZhbHVlIjoiYzJXVlA0aXNEWERSNDNZQ1p4VTJNMjNybEc2KzhtWjhxaXFGcDNGd25EblNvcE00ckpvdmhhaDJHY3owVXBlK2pSSzJZNE9oTm9HRXgybXZIOE5BK0FzOGlhdExZYnZuRzIvbXY4U2c0SzRSendlVUVJOWt3S3c4empmTnFSOWUiLCJtYWMiOiI0MjRjZGUzYTA4Y2Q2YjU2NzNhODdlMGQyMmRjNGE2M2NmZmM1YzU1Mzg4NjNkMzM4YzkzNjA0MDVjZThkYzQxIiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:23 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6InFsNlZJdlo5dC93bmdwR0R5OE5HREE9PSIsInZhbHVlIjoiTzhHaEM2OGJtRk9tUEh0TzJsZUVVRS9FU1U4eEp2RkxvK0graVo1QmJwamdqUHlPWUg1ZHkyN3lLQXorbUNnU0JJWFFqQzBublpoZnZNbXlkTnNDS1VhKzEzekJMYWJvdFRHcGFERXBWemJyNklmS2RWdnlIU2d5MEtMT2pYc0YiLCJtYWMiOiJmNTkzNDIxYWFiNmNmMmUwYmUwMzc1Y2NhOGMyM2Q3NjVlY2UxYTZhN2IwMThlNDM4ZjJiZDcxM2E2YjVhYzgzIiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:23 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6ImRMUWwzU1I5cjBIRWJQUUgvV25nc1E9PSIsInZhbHVlIjoiMElIa2J5VTIyS3Rpa09oVjJwTjI5MjJhNDNxOG1ZUTFRY1RCNEVlOXZES0lxemZRaEpOMGd5bTJrU3FMQ251ZkpVYWFKNytiY1VwLzkxMzJUdHp2NG13ZVE2Ym9YWW10VVdpa0FmSGVXaUQvZk82bkp1d1RiTzFtME9xTUd5WlYiLCJtYWMiOiJkMjM0NTUxMDU3ZWE1Y2YzZWY2MzMxYjNjOWQ4Mjk1YTc1OWQzYjllZjE4OWQyZGI5ODc4NGNhZWQ4NzRjYTc3IiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6InlqbEI5UmhqTGpac2FxUXd6Q3hIUkE9PSIsInZhbHVlIjoiUG1JbkFsd2VmSmlPdzlhbkJKcjI2NFdQNk1xR05SNGY0SDdySkd1QWt2OHVMaGNPWVFkbDNqTk55RVBNZUxmRDg3VU9yN1VJa1RRbWUvcEloTEZQTThrdENpMHBDZHArU1JRd1N5cVQ1czE1SEpOZ21oUERhYTRySWVMUCtmejQiLCJtYWMiOiJiZmRjNGIzYWNmYzE4YjNmNzk5MDAyYTc2MTYzYjlhM2E5NTI5MzExZTZjMmMxY2Y3NThiYTEzYWM4NGFmY2FjIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -1854,7 +1854,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6Iit3VmIvWmdicDZhc0syckVvWXhpOWc9PSIsInZhbHVlIjoiY2ZKaEJnbElBYkhpejkwdnBob1RpNks0K3plZjB1VlZKZG9sQytlMmt2K1VLbUEzZTBjRnBiTnFSR09HT05BcnBZeXoydEppemxWQzh5TCtvQVFVVTE2bVZXc0s5eUtLR2ExRjFMaStDWUh5NXJiS3VpZU03a3YrbzV0NXoyWUUiLCJtYWMiOiJiODBlMDI5NjkxMGQ4NTU0ZGZjNDU4NjY3MjYwN2Q4Y2JkYzNlNTVjNWI2MGQ2OTJhYzJjZDYwNzMwN2VmN2FiIiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:23 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6InYrQ040enFpZlZ2T3ZKbElYRGVCK2c9PSIsInZhbHVlIjoiZVNicHZZMU1oWGo0bkpqOVRDVnFrelRoTm81TUxYTmJGNWYzM090ZkRHc3B0VHNaOHU0QUY3eXZOaDI4N0ZTYVpiRTNTaHUrU0VDV05iUEEvUmk5a3ZXRmtGcW1HNWtYM0NISENlUkVpUDBNTGlWN3d2ejNJSnErWmRDVHZORGYiLCJtYWMiOiIxYmEzZTg1ZTI2NGU2MjBkMWM1MzcyZGMwZjZiZTFiMTM5YTE4Y2QwODM3ODM3Yjc5YTc4NDEzNmRlNjYzNjU3IiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:23 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6IkRnbFI0RWpvdFRVREVoclJkRWlwcXc9PSIsInZhbHVlIjoiVG9DRnp1QU9Oc2dLOWdWZ0pMclgxb0s0UGtUdFdiVys2a3MxVlUwODViMG9DYWtaNUZ6enJQQVhPODM2NnptcmV1RVJKcnNkRlZmSDVPdWFMbnJSajFqRmNIV0Q5cUJrenZyclNmdGtkM0RMcExpN2F3RU43em9UOHdnTXhzdWwiLCJtYWMiOiJiMGM3MWZhZjFlODczZmIzOTcxNmQ4Mzg4NThlMjAwNGVlM2FjZmQzZjZiODgzZDU0MDVjZjExOGQzMTliZjMyIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6ImYybDEwQWJEVnVJTTJucStRQ1JCZ2c9PSIsInZhbHVlIjoiR0h0SHNNQklBZlJqcWRkSGIvY0piN0ZZNWZDVTVRVWFoSXc2V3JYWXpHZnpsMFJnTVlkeTFzRFo3Qk9uMFpOczBiaXcyZFUrUFVHZ3VFdkNnSGFkQWpCUmxRUCs0YkVlbTkzTlpaS2dpaWNHOFJ3VUs5bFVhM2lOQ3ZjbXo5MEEiLCJtYWMiOiJmZjE1ODkzMDdiNjBkZjUzYzc4ZTEyODM0ZDM1NDFjZDM5NWM4MjdkMTliOGY3MTRkNzY2NWZmN2UxNGNlY2QzIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -2102,7 +2102,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6IkxtWGVlanBRVTlQa29CNEtuUUl2NkE9PSIsInZhbHVlIjoiQkFCUnl2dkJrdHJSYXBiSmJVYTBLR3RERjJCcTdxZXJZNDEvRmVwSEU2MWF0N1llWTNzRkxjMUpnMVBZdUJGUkpPeXc2b1BKSkdOdG15VDJ0Y1oxS3g5SHh5enZsYVoxenRadUFxVXZNVkMxT2UybjZSZnRmaDdnUnFnZVlkZEMiLCJtYWMiOiJmNDZjZGUzNGMxNjZkODI4MDk4Yjk2NDdiNGQ0YTBkMjlmMWFiOGZmMWEwOThjMWE0YjNiNDhlOWE1MWRjMzM3IiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:23 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IkZCZEhIOWFyejFIbTJpV29mYWdJVEE9PSIsInZhbHVlIjoiOTlRM0VKUU44YU9xNzdOdjY1b1M2WTRuUU80ZjRzbFNKQk1rK0RJWS8vS0RHaVlreE12TFJLTVl5RC8rMHlvZzBmSFcwZlpVeGJpUWhCSGZ5a2pRNUQzdXlnclhwUXYwTXBiWHNScEhWdkFFaEhBRk9PSk1XTWh5ZGh5TkVieVUiLCJtYWMiOiJiN2UyNTRmZDZjMTE0NzlhMGY0ZGRkNTk1NDFiOTEwMGM0Y2FlYjg5ODc3ZjIyZDg3NGFiOTI0ZTUzMmRkNzNiIiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:23 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6IkZ6STl2cGVCU09HWURnVTVwS01Qb1E9PSIsInZhbHVlIjoiNzNsc0x6QWRMK1NqRTZxQmRYT1NNSWFBUWVNTXdqRGJMQnBCcmw4eGViWWd6dU91WDBZR1JqSGNnNCsxSlZvNnJmNUNkL0pzazZUTGFwekpPQ1QyNjBXVjU0VnE5andZaVZMYjl4TTBmMzdxTTY2Y0Z6WDVGL3BKUFNQU25JTlkiLCJtYWMiOiI4ZTQwODdjYjhlMWE4YzliYzRmZTJiNjc0OTM4ZGU3ZWI4MmU0NmJjYjE1YWMyM2IwMjMwNTVlY2FhNjRkMTQxIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6InFFQ21hdzNsUS84YzFOUExhcXozelE9PSIsInZhbHVlIjoiK240Q3NCdHpFdlZBNEJpWGlkSWN2NFBscUZpUkFBZWIvdG4yZGxsUitGVHFVVi9odVJ6dVhXL2xHQkVWY3JZd2wxZklSamRYWGF4TzhIYXVhZmNFQkx5YVRxQUQwQ2ZWc1U2Wk43U3Q2L0JXRUVjYWQ1QXVEM3RVTExsWS9qNlkiLCJtYWMiOiI4YmYyNTc2NjM2YmIyZTM1ZmE4MzYzN2NhMjRlYjJlMDI0ZDYzZGNjNGNmZWFhODE0MTljNWI3NTY5YjVjMzYzIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -2239,7 +2239,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6IlhtSzZMdkFiUDhyOGoyT1JweDNqREE9PSIsInZhbHVlIjoibFZMQ0F2SFdoSDFVL1NtdDJ2MmJJMGdURkNtNkJ1S0NQM25xVFhSa3o1aEZZSmZ5cjNQRHcrZGRMODdLZ1NOYnR0eE1BWTZnbnpFU0ZIRSthN3RweFd4RWRsMkNMa2svVlNFQzJCNzNvWi9TY0VjRGs1TTltcXRMa2h2RHdUSzUiLCJtYWMiOiJjYzU4MDM1ZjczNDk4ZDQyNjc5ZTlhMWU3ZmNkOTdiOWNkNWJjN2U0OTBlZWQzMTk4ZWU4NjkwMDg4NmM1MjMzIiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:23 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6InFMaDNudkJqcFIvaVkxSFNyNjN0ZlE9PSIsInZhbHVlIjoiQWllZWRES3d5TVZTTnZLRnIrdVMxclNQYlRVbzF1ZzdaTnBiMU9WZnRIY3dTazFkQ3lETWtyTHYxVUFSckFXempZNHpobE5pNjdtNHVhaW9LZnRrclQ1Vk5mRStnSU5GMnJKaFJzT0FHNTFXYWhUU3VWWElncElJa3NDb3RRY0giLCJtYWMiOiIyYzljMTE5MGMyMmJmMGJiOWU1NWZkNWMwM2U5ZTcwZTc2MGE1ZGUwYzk2MmJhN2Y4MmMzNzQzZTgwMjg2OTAxIiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:23 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6IldqVU50UGxrOXNSa0hIM2MwaDhrMnc9PSIsInZhbHVlIjoiZ2ZHSEk2MmgyWTcvdXdEUkdpd1RhcWd6NHhxVkRzRWk0bWpwanZxYlF4UFAxZ3Y4NjRScW1MaldGWTlPbVNMMjhQbDdVQUVWUU1PbldOZ1dTWGV4TVN0czRpV0FBaGdtVnJ0aHFXWmcybWxzRkhydW0vQXV5NEFXRUhONDA3SW0iLCJtYWMiOiI4M2JiNzFmMGQyYjY3ZjY2ODViZmI2OGE4ZDBhMjQ3OTEzMzcyYjc3ZjQ5MDI4MTMwNmQ2NGNjZjI0MmQzOGZmIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6Im1FM1BlREQzYnJ3aVJUMFF6M0dDb2c9PSIsInZhbHVlIjoieTA1UytaVjNPSnQ3ZmxHZytOd1ZrOS9wWHdFZXZ2WEl2dWoxcTYyNVl0UHZNSXA4ZWpjUVhPWTcrUm5ScjdzOFJJTnNvR214bkJ4ZjRyMWxaSk5vL1VyUlRzZGo0R3hhZWJsaURMVm5OUEM1cjJrVlZldEJ6MmdjU1E1YzUwTWUiLCJtYWMiOiIxMTUzNmY5NWM3ZmNiZjllZmUyYjIwZGQ5MzYwYTc3YWE1OTE0NWY3OTliODY3NzNhYWQ3NjhmYmZiZDM1MjU4IiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -2376,7 +2376,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6IldubHlGNkVmM1BRUGtaQjIxTUFBVXc9PSIsInZhbHVlIjoiYzhGcG1KQ0x2TlhvUHNKT1ZtOU4weGdlaFR1Y2FxMkRDdW5RMzY2d1FPdUVXb1pPMmZBZ081MlU5UlVxY2IxbjRPY0Y2cmZzY3ZnN3V4M3k4Rm1WbGdzY0U4ak1HVS9keE1YVFR5dVk5WjIwa1lhbHZiTUpwYTV5aC9acWNNelAiLCJtYWMiOiIxNGE2NTIzMmMzYmIxYTg4NTA3ZTdhNDZhYWU1NGE3N2E0ZTNkOGM5NGViYjNkNTE3OWIyYzNkNmRmM2Q2Y2U5IiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:23 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6Ilgyd3VjazU2TG5UK3NtV2x5UEYzcGc9PSIsInZhbHVlIjoiUVBxTDU0MitsWU5wc0hFdldoalhCVjIvckFock41QWYwUEUxSndicGFkNjRKVlVhNEdMQWN5MGlGZ0dxR1JkMVI5S213TWtkQ01Oa2FybHI0YU01MzZJbVY1NnRqZ2NFOTdUS3htb2IyMElEMUJJL3NuMGZtN1BybFN5MXJqWWsiLCJtYWMiOiIwZTgxMTZlMzU2Zjc5NmE5YzhlZGJjZDY5MzE1MjYyMWU5ZjExMDRjYjA4YWUxNjMxYmE3M2Y3YzZiNTRkOWFkIiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:23 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6IjhzOGlqd3hpeGNRSzRiTTg0MVpuK3c9PSIsInZhbHVlIjoibG5PSHd6a0poU3NsNFdkekYxcXU5WEtBMWsyN0NubGRKajFEbUwrTUY0bGFRWFBDeERWWjNhczZBS3VzYjNLYThxSTc4ODlqQlI5L1ZINjZvMDlwOU0rcTlIYXNadXo3ektodFNCekl0Y3huWFFqN0x3V1pseTdrVm1FeUVIMTUiLCJtYWMiOiJkMWRkMDJlNTQxZjQxZTliN2JjNjVkZGM3ODRlODQ1MmE5Mzc2ZWNiNWFlNTYxZTEzZmYwZjdiNmFiN2JjNDJhIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IkFRZEtQU1h5dTEyeUtYVXRUQW4xWGc9PSIsInZhbHVlIjoieXRET3ZVd1VSQ1NDc1R6WkRwanRRaEwxUjJFVGNqVE9PcE5xRlBETzEwd0pxNlhSbkNvZHZZQTRBWDk3OEljVnQ2MnNxWTNCMTJ5M0Eyb0tWUVlSOGw1M3pwREgyL0hUSVlZQzcxczF2OFdmZ3Q2NmQyM2pZczhidGZoR3E4SVYiLCJtYWMiOiJlYjI0NmE3OTVmZmZkYTAwOWFjMzc1N2Q0MTViMjBkMzQzZGFlNjU5ZWFjMmQ2OTZkMjM1MDdiYzEyMDA3NDNmIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -2486,7 +2486,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     \"name\": \"vmqeopfuudtdsufvyvddq\",
     \"quantity\": 2,
     \"amount\": 45,
-    \"date_acquired\": \"2026-06-14T03:03:23\"
+    \"date_acquired\": \"2026-07-21T02:28:36\"
 }"
 </code></pre></div>
 
@@ -2505,7 +2505,7 @@ let body = {
     "name": "vmqeopfuudtdsufvyvddq",
     "quantity": 2,
     "amount": 45,
-    "date_acquired": "2026-06-14T03:03:23"
+    "date_acquired": "2026-07-21T02:28:36"
 };
 
 fetch(url, {
@@ -2633,10 +2633,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="text" style="display: none"
                               name="date_acquired"                data-endpoint="POSTapi-tools"
-               value="2026-06-14T03:03:23"
+               value="2026-07-21T02:28:36"
                data-component="body">
     <br>
-<p>Must be a valid date. Example: <code>2026-06-14T03:03:23</code></p>
+<p>Must be a valid date. Example: <code>2026-07-21T02:28:36</code></p>
         </div>
         </form>
 
@@ -2687,7 +2687,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6InRaOVJEMTlKQ24rZ2w4MUFiMHI4dFE9PSIsInZhbHVlIjoiL3hWOWVsbVUrTG5nRVU0YS9MbkdpSzRzdEZQNyt5WVFSUllQZjJyVEhYcE84V3NtMTNwbWIzb3VWUEtXUEVFZlVvTktNWTBqT0kyaXMyTURRWXMzVDEzRWNHUnNVSWErUWRQdTcvcjJRUHdFUWtTOEI4dVU3WjJGZEdSTXk0WGoiLCJtYWMiOiJjZjVmOTFhODZjZmY5OTg3ZDFiYWE4YTQyMDE4OGRkY2Y3NjcxNDc5YzEwMGJkMzZiZGQ2MzliYWNhYjdmODMxIiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:23 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6Ijhhd2ZWOG11WmxzTko2SC9yRkYyR1E9PSIsInZhbHVlIjoiaDBlK056UkFhV2J5SndXajVUUDZTdXE0ajYwRHJvSFlaTzVGN1hxQVFwcjZ3bDFKU0hwaXRxNTJmRW0ycWJFd2ZPVnp4bVBvanYvMldvUXBTME9uZ1p3VVA4ZWVuOEZhYzEyRlg5VUxBMzRGZkdlMCtYbys3bkViSWJBN1RnanMiLCJtYWMiOiI3ZWZkMTQzMTkyZjY1YWZiYWNjMGQxYmYzMjE0MjZhN2EyNGMxMjdhMzQwNTMzY2JkYzNhMzkwOGEwYmE1YWNmIiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:23 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6IkpwSTg1TE5tdUdOenlsbWFDMUtjOGc9PSIsInZhbHVlIjoiMGQzYUxjd05BOVkvanVqL3RWUk45OEVmcEdSY3orQjFEOHB3WXhhMmhQTkF0TzlLNTc1UitjYVZSTVJWRWY1TURYL0Y2Tm5GWnM2eDVZb0dId1hWZURZekdjVTV5MWFlZHorVzZ1cG8yTmF1N21waS9Ea1ZFUG9lSHF5VHVrREsiLCJtYWMiOiJkMDI4YmRlYTVhOTQzZTM0OTAxNzk4ODg0ODliNWI1N2M5YWFhNjNiZGQzM2VhNjBmMGZkODFlZTNlZjNjYmFiIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IlNKZk1yZkFCNzlXTDczSStsc2JXRHc9PSIsInZhbHVlIjoiQVc5THM4SmE2MjhKZzJRMzc0T0g4eXJON2RmM3BhWHd4dFFtL3Vzb2pFS0xIb1hiK1c4UUMrQXZMbnRESDhsZ3JuR255WktwUW42YjV4N2xYbndyN0ljd1ZmV0UyQnkrb1NHN2tGWjZERVNtaGFmRlVnNnZ5WnZZZDN3c1E2dUciLCJtYWMiOiIyODQ1MGQwNmIyMTEyYjQzYjdkNTkzM2Y1MTE1ZmY5ZjJlNzljZDkyMjcxNGUwZDY1OWIwM2NlNjY1MTI0Y2Y0IiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -2810,7 +2810,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     \"name\": \"vmqeopfuudtdsufvyvddq\",
     \"quantity\": 2,
     \"amount\": 45,
-    \"date_acquired\": \"2026-06-14T03:03:23\"
+    \"date_acquired\": \"2026-07-21T02:28:37\"
 }"
 </code></pre></div>
 
@@ -2829,7 +2829,7 @@ let body = {
     "name": "vmqeopfuudtdsufvyvddq",
     "quantity": 2,
     "amount": 45,
-    "date_acquired": "2026-06-14T03:03:23"
+    "date_acquired": "2026-07-21T02:28:37"
 };
 
 fetch(url, {
@@ -2970,10 +2970,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="text" style="display: none"
                               name="date_acquired"                data-endpoint="PUTapi-tools--id-"
-               value="2026-06-14T03:03:23"
+               value="2026-07-21T02:28:37"
                data-component="body">
     <br>
-<p>Must be a valid date. Example: <code>2026-06-14T03:03:23</code></p>
+<p>Must be a valid date. Example: <code>2026-07-21T02:28:37</code></p>
         </div>
         </form>
 
@@ -3148,7 +3148,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6IlNWZXl4Y1VQRmhGSXF2K3Jqektkd0E9PSIsInZhbHVlIjoiVFdNbFRQMDh5T1pzb2k5ci9hSmxJVVNnRDh6MkFZVEhVSzNPQ2tjdkNqQnFtbk1naFVVL1ZBeGFMcnhtNjFleEl3VU5UYk5WUDkya0RDY1BxUEh4a3BscnNjRm1xNFFxaERpSDNJU252ZzhCTE4yYkJ1akxGWDVldFJyNkIvK0EiLCJtYWMiOiI4MTVhYmZjMGFjMGJhYTU5MmZjYTFlYjUwMWI2YmY5MDFmYzY0OWRhYzBkOGVlNDE3ZTEyZDc1NTFiMDc2YjI4IiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:24 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IjNtZ1FIYTBxYlIrNGtuRlJxSjlsREE9PSIsInZhbHVlIjoiZ3FNR09ncVZpd0w1S2Q4aldMZ2pydUNLUVFtdGhTNlZuSWR1L3oyd2JLekpZczVlZUtmWUhDZUN2eG1DTVplaDJCQm0wMEh0VlBIVHRib00xVVJGazFtMkhKMnpFOVAvWWEwQ1F0WWZsaGFOeXBJaStROEZhSCswdVVCM2g3UXkiLCJtYWMiOiI0ZmQ4ZDllNzc3ZWEzZDA5YzlkMzhlODEwZWE4YmMzNWVmYTNmOWI0OTMxYjBjNDU2ZTM0ZTM0ZThkZWExYjc2IiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:24 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6IkhLMXZyNDliWGV1VVZuTm56N3JnN0E9PSIsInZhbHVlIjoiempuSndtYXp4dzkvN0Z2WGhqeTE5S1B2TGhlZnJ2V2dQMEdEK1BMNWlWNUJVdzhZMHkybDFlaDZrVlYyK3ZuT0FQd3htYlpwQzh0eTZoRlVNZ1VoOW5iTk1IWXRzcGt4a3hoTEY1TmJmRGdCSE92M1c2WnhBay8wY3l2KzZ4MS8iLCJtYWMiOiJmMGVlMjEwNWM5MjhiYzg1MTBmZmY2ZmFhMGUwMDRmZWYyODMyYWVjZWNiMGQ4Njk4ZTFlZDBmMTNiMDQ3ZWQ0IiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IjhKaUIrVGdER3FuUXBNVnRhWkxDMVE9PSIsInZhbHVlIjoiVnVkZTRSUkYzSW0zY3VId0RxRDFXWUtiMnBjSFVVSGQ5RU14SllLMUNUVGkzRlpsZnRLSGFVN0dtMzNvOGp4dk42c0Z3a2hEbml0S2h0bXFXYnFGaS9MQmZlZXVjWTkxQnFVa3dLVkdiSHpmL0h4UEJZNGxZYnVFbkNqSU9DekEiLCJtYWMiOiJiM2RjMjBiNzY1M2UxNThlYzE1ZGMzM2EzMjZlMzVkZWE5NTE1OTQ1NWRiZjUzNzQ5ZGFmYmRkODdiNzQwMmJmIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -3298,7 +3298,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6IndhZ1FCWDBac0Iyd1ZZLys1dlg5bGc9PSIsInZhbHVlIjoiUnQyN0ZwRWY2ZnczR0VrS1dKUFdjazl0MVVZYnpQVC83WnUxYzlyc1hqdTAzRDJUTFp6Zm80clY0MTZZUW1RNStXbkc2VlFLWGgzVUxtTDhkRUJ6OXpnZEJOSzBBSEg2YVJCYXZ2djlTWGlJWGlTMENVR2lzekl6aFB1alhWRnUiLCJtYWMiOiI2ZTc0MTcwNmM0NGQ3NTUxYzVjMzFlMjdhZGVlYjc1NDI3ZWIyMTk5MDQwNjhiMGRkOTYxYjFhYmU5ZmM3MmVjIiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:24 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6InJySmhmV1NBZ0dsZFpBQ1EyWEg4cGc9PSIsInZhbHVlIjoiTXNiYzhPMncxS1kxWm45OTZEcHJnVE83Z0Z0NDdPSzVOekIyTFNBZ0o1c2JVZHJGOVpXdGtYZFh6Qy9XYXRmSTlLR1owU2NvSjArSHV0cE1NdnVaVUdhNFNoUDZMR2N0Q2hGcjI2NHpzMW53ZkpuWWRPZWJSUmtmUGlRdVVFeXQiLCJtYWMiOiI3NjExZTRhNTA2MDY1ZGYxY2E5YWQzMDc3YmIyM2EwNjIxYWIxNTIxNzZhMzVlMDZkZjMzNTQ1MjljNmEyOWFkIiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:24 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6IjlPcUlyM0RvNVlJRDBSUTFpWHYyZkE9PSIsInZhbHVlIjoiOXR4VjhWYjNITzdFVWNxMkNmK0JNTjROZUNxc3FkZmgyaFVsSXl0QlVVVldMOE1ZaW9RWTYyRVpxbU5vb0RlWnNSWEx6bzlONVRRZmd1dW9kSWNEL2xDbnFwcXhUNDJmZGsyL2xWL1hLZTJxczFoZVRkOExRTGNFbytmYyt5NFoiLCJtYWMiOiIxMDE2YTg1MWViM2YzNzdmZDk2YmIxZWQzNWYzMzZmNzE1ZjgyNmJiNWYwMDUwMzNlYjA1YWZlNjMzYTk0YzVjIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IkZWemhNR29jWExNaGlFZCt0WUFGN3c9PSIsInZhbHVlIjoiMkxGY2lhd0hPd2swRkUxekV1MmN0Rmw4S2NVRllXMysrdnN6VXZ0Tk1HTE0vUU44YS9UN2JTeHArcDk0dDNZZ1pHbjFQVjFqM2swaVBBUW5GZUJXbFhqV3ptZWx2WWRacGhJQ3UwYS9IK0JSOGhPK3d3MnpRT3Ewam9CK1lXS2MiLCJtYWMiOiIyMDA2NmVmNWNiYzdlOWVmZTFhOGExOGVmZTgzMTAyZjhiMDA0MzU1MTk2MDQ1M2VhYWUwZTRhMDlkNWNmYzRiIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -3406,7 +3406,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     --header "Accept: application/json" \
     --data "{
     \"payment_method_id\": \"consequatur\",
-    \"budget_date\": \"2026-06-14T03:03:24\",
+    \"budget_date\": \"2026-07-21T02:28:37\",
     \"starting_balance\": 45,
     \"added_cash\": 56,
     \"notes\": \"eopfuudtdsufvyvddqamn\"
@@ -3426,7 +3426,7 @@ const headers = {
 
 let body = {
     "payment_method_id": "consequatur",
-    "budget_date": "2026-06-14T03:03:24",
+    "budget_date": "2026-07-21T02:28:37",
     "starting_balance": 45,
     "added_cash": 56,
     "notes": "eopfuudtdsufvyvddqamn"
@@ -3533,10 +3533,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="text" style="display: none"
                               name="budget_date"                data-endpoint="POSTapi-soa-daily-budget"
-               value="2026-06-14T03:03:24"
+               value="2026-07-21T02:28:37"
                data-component="body">
     <br>
-<p>Must be a valid date. Example: <code>2026-06-14T03:03:24</code></p>
+<p>Must be a valid date. Example: <code>2026-07-21T02:28:37</code></p>
         </div>
                 <div style=" padding-left: 28px;  clear: unset;">
             <b style="line-height: 2;"><code>starting_balance</code></b>&nbsp;&nbsp;
@@ -3594,7 +3594,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     --header "Accept: application/json" \
     --data "{
     \"payment_method_id\": \"consequatur\",
-    \"addition_date\": \"2026-06-14T03:03:24\",
+    \"addition_date\": \"2026-07-21T02:28:37\",
     \"amount\": 45,
     \"description\": \"Amet iste laborum eius est dolor dolores.\"
 }"
@@ -3613,7 +3613,7 @@ const headers = {
 
 let body = {
     "payment_method_id": "consequatur",
-    "addition_date": "2026-06-14T03:03:24",
+    "addition_date": "2026-07-21T02:28:37",
     "amount": 45,
     "description": "Amet iste laborum eius est dolor dolores."
 };
@@ -3719,10 +3719,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="text" style="display: none"
                               name="addition_date"                data-endpoint="POSTapi-soa-add-cash"
-               value="2026-06-14T03:03:24"
+               value="2026-07-21T02:28:37"
                data-component="body">
     <br>
-<p>Must be a valid date. Example: <code>2026-06-14T03:03:24</code></p>
+<p>Must be a valid date. Example: <code>2026-07-21T02:28:37</code></p>
         </div>
                 <div style=" padding-left: 28px;  clear: unset;">
             <b style="line-height: 2;"><code>amount</code></b>&nbsp;&nbsp;
@@ -3797,7 +3797,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6IlREWjVzQVFVVStQeWNNWHBmK0RVSkE9PSIsInZhbHVlIjoidlg2cVFyUm9RS2duMklETithZFpwczhoZkZ0cmRsU3Vtd3hIV2NKeEU5dW1yZWhoU21tanNnUEo3NDY2dnZsYVBPaVhxMWREVW1lS2ZJYTAzQzUrNkRjeGpoRW8zamxjVEFOUjMvQld6YnZRa1cyTnpSMFZpeW42WVdueEkxWkgiLCJtYWMiOiI1OWMxZjQyMWJmYjk2OWFlYTRmZWU2YjJjMWM0MmNjNDFmZGI0YjE3MTYyMTkxMDM3NjIxYmU0MWE3ODgwYTRjIiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:24 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IlpRTDdzTWUrd0JzK0ZTa08zOEJmRnc9PSIsInZhbHVlIjoiQmhjQWtuSEV4SUZjbDhNRHFVblptYkc2RG91dmZ0ZFR0ZG8wV3p1ZFo0bXJrU1M5YVBsSWN2K0ticGkyN0YvVjRheHB3VzR3RXhCV0pwTjd4ZUx3bkF5dEtGTEcrQ0x2cElNQ09KRExyNXl6enRoekp5M3Z3TDNGTlhzeEhIRmciLCJtYWMiOiIwOTNmNmY0MmYxMTAwZjAyOGJhYjQyZTliZGU0ODE5NzY0MGYxMmQ3YWEwOTFmMTYzZmY1ZDUwYWY0MjljZTNiIiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:24 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6ImNTZ01Bd25rK1ljVExna1IwYm12Q2c9PSIsInZhbHVlIjoiaEREQ29vTmoyM0hoWjhDY2V2ditRSzF1UCtsK1hQajlCd3dvaG9wUFVUdnZVRjdZSDFRRXFMYjZrVFFBYlBXc1BrUGdISU1BMVRSbEVCK0ZHQk9BR3RJM1NCcU1IZHVqS28rckI5bUkrQTVyY1lHZFJGa2pDV0JCbnNkTVpXbzgiLCJtYWMiOiJlZDg5YmMyMzA0ZjcwY2U2ZWZiY2M5YjgzMzkyYTdjN2NmMGZjN2MxOWZlZTUxOGQxYTVmZjljMGViMjI3MjIyIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6Ik5WZXc2M1hqUi9wVk5Qck9LV1luc3c9PSIsInZhbHVlIjoiSVNjWXFGSDZqUWJ0eU9OSDJic0RxNUpvMlF4bGRaWDhVUlBVVnRaMTZWejJLZE5zVW5KenU1bHRJR01wcGt3c0ZwYnh2MHdEbnBaQWNTZEJzeHFrbVNjSytwaHJxQXBZRkJDQVo3UjZmWVduVzVFcjdHVk1uTUwyTzBKZ1dycTAiLCJtYWMiOiJiZWZjNzIwMWJlN2ZmZDdmYTQzMzA4OWFlNDZlZTI1M2Y1MGQ4MGU3YmIzN2U5ZjhhMGVlZjUxODA1ZTZhZGEzIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -3906,7 +3906,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     --data "{
     \"amount\": 73,
     \"description\": \"Dolorum amet iste laborum eius est dolor.\",
-    \"addition_date\": \"2026-06-14T03:03:24\"
+    \"addition_date\": \"2026-07-21T02:28:37\"
 }"
 </code></pre></div>
 
@@ -3924,7 +3924,7 @@ const headers = {
 let body = {
     "amount": 73,
     "description": "Dolorum amet iste laborum eius est dolor.",
-    "addition_date": "2026-06-14T03:03:24"
+    "addition_date": "2026-07-21T02:28:37"
 };
 
 fetch(url, {
@@ -4053,10 +4053,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="text" style="display: none"
                               name="addition_date"                data-endpoint="PUTapi-soa-cash--id-"
-               value="2026-06-14T03:03:24"
+               value="2026-07-21T02:28:37"
                data-component="body">
     <br>
-<p>Must be a valid date. Example: <code>2026-06-14T03:03:24</code></p>
+<p>Must be a valid date. Example: <code>2026-07-21T02:28:37</code></p>
         </div>
         </form>
 
@@ -4202,7 +4202,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     --header "Accept: application/json" \
     --data "{
     \"payment_method_id\": \"consequatur\",
-    \"budget_date\": \"2026-06-14T03:03:24\",
+    \"budget_date\": \"2026-07-21T02:28:37\",
     \"starting_balance\": 45
 }"
 </code></pre></div>
@@ -4220,7 +4220,7 @@ const headers = {
 
 let body = {
     "payment_method_id": "consequatur",
-    "budget_date": "2026-06-14T03:03:24",
+    "budget_date": "2026-07-21T02:28:37",
     "starting_balance": 45
 };
 
@@ -4325,10 +4325,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="text" style="display: none"
                               name="budget_date"                data-endpoint="PUTapi-soa-update-starting-cash"
-               value="2026-06-14T03:03:24"
+               value="2026-07-21T02:28:37"
                data-component="body">
     <br>
-<p>Must be a valid date. Example: <code>2026-06-14T03:03:24</code></p>
+<p>Must be a valid date. Example: <code>2026-07-21T02:28:37</code></p>
         </div>
                 <div style=" padding-left: 28px;  clear: unset;">
             <b style="line-height: 2;"><code>starting_balance</code></b>&nbsp;&nbsp;
@@ -4362,7 +4362,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     --header "Accept: application/json" \
     --data "{
     \"payment_method_id\": \"consequatur\",
-    \"entry_date\": \"2026-06-14T03:03:24\",
+    \"entry_date\": \"2026-07-21T02:28:37\",
     \"description\": \"Dolorum amet iste laborum eius est dolor.\",
     \"type\": \"credit\",
     \"amount\": 66,
@@ -4385,7 +4385,7 @@ const headers = {
 
 let body = {
     "payment_method_id": "consequatur",
-    "entry_date": "2026-06-14T03:03:24",
+    "entry_date": "2026-07-21T02:28:37",
     "description": "Dolorum amet iste laborum eius est dolor.",
     "type": "credit",
     "amount": 66,
@@ -4495,10 +4495,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="text" style="display: none"
                               name="entry_date"                data-endpoint="POSTapi-soa-manual-entries"
-               value="2026-06-14T03:03:24"
+               value="2026-07-21T02:28:37"
                data-component="body">
     <br>
-<p>Must be a valid date. Example: <code>2026-06-14T03:03:24</code></p>
+<p>Must be a valid date. Example: <code>2026-07-21T02:28:37</code></p>
         </div>
                 <div style=" padding-left: 28px;  clear: unset;">
             <b style="line-height: 2;"><code>description</code></b>&nbsp;&nbsp;
@@ -4955,7 +4955,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     --header "Accept: application/json" \
     --data "{
     \"payment_method_id\": \"consequatur\",
-    \"date\": \"2026-06-14T03:03:24\"
+    \"date\": \"2026-07-21T02:28:37\"
 }"
 </code></pre></div>
 
@@ -4972,7 +4972,7 @@ const headers = {
 
 let body = {
     "payment_method_id": "consequatur",
-    "date": "2026-06-14T03:03:24"
+    "date": "2026-07-21T02:28:37"
 };
 
 fetch(url, {
@@ -5076,10 +5076,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="text" style="display: none"
                               name="date"                data-endpoint="DELETEapi-soa-daily-record"
-               value="2026-06-14T03:03:24"
+               value="2026-07-21T02:28:37"
                data-component="body">
     <br>
-<p>Must be a valid date. Example: <code>2026-06-14T03:03:24</code></p>
+<p>Must be a valid date. Example: <code>2026-07-21T02:28:37</code></p>
         </div>
         </form>
 
@@ -5130,7 +5130,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6IndiM0dNL0NWK2FZbjQ4cjhKY0QyNkE9PSIsInZhbHVlIjoiM1lVWEQ0SlZtdVRsQndTdzNoVEF0dU1UTlVidlRRY2MxL05lRTNsdzdlY0IxVUltWC9XeElBVy9lcGh0NXBDWnlQY3dLbG1zNVk4aDFKTVhtTHVhZkZJNU82S2QvU2swV1hZTUg2SUc4ZGFQL3NvR3RHS0UzODJpMmdiQmFQNHAiLCJtYWMiOiIyYjE4MDlhMmVjMGM2ZjhmNmMzNDBjZGMwMTJhZDQzMTcwNzY1Mzg5ZmM5MzVkNTBlNjM2YjYxZjMxYWQ2MDI4IiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:24 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IllIT2N6N0xoTmVBVGkvc2xXV3FvL2c9PSIsInZhbHVlIjoiMVgvdGdRdVhJNllnbVdleVFXQUp0ZW1XbnJwRUNYdUVmTDk1QVIvV1JSVkZ5T1EwVHFDYkw0UUg1enVVbitvOUJSa0VSbUxveTQ1VnM1bHlNR3I5SWcycHNGSFl2aisxM3JtNW9GZExJNEJzaGNqVHBWejNXSUdZNmkra0pFbmoiLCJtYWMiOiJkMGM5NTYwMmVmODg5M2IzY2QxOTZkODU1MGQxMzc3OTEwOTJjOWQ5ODNiOTgwMWYyMDU1YzE3YTVkMjk5OTA1IiwidGFnIjoiIn0%3D; expires=Sun, 14 Jun 2026 05:03:24 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6Im9zdDU2bWpNd0hTY1F2OG9ra1hnaHc9PSIsInZhbHVlIjoiNjBlSW1pZUNOZS93VkZFcWtRNjNxUnprZEVqVjdUQ2FER3FkK2xnY3hZT0J4TE8vZnZuTnhZYlY1aDV4c0hoMW5ZNURFb2FxcWc5OVNxa0c5c0VBTkFoWVltaHNDaVp3bnZTcWF1WlFJTEFYdWV2MWRDQjNBVWx1Y3RRb0d5emIiLCJtYWMiOiI5NzcyYzM2NGZhNjllMmExNTM2YjczMWY3ZmIxYTdiYmVhMzBjYjNkNTBlZmYzYmE1NzY5ZmJlYjc1NWM1YzczIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6InJVR01jTU1wMk9VRXNvMGt0dGlpNWc9PSIsInZhbHVlIjoiMWZWQ3JTa0pKK1l3QzFCZ3k5cU1nVnlDUWNORVAwem4vM052ZzltQVNWdExSS2tkbmJpUWh3Z1hxQk8wWEFLN08rUGhSSFlaMitqRWdybHRaQUxhRElOcXBudW9odXR3SDN5MTloZHBsSDlwbkRYcWJlcWF6TTU0VURtU05NNjgiLCJtYWMiOiI4OTJjM2ZjNTllMjM2N2UzNGJmOTlmNWIwN2M5ZTIyY2M4OGFhNmZhZTUzNjc5N2I1NDZhNGI0MzhmMTIyZjI1IiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;

@@ -27,6 +27,30 @@
                                 
                                 <div class="row">
                                     <div class="col-md-6 mb-3">
+                                        <label for="branch_location_id" class="form-label">Showroom <span class="text-danger">*</span></label>
+                                        <select class="form-select @error('branch_location_id') is-invalid @enderror"
+                                                id="branch_location_id" name="branch_location_id" required>
+                                            <option value="">Select Showroom</option>
+                                            @foreach($branches ?? [] as $branch)
+                                                <option value="{{ $branch->id }}" {{ (string) old('branch_location_id', $vehicle->branch_location_id) === (string) $branch->id ? 'selected' : '' }}>
+                                                    {{ $branch->name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        @error('branch_location_id')
+                                            <div class="invalid-feedback">{{ $message }}</div>
+                                        @enderror
+                                        @if(($branches ?? collect())->isEmpty())
+                                            <div class="form-text">
+                                                No active showrooms yet. Add them in
+                                                <a href="{{ route('settings.branch-locations.index') }}">Settings → Showroom</a>.
+                                            </div>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <div class="row">
+                                    <div class="col-md-6 mb-3">
                                         <label for="year" class="form-label">Year <span class="text-danger">*</span></label>
                                         <input type="number" class="form-control @error('year') is-invalid @enderror" 
                                                id="year" name="year" value="{{ old('year', $vehicle->year) }}" 

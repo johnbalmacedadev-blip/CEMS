@@ -12,9 +12,11 @@
             <a href="{{ route('home') }}" class="btn btn-outline-secondary me-2">
                 <i class="fas fa-home me-1"></i>Back to Main Menu
             </a>
+            @canPage('insurance-tracker', 'create')
             <a href="{{ route('insurance-tracker.create') }}" class="btn btn-primary">
                 <i class="fas fa-plus me-1"></i>Add Record
             </a>
+            @endcanPage
         </div>
     </div>
 
@@ -25,7 +27,7 @@
         </div>
     @endif
 
-    <p class="text-muted mb-4">Track insurance by showroom, sales, unit, reservation and release dates.</p>
+    <p class="text-muted mb-4">Track insurance by sales, unit, reservation and release dates.</p>
 
     <div class="card mb-4">
         <div class="card-body">
@@ -47,15 +49,11 @@
                         @endfor
                     </select>
                 </div>
-                <div class="col-md-2">
-                    <label class="form-label small">Showroom</label>
-                    <input type="text" class="form-control form-control-sm" name="showroom" placeholder="e.g. FLAGSHIP" value="{{ request('showroom') }}">
-                </div>
-                <div class="col-md-3">
+                <div class="col-md-4">
                     <label class="form-label small">Search</label>
                     <input type="text" class="form-control form-control-sm" name="search" placeholder="Sales, make, model, number..." value="{{ request('search') }}">
                 </div>
-                <div class="col-md-2 d-flex align-items-end">
+                <div class="col-md-3 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary btn-sm me-2"><i class="fas fa-search me-1"></i>Filter</button>
                     <a href="{{ route('insurance-tracker.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
                 </div>
@@ -71,7 +69,6 @@
                         <thead class="table-primary">
                             <tr>
                                 <th class="text-center">#</th>
-                                <th>SHOWROOM</th>
                                 <th>SALES</th>
                                 <th>YEAR</th>
                                 <th>MAKE</th>
@@ -89,7 +86,6 @@
                             @foreach($records as $index => $r)
                                 <tr>
                                     <td class="text-center">{{ $records->firstItem() + $index }}</td>
-                                    <td>{{ $r->showroom ?: '—' }}</td>
                                     <td>{{ $r->sales ?: '—' }}</td>
                                     <td>{{ $r->display_year }}</td>
                                     <td>{{ $r->display_make }}</td>
@@ -107,12 +103,16 @@
                                     <td>{{ $r->release_date ? $r->release_date->format('d F Y') : '—' }}</td>
                                     <td class="text-end fw-bold">{{ $r->amount !== null ? '₱' . number_format($r->amount, 2) : '—' }}</td>
                                     <td class="text-center">
+                                        @canPage('insurance-tracker', 'update')
                                         <a href="{{ route('insurance-tracker.edit', $r) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="fas fa-edit"></i></a>
+                                        @endcanPage
+                                        @canPage('insurance-tracker', 'delete')
                                         <form action="{{ route('insurance-tracker.destroy', $r) }}" method="POST" class="d-inline" onsubmit="return confirm('Remove this record?');">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="fas fa-trash-alt"></i></button>
                                         </form>
+                                        @endcanPage
                                     </td>
                                 </tr>
                             @endforeach
@@ -126,8 +126,10 @@
                 <div class="text-center py-5">
                     <i class="fas fa-shield-alt fa-3x text-muted mb-3"></i>
                     <h5 class="text-muted">No insurance records yet</h5>
-                    <p class="text-muted mb-3">Add records to track insurance by showroom, unit, and dates.</p>
+                    <p class="text-muted mb-3">Add records to track insurance by unit and dates.</p>
+                    @canPage('insurance-tracker', 'create')
                     <a href="{{ route('insurance-tracker.create') }}" class="btn btn-primary"><i class="fas fa-plus me-1"></i>Add Record</a>
+                    @endcanPage
                 </div>
             @endif
         </div>

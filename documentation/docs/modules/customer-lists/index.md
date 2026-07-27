@@ -10,13 +10,13 @@ sidebar_position: 1
 
 | Module | URL | Permission | Description |
 |--------|-----|------------|-------------|
-| **CLIENT FOLLOW UP LIST** | `/client-follow-up-list` | `client-follow-up-list` | Track client contacts and follow-up status |
+| **CLIENT LIST** | `/client-follow-up-list` | `client-follow-up-list` | Track client contacts and follow-up status |
 | **APPOINTMENT LIST** | `/appointment-list` | `appointment-list` | Scheduled client appointments |
 | **TRAIL FORM LIST** | `/trail-form-list` | `trail-form-list` | Client inquiries and reservations |
 
 ```mermaid
 flowchart TD
-    CL[CUSTOMER LISTS] --> CF[Client Follow Up List]
+    CL[CUSTOMER LISTS] --> CF[Client List]
     CL --> AP[Appointment List]
     CL --> TF[Trail Form List]
     AP --> CF
@@ -24,7 +24,7 @@ flowchart TD
     Reserve --> Contract[Contracts]
 ```
 
-## Client Follow Up List
+## Client List
 
 CRM-style list for tracking client interactions.
 
@@ -52,7 +52,7 @@ Track client **inquiries** and **reservations** with inquiry source and vehicle 
 ## Sales workflow
 
 1. **Appointment List** — client schedules visit
-2. **Client Follow Up List** — log calls and next steps
+2. **Client List** — log calls and next steps
 3. **Unit Report** — reserve vehicle when client commits
 4. **Contracts** — formalize sale (see [Company Documents](../company-documents/))
 

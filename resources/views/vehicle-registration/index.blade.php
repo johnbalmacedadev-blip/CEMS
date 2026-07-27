@@ -12,19 +12,65 @@
             <a href="{{ route('home') }}" class="btn btn-outline-secondary me-2">
                 <i class="fas fa-home me-1"></i>Back to Main Menu
             </a>
+            @canPage('vehicle-registration', 'create')
             <a href="{{ route('vehicle-registration.create') }}" class="btn btn-primary">
                 <i class="fas fa-plus me-1"></i>Add Record
             </a>
+            @endcanPage
         </div>
     </div>
 
     <p class="text-muted mb-3">Track vehicle registration renewals, smoke test, duplicate plates, PNP clearance, and COC. <span class="text-muted small"><i class="fas fa-arrows-alt-h me-1"></i>Click and drag the table left or right to scroll.</span></p>
 
+    <div class="row g-2 mb-3">
+        @foreach(($branchSummaries ?? []) as $loc)
+            @php
+                $locKey = strtolower(trim($loc['name']));
+                $cardStyle = match (true) {
+                    $locKey === 'annex' => 'background-color: #fff3cd; border-color: #ffc107 !important;',
+                    $locKey === 'flagship' => 'background-color: #cff4fc; border-color: #0dcaf0 !important;',
+                    default => 'background-color: #f8f9fa; border-color: #ced4da !important;',
+                };
+                $badgeClass = match (true) {
+                    $locKey === 'annex' => 'bg-warning text-dark',
+                    $locKey === 'flagship' => 'bg-info text-white',
+                    default => 'bg-secondary text-white',
+                };
+                $filterUrl = route('vehicle-registration.index', array_merge(
+                    request()->except('page', 'branch_location_id'),
+                    ['branch_location_id' => $loc['id']]
+                ));
+            @endphp
+            <div class="col-sm-6 col-lg-4">
+                <a href="{{ $filterUrl }}" class="text-decoration-none text-reset">
+                    <div class="border rounded px-3 py-2 h-100 d-flex align-items-center justify-content-between" style="{{ $cardStyle }}">
+                        <div>
+                            <div class="small text-muted text-uppercase fw-semibold">{{ $loc['name'] }} Total</div>
+                            <div class="fs-5 fw-bold text-dark">{{ number_format($loc['count']) }} <span class="fs-6 fw-normal text-muted">records</span></div>
+                            <div class="small fw-semibold text-danger">₱{{ number_format($loc['fee_total'], 2) }}</div>
+                        </div>
+                        <span class="badge {{ $badgeClass }}">{{ $loc['name'] }}</span>
+                    </div>
+                </a>
+            </div>
+        @endforeach
+        <div class="col-sm-6 col-lg-4">
+            <div class="border rounded px-3 py-2 h-100 d-flex align-items-center justify-content-between" style="background-color: #f8f9fa; border-color: #adb5bd !important;">
+                <div>
+                    <div class="small text-muted text-uppercase fw-semibold">All Showrooms</div>
+                    <div class="fs-5 fw-bold text-dark">{{ number_format($grandCount ?? 0) }} <span class="fs-6 fw-normal text-muted">records</span></div>
+                    <div class="small fw-semibold text-danger">₱{{ number_format($grandFeeTotal ?? 0, 2) }}</div>
+                </div>
+                <span class="badge bg-dark">Total</span>
+            </div>
+        </div>
+    </div>
+
     <div class="card mb-3">
         <div class="card-body py-2">
             <form method="GET" action="{{ route('vehicle-registration.index') }}" class="row g-2 align-items-end">
                 <div class="col-auto">
-                    <label class="form-label small mb-0">Branch / Store Location</label>
+                    <label class="form-label small mb-0">Showroom</label>
                     <select class="form-select form-select-sm" name="branch_location_id" style="width: auto; min-width: 160px;">
                         <option value="">All</option>
                         @foreach($branches as $branch)
@@ -94,7 +140,9 @@
                                     $seriesName = $v->vehicleModel && is_object($v->vehicleModel) ? $v->vehicleModel->name : ($v->model ?? '');
                                 @endphp
                                 <tr>
-                                    <td>{{ $r->branchLocation?->name ?: '—' }}</td>
+                                    <td>
+                                        @include('partials.showroom-badge', ['name' => $r->branchLocation?->name])
+                                    </td>
                                     <td>{{ $r->date->format('j M Y') }}</td>
                                     <td>
                                         @if($r->vehicle_id && $v)
@@ -119,12 +167,16 @@
                                     <td><span class="fw-bold {{ str_contains(strtoupper($r->status ?? ''), 'DONE') ? 'text-danger' : '' }}">{{ $r->status ?: '—' }}</span></td>
                                     <td class="fw-bold text-danger">{{ number_format($r->feeTotal(), 2) }}</td>
                                     <td class="text-center">
+                                        @canPage('vehicle-registration', 'update')
                                         <a href="{{ route('vehicle-registration.edit', $r) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="fas fa-edit"></i></a>
+                                        @endcanPage
+                                        @canPage('vehicle-registration', 'delete')
                                         <form action="{{ route('vehicle-registration.destroy', $r) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this record?');">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="fas fa-trash-alt"></i></button>
                                         </form>
+                                        @endcanPage
                                     </td>
                                 </tr>
                             @endforeach
@@ -139,7 +191,9 @@
                     <i class="fas fa-id-card fa-3x text-muted mb-3"></i>
                     <h5 class="text-muted">No vehicle registration records yet</h5>
                     <p class="text-muted mb-3">Add records to track registration renewals by vehicle.</p>
+                    @canPage('vehicle-registration', 'create')
                     <a href="{{ route('vehicle-registration.create') }}" class="btn btn-primary"><i class="fas fa-plus me-1"></i>Add Record</a>
+                    @endcanPage
                 </div>
             @endif
         </div>

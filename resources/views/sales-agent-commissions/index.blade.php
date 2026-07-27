@@ -145,7 +145,9 @@
                                 @endphp
                                 <tr>
                                     <td class="text-muted">{{ $rowNum }}</td>
-                                    <td>{{ $showroom }}</td>
+                                    <td>
+                                        @include('partials.showroom-badge', ['name' => $showroom !== '—' ? $showroom : null])
+                                    </td>
                                     <td>{{ $yearDisp }}</td>
                                     <td>{{ $makeName }}</td>
                                     <td>{{ $modelName }}</td>

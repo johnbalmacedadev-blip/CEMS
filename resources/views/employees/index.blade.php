@@ -50,42 +50,11 @@
                 </div>
             </div>
 
-            <!-- Contract Type Tabs -->
-            <div class="card mb-4">
-                <div class="card-header">
-                    <ul class="nav nav-tabs card-header-tabs" id="contractTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link {{ $contractType === 'all' ? 'active' : '' }}" 
-                               href="{{ route('employees.index', ['contract_type' => 'all', 'status' => $status]) }}" 
-                               role="tab">
-                                <i class="fas fa-list me-1"></i>All Contract Types
-                            </a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link {{ $contractType === 'PROBATIONARY' ? 'active' : '' }}" 
-                               href="{{ route('employees.index', ['contract_type' => 'PROBATIONARY', 'status' => $status]) }}" 
-                               role="tab">
-                                <i class="fas fa-clock me-1"></i>Probationary
-                                <span class="badge bg-warning ms-1">{{ $probationaryCount }}</span>
-                            </a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link {{ $contractType === 'REGULAR' ? 'active' : '' }}" 
-                               href="{{ route('employees.index', ['contract_type' => 'REGULAR', 'status' => $status]) }}" 
-                               role="tab">
-                                <i class="fas fa-check-double me-1"></i>Regular
-                                <span class="badge bg-primary ms-1">{{ $regularCount }}</span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-
             <!-- Search Form -->
             <div class="card mb-4">
                 <div class="card-body">
                     <form method="GET" action="{{ route('employees.index') }}" class="row g-3">
-                        <div class="col-md-6">
+                        <div class="col-md-8">
                             <div class="input-group">
                                 <span class="input-group-text">
                                     <i class="fas fa-search"></i>
@@ -101,23 +70,10 @@
                                     All Status
                                 </option>
                                 <option value="active" {{ $status === 'active' ? 'selected' : '' }}>
-                                    <i class="fas fa-check-circle me-1"></i>Active
+                                    Active
                                 </option>
                                 <option value="inactive" {{ $status === 'inactive' ? 'selected' : '' }}>
-                                    <i class="fas fa-times-circle me-1"></i>Inactive
-                                </option>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <select class="form-select" name="contract_type">
-                                <option value="all" {{ $contractType === 'all' ? 'selected' : '' }}>
-                                    All Contract Types
-                                </option>
-                                <option value="PROBATIONARY" {{ $contractType === 'PROBATIONARY' ? 'selected' : '' }}>
-                                    Probationary
-                                </option>
-                                <option value="REGULAR" {{ $contractType === 'REGULAR' ? 'selected' : '' }}>
-                                    Regular
+                                    Inactive
                                 </option>
                             </select>
                         </div>
@@ -132,13 +88,13 @@
                             </a>
                         </div>
                     </form>
-                    @if($search || $status !== 'all' || $contractType !== 'all')
+                    @if($search || $status !== 'all')
                         <div class="mt-3">
                             @if($search)
                                 <span class="badge bg-info me-2">
                                     <i class="fas fa-search me-1"></i>
                                     Search: "{{ $search }}"
-                                    <a href="{{ route('employees.index', ['status' => $status, 'contract_type' => $contractType]) }}" class="text-white ms-2">
+                                    <a href="{{ route('employees.index', ['status' => $status]) }}" class="text-white ms-2">
                                         <i class="fas fa-times"></i>
                                     </a>
                                 </span>
@@ -147,16 +103,7 @@
                                 <span class="badge bg-primary me-2">
                                     <i class="fas fa-filter me-1"></i>
                                     Status: {{ ucfirst($status) }}
-                                    <a href="{{ route('employees.index', ['search' => $search, 'contract_type' => $contractType]) }}" class="text-white ms-2">
-                                        <i class="fas fa-times"></i>
-                                    </a>
-                                </span>
-                            @endif
-                            @if($contractType !== 'all')
-                                <span class="badge bg-warning me-2">
-                                    <i class="fas fa-filter me-1"></i>
-                                    Contract: {{ ucfirst($contractType) }}
-                                    <a href="{{ route('employees.index', ['search' => $search, 'status' => $status]) }}" class="text-white ms-2">
+                                    <a href="{{ route('employees.index', ['search' => $search]) }}" class="text-white ms-2">
                                         <i class="fas fa-times"></i>
                                     </a>
                                 </span>
@@ -179,18 +126,12 @@
                         @else
                             {{ ucfirst($status) }} Employees
                         @endif
-                        @if($contractType !== 'all')
-                            - {{ ucfirst($contractType) }}
-                        @endif
                         <span class="badge bg-secondary ms-2">{{ $employees->total() }} total</span>
                         @if($search)
                             <span class="badge bg-info ms-1">for "{{ $search }}"</span>
                         @endif
                         @if($status !== 'all')
                             <span class="badge bg-primary ms-1">{{ ucfirst($status) }}</span>
-                        @endif
-                        @if($contractType !== 'all')
-                            <span class="badge bg-warning ms-1">{{ ucfirst($contractType) }}</span>
                         @endif
                     </h5>
                 </div>
@@ -244,7 +185,9 @@
                                                 @endif
                                             </td>
                                             <td>{{ $employee->role ?: 'N/A' }}</td>
-                                            <td>{{ $employee->location ?: 'N/A' }}</td>
+                                            <td>
+                                                @include('partials.showroom-badge', ['name' => $employee->location, 'empty' => 'N/A'])
+                                            </td>
                                             <td>{{ $employee->sss ?: 'N/A' }}</td>
                                             <td>{{ $employee->philhealth ?: 'N/A' }}</td>
                                             <td>{{ $employee->pagibig ?: 'N/A' }}</td>
@@ -285,7 +228,7 @@
                             <i class="fas fa-users fa-3x text-muted mb-3"></i>
                             <h5 class="text-muted">No employees found</h5>
                             <p class="text-muted">
-                                @if($search || $status !== 'all' || $contractType !== 'all')
+                                @if($search || $status !== 'all')
                                     Try adjusting your search criteria or 
                                     <a href="{{ route('employees.index') }}">view all employees</a>.
                                 @else

@@ -220,10 +220,14 @@
     }, true);
 
     document.addEventListener('submit', function (event) {
-        if (shouldShowForForm(event.target)) {
-            showPreloader();
-        }
-    }, true);
+        if (!shouldShowForForm(event.target)) return;
+        showPreloader();
+        setTimeout(function () {
+            if (event.defaultPrevented) {
+                hidePreloader();
+            }
+        }, 0);
+    }, false);
 
     window.addEventListener('beforeunload', function () {
         showPreloader();

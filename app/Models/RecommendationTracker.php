@@ -13,6 +13,18 @@ class RecommendationTracker extends Model
 
     protected $fillable = [
         'date', 'year', 'customer', 'make', 'model', 'paint',
+        'plate_number', 'variant', 'transmission', 'fuel_type', 'color',
+        'purchase_price', 'purchased_from', 'purchase_date', 'final_status',
+        'paint_recommendation', 'paint_completion',
+        'mechanical_recommendation', 'mechanical_completion',
+        'electrical_recommendation', 'electrical_completion',
+        'ecu_cluster_recommendation', 'ecu_cluster_completion',
+        'aircon_recommendation', 'aircon_completion',
+        'interior_recommendation', 'interior_completion',
+        'tires_recommendation', 'tires_completion',
+        'battery_recommendation', 'battery_completion',
+        'misc_recommendation', 'misc_completion',
+        'notes',
         'hood', 'front_bumper', 'grille', 'fender_right', 'fender_left',
         'driver_passenger_door', 'driver_side_door', 'step_board_left', 'step_board_right',
         'trunk_lid', 'quarter_panels_left', 'rear_bumper', 'quarter_panel_right',
@@ -31,6 +43,8 @@ class RecommendationTracker extends Model
 
     protected $casts = [
         'date' => 'date',
+        'purchase_date' => 'date',
+        'purchase_price' => 'decimal:2',
         'hood' => 'boolean',
         'front_bumper' => 'boolean',
         'grille' => 'boolean',
@@ -87,12 +101,30 @@ class RecommendationTracker extends Model
         return $this->hasMany(RecommendationTrackerImage::class)->orderBy('sort_order');
     }
 
-    /**
-     * Display title for list (customer + year make model).
-     */
     public function getDisplayTitleAttribute(): string
     {
-        $parts = array_filter([$this->year, $this->make, $this->model, $this->customer]);
-        return implode(' – ', $parts) ?: 'Recommendation #' . $this->id;
+        $parts = array_filter([$this->year, $this->make, $this->model, $this->plate_number ?: $this->customer]);
+
+        return implode(' – ', $parts) ?: 'Recommendation #'.$this->id;
+    }
+
+    public static function normalizePlate(?string $plate): string
+    {
+        return strtoupper(preg_replace('/[\s\-]+/', '', (string) $plate) ?? '');
+    }
+
+    public static function recommendationCategories(): array
+    {
+        return [
+            'paint' => 'Paint',
+            'mechanical' => 'Mechanical',
+            'electrical' => 'Electrical',
+            'ecu_cluster' => 'ECU / Cluster',
+            'aircon' => 'Aircon',
+            'interior' => 'Interior',
+            'tires' => 'Tires',
+            'battery' => 'Battery',
+            'misc' => 'Misc',
+        ];
     }
 }

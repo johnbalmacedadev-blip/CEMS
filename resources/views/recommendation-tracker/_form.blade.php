@@ -33,8 +33,49 @@
                 <input type="text" class="form-control" id="model" name="model" value="{{ $val('model') }}" placeholder="Model">
             </div>
             <div class="col-md-2">
-                <label for="paint" class="form-label">PAINT</label>
-                <input type="text" class="form-control" id="paint" name="paint" value="{{ $val('paint') }}" placeholder="Paint">
+                <label for="paint" class="form-label">PAINT (short)</label>
+                <input type="text" class="form-control" id="paint" name="paint" value="{{ $val('paint') }}" placeholder="Paint summary">
+            </div>
+            <div class="col-md-3">
+                <label for="plate_number" class="form-label">PLATE NUMBER</label>
+                <input type="text" class="form-control" id="plate_number" name="plate_number" value="{{ $val('plate_number') }}" placeholder="Links to vehicle when matched">
+            </div>
+            <div class="col-md-3">
+                <label for="variant" class="form-label">VARIANT</label>
+                <input type="text" class="form-control" id="variant" name="variant" value="{{ $val('variant') }}">
+            </div>
+            <div class="col-md-2">
+                <label for="transmission" class="form-label">TRANSMISSION</label>
+                <input type="text" class="form-control" id="transmission" name="transmission" value="{{ $val('transmission') }}">
+            </div>
+            <div class="col-md-2">
+                <label for="fuel_type" class="form-label">FUEL TYPE</label>
+                <input type="text" class="form-control" id="fuel_type" name="fuel_type" value="{{ $val('fuel_type') }}">
+            </div>
+            <div class="col-md-2">
+                <label for="color" class="form-label">COLOR</label>
+                <input type="text" class="form-control" id="color" name="color" value="{{ $val('color') }}">
+            </div>
+            <div class="col-md-2">
+                <label for="final_status" class="form-label">FINAL STATUS</label>
+                <input type="text" class="form-control" id="final_status" name="final_status" value="{{ $val('final_status') }}" list="final_status_options">
+                <datalist id="final_status_options">
+                    <option value="COMPLETE"></option>
+                    <option value="PENDING"></option>
+                    <option value="IN PROGRESS"></option>
+                </datalist>
+            </div>
+            <div class="col-md-3">
+                <label for="purchase_price" class="form-label">PURCHASE PRICE</label>
+                <input type="number" step="0.01" class="form-control" id="purchase_price" name="purchase_price" value="{{ $val('purchase_price') }}">
+            </div>
+            <div class="col-md-3">
+                <label for="purchased_from" class="form-label">PURCHASED FROM</label>
+                <input type="text" class="form-control" id="purchased_from" name="purchased_from" value="{{ $val('purchased_from') }}">
+            </div>
+            <div class="col-md-2">
+                <label for="purchase_date" class="form-label">PURCHASE DATE</label>
+                <input type="date" class="form-control" id="purchase_date" name="purchase_date" value="{{ old('purchase_date', $r && $r->purchase_date ? $r->purchase_date->format('Y-m-d') : '') }}">
             </div>
             <div class="col-12">
                 <label for="vehicle_id" class="form-label">Link to vehicle (optional)</label>
@@ -54,6 +95,28 @@
                             {{ (old('vehicle_id', $r ? $r->vehicle_id : request('vehicle_id')) == $v->id) ? 'selected' : '' }}>{{ $v->full_name }} @if($v->plate_number)({{ $v->plate_number }})@endif</option>
                     @endforeach
                 </select>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header"><strong>Recommendation & Completion Notes</strong></div>
+    <div class="card-body">
+        <div class="row g-3">
+            @foreach(\App\Models\RecommendationTracker::recommendationCategories() as $key => $label)
+                <div class="col-md-6">
+                    <label for="{{ $key }}_recommendation" class="form-label">{{ $label }} Recommendation</label>
+                    <textarea class="form-control" id="{{ $key }}_recommendation" name="{{ $key }}_recommendation" rows="3">{{ $val($key.'_recommendation') }}</textarea>
+                </div>
+                <div class="col-md-6">
+                    <label for="{{ $key }}_completion" class="form-label">{{ $label }} Completion</label>
+                    <textarea class="form-control" id="{{ $key }}_completion" name="{{ $key }}_completion" rows="3">{{ $val($key.'_completion') }}</textarea>
+                </div>
+            @endforeach
+            <div class="col-12">
+                <label for="notes" class="form-label">Notes</label>
+                <textarea class="form-control" id="notes" name="notes" rows="2">{{ $val('notes') }}</textarea>
             </div>
         </div>
     </div>

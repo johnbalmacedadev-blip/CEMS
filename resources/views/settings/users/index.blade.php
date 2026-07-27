@@ -16,6 +16,23 @@
         </div>
     </div>
 
+    <div class="alert alert-light border mb-4">
+        <div class="row g-3 align-items-start">
+            <div class="col-md-4">
+                <strong class="d-block"><span class="badge bg-danger me-1">Super Admin</span></strong>
+                <span class="small text-muted">Full access to every page, settings, and user management.</span>
+            </div>
+            <div class="col-md-4">
+                <strong class="d-block"><span class="badge bg-primary me-1">Contributor</span></strong>
+                <span class="small text-muted">View, add, and edit records across modules. Limited delete; no user admin logs.</span>
+            </div>
+            <div class="col-md-4">
+                <strong class="d-block"><span class="badge bg-secondary me-1">Spectator</span></strong>
+                <span class="small text-muted">View-only access to available pages. Cannot create, edit, or delete.</span>
+            </div>
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-body">
             <div class="table-responsive">
@@ -34,7 +51,12 @@
                                 <td>{{ $u->name }}</td>
                                 <td>{{ $u->email }}</td>
                                 <td>
-                                    <span class="badge bg-{{ $u->role === 'admin' ? 'danger' : 'primary' }}">{{ ucfirst($u->role) }}</span>
+                                    @if($u->isAdmin())
+                                        <span class="badge bg-danger">Super Admin</span>
+                                    @else
+                                        <span class="badge bg-primary">User</span>
+                                        <a href="{{ route('settings.users.permissions', $u) }}" class="small ms-1">Permissions</a>
+                                    @endif
                                 </td>
                                 <td>
                                     <a href="{{ route('settings.users.permissions', $u) }}" class="btn btn-sm btn-outline-info" title="Page permissions">

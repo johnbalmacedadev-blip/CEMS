@@ -37,9 +37,9 @@
     <section class="transfer-orcr-section">
         <h6 class="transfer-orcr-section-title">Record &amp; Vehicle</h6>
         <div class="row g-3">
-            @component('transfer-orcr._simple-field', ['label' => 'Branch / Store Location', 'id' => 'branch_location_id', 'cols' => 3])
+            @component('transfer-orcr._simple-field', ['label' => 'Showroom', 'id' => 'branch_location_id', 'cols' => 3])
                 <select class="form-select @error('branch_location_id') is-invalid @enderror" id="branch_location_id" name="branch_location_id">
-                    <option value="">— Select branch —</option>
+                    <option value="">— Select showroom —</option>
                     @foreach($branches as $branch)
                         <option value="{{ $branch->id }}" {{ (string) old('branch_location_id', $record?->branch_location_id) === (string) $branch->id ? 'selected' : '' }}>
                             {{ $branch->name }}
@@ -48,7 +48,7 @@
                 </select>
                 @error('branch_location_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                 @if($branches->isEmpty())
-                    <div class="form-text">Add branches in <a href="{{ route('settings.branch-locations.index') }}">Settings → Branch / Location</a>.</div>
+                    <div class="form-text">Add showrooms in <a href="{{ route('settings.branch-locations.index') }}">Settings → Showroom</a>.</div>
                 @endif
             @endcomponent
 

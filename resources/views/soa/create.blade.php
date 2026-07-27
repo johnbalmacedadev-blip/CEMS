@@ -123,7 +123,7 @@
                 <div class="card-body">
                     <p class="text-muted mb-3">No starting balance found for this date. Enter the starting balance, then click save to generate the SOA table.</p>
                     <div id="yesterdayBalanceSuggestionWrap" class="d-none"></div>
-                    <form id="dailyBudgetForm">
+                    <form id="dailyBudgetForm" data-no-preloader>
                         @csrf
                         <input type="hidden" id="budget_payment_method_id" name="payment_method_id">
                         <input type="hidden" id="budget_date" name="budget_date">
@@ -1531,6 +1531,9 @@ document.getElementById('updateStartingCashBtn').addEventListener('click', funct
 // Handle daily budget form submission
 document.getElementById('dailyBudgetForm').addEventListener('submit', function(e) {
     e.preventDefault();
+    if (window.CarEmpirePreloader) {
+        window.CarEmpirePreloader.hide();
+    }
     
     const formData = {
         payment_method_id: document.getElementById('budget_payment_method_id').value,

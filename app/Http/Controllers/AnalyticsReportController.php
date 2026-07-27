@@ -117,12 +117,598 @@ class AnalyticsReportController extends Controller
 
     public function sales(Request $request)
     {
-        return view('analytics-reports.sales');
+        $data = $this->buildSalesPageData($request);
+
+        return view('analytics-reports.sales', $data);
+    }
+
+    public function exportSales(Request $request)
+    {
+        $data = $this->buildSalesPageData($request);
+        $baseName = 'sales-report-' . date('Y-m-d');
+
+        $pdf = Pdf::loadView('analytics-reports.sales-export-pdf', $data)->setPaper('a4', 'landscape');
+
+        return $pdf->download($baseName . '.pdf');
+    }
+
+    protected function buildSalesPageData(Request $request): array
+    {
+        $period = (string) $request->get('period', 'monthly');
+        if (! array_key_exists($period, $this->periodOptions)) {
+            $period = 'monthly';
+        }
+
+        $window = $this->resolveDateWindow($request, $period);
+        $analytics = $this->buildSalesAnalytics($window);
+
+        return [
+            'periodOptions' => $this->periodOptions,
+            'selectedPeriod' => $period,
+            'dateFrom' => $window['from'] ? $window['from']->format('Y-m-d') : '',
+            'dateTo' => $window['to'] ? $window['to']->format('Y-m-d') : '',
+            'activeRangeLabel' => $this->rangeLabel($window),
+            'summary' => $analytics['summary'],
+            'charts' => $analytics['charts'],
+            'tables' => $analytics['tables'],
+            'hasData' => $analytics['has_data'],
+        ];
     }
 
     public function salesExecutive(Request $request)
     {
-        return view('analytics-reports.sales-executive');
+        $period = (string) $request->get('period', 'monthly');
+        if (! array_key_exists($period, $this->periodOptions)) {
+            $period = 'monthly';
+        }
+
+        $viewMode = (string) $request->get('view', 'team');
+        if (! in_array($viewMode, ['team', 'agents', 'executives'], true)) {
+            $viewMode = 'team';
+        }
+
+        $window = $this->resolveDateWindow($request, $period);
+        $analytics = $this->buildSalesExecutiveAnalytics($window, $viewMode);
+
+        return view('analytics-reports.sales-executive', [
+            'periodOptions' => $this->periodOptions,
+            'selectedPeriod' => $period,
+            'viewMode' => $viewMode,
+            'dateFrom' => $window['from'] ? $window['from']->format('Y-m-d') : '',
+            'dateTo' => $window['to'] ? $window['to']->format('Y-m-d') : '',
+            'activeRangeLabel' => $this->rangeLabel($window),
+            'summary' => $analytics['summary'],
+            'charts' => $analytics['charts'],
+            'tables' => $analytics['tables'],
+            'hasData' => $analytics['has_data'],
+            'viewLabel' => $analytics['view_label'],
+        ]);
+    }
+
+    /**
+     * Sales team / agent / executive performance from Released units.
+     *
+     * Credit priority per unit:
+     * sales_person_reserved → sales_person_release → sales_agent_name → Unassigned
+     */
+    protected function buildSalesExecutiveAnalytics(array $window, string $viewMode = 'team'): array
+    {
+        $vehicles = $this->soldVehiclesBase($window);
+
+        $salesAgents = \App\Models\SalesAgent::query()
+            ->with('executiveAgent')
+            ->get(['id', 'name', 'sales_agent_id', 'executive_agent_id', 'status']);
+
+        $executives = \App\Models\ExecutiveAgent::query()
+            ->with(['salesAgents:id,name,executive_agent_id'])
+            ->get(['id', 'name', 'executive_code', 'status']);
+
+        $agentNameMap = [];
+        foreach ($salesAgents as $agent) {
+            $key = $this->normalizePersonName($agent->name);
+            if ($key !== '') {
+                $agentNameMap[$key] = $agent;
+            }
+        }
+
+        $execNameMap = [];
+        foreach ($executives as $exec) {
+            $key = $this->normalizePersonName($exec->name);
+            if ($key !== '') {
+                $execNameMap[$key] = $exec;
+            }
+        }
+
+        $rows = $vehicles->map(function (Vehicle $v) use ($agentNameMap, $execNameMap) {
+            $detail = $v->statusDetail;
+            $reserved = trim((string) ($detail?->sales_person_reserved ?? ''));
+            $release = trim((string) ($detail?->sales_person_release ?? ''));
+            $agentName = trim((string) ($detail?->sales_agent_name ?? ''));
+            $saleOrigin = trim((string) ($detail?->sale_origin ?? ''));
+
+            $creditName = $reserved !== '' ? $reserved
+                : ($release !== '' ? $release
+                    : ($agentName !== '' ? $agentName : 'Unassigned'));
+
+            $norm = $this->normalizePersonName($creditName);
+            $matchedAgent = $agentNameMap[$norm] ?? null;
+            $matchedExec = $execNameMap[$norm] ?? null;
+            if (! $matchedExec && $matchedAgent?->executiveAgent) {
+                $matchedExec = $matchedAgent->executiveAgent;
+            }
+
+            $event = $detail?->release_date ?? $detail?->sale_date ?? $v->updated_at;
+            $soldPrice = (float) ($v->sold_price ?? 0);
+            if ($soldPrice <= 0) {
+                $soldPrice = (float) ($detail?->sales_price ?? 0);
+            }
+
+            $role = 'Sales Team';
+            if ($matchedExec && $this->normalizePersonName($matchedExec->name) === $norm) {
+                $role = 'Executive';
+            } elseif ($matchedAgent) {
+                $role = 'Sales Agent';
+            } elseif ($agentName !== '' && $this->normalizePersonName($agentName) === $norm) {
+                $role = 'External Agent';
+            } elseif (strcasecmp($saleOrigin, 'Agent') === 0 && $agentName !== '') {
+                $role = 'External Agent';
+            }
+
+            return [
+                'name' => $creditName,
+                'name_key' => $norm !== '' ? $norm : 'unassigned',
+                'role' => $role,
+                'reserved_by' => $reserved !== '' ? $reserved : null,
+                'released_by' => $release !== '' ? $release : null,
+                'agent_name' => $agentName !== '' ? $agentName : null,
+                'sale_origin' => $saleOrigin !== '' ? $saleOrigin : null,
+                'executive_name' => $matchedExec?->name,
+                'sales_agent_record' => $matchedAgent?->name,
+                'sold_price' => $soldPrice,
+                'plate' => $v->plate_number,
+                'unit' => $v->full_name,
+                'release_date_raw' => $event ? Carbon::parse($event)->toDateString() : null,
+            ];
+        })->filter(fn ($r) => ! empty($r['release_date_raw']))->values();
+
+        $teamRanking = $this->aggregatePerformerRanking($rows);
+        $agentRanking = $this->aggregatePerformerRanking(
+            $rows->filter(fn ($r) => in_array($r['role'], ['Sales Agent', 'External Agent'], true)
+                || ($r['agent_name'] ?? null) !== null)
+                ->map(function ($r) {
+                    // Prefer explicit agent name when present
+                    if (! empty($r['agent_name'])) {
+                        $r['name'] = $r['agent_name'];
+                        $r['name_key'] = $this->normalizePersonName($r['agent_name']);
+                    }
+                    return $r;
+                })
+                ->values()
+        );
+
+        $executiveRanking = $this->buildExecutiveRanking($rows, $executives);
+
+        if ($viewMode === 'agents') {
+            $activeRanking = $agentRanking;
+            $viewLabel = 'Sales Agents';
+        } elseif ($viewMode === 'executives') {
+            $activeRanking = $executiveRanking;
+            $viewLabel = 'Sales Executives';
+        } else {
+            $activeRanking = $teamRanking;
+            $viewLabel = 'Sales Team';
+        }
+
+        $topByUnits = $activeRanking->take(10)->values();
+        $topBySales = $activeRanking->sortByDesc('sales')->take(10)->values();
+
+        $unitCount = $rows->count();
+        $totalSales = (float) $rows->sum('sold_price');
+        $performerCount = $activeRanking->count();
+        $leader = $activeRanking->first();
+
+        $monthlyByLeader = collect();
+        if ($leader) {
+            $leaderKey = $leader['name_key'] ?? $this->normalizePersonName($leader['name']);
+            $leaderRows = $viewMode === 'executives'
+                ? $rows->filter(function ($r) use ($leader) {
+                    return $this->normalizePersonName($r['executive_name'] ?? '') === $this->normalizePersonName($leader['name'])
+                        || $this->normalizePersonName($r['name']) === $this->normalizePersonName($leader['name']);
+                })
+                : $rows->filter(fn ($r) => ($r['name_key'] ?? '') === $leaderKey);
+
+            if ($viewMode === 'agents') {
+                $leaderRows = $rows->filter(function ($r) use ($leaderKey, $leader) {
+                    $agentKey = $this->normalizePersonName($r['agent_name'] ?? $r['name']);
+                    return $agentKey === $leaderKey || $this->normalizePersonName($r['name']) === $this->normalizePersonName($leader['name']);
+                });
+            }
+
+            $monthlyByLeader = $leaderRows
+                ->groupBy(fn ($r) => Carbon::parse($r['release_date_raw'])->format('Y-m'))
+                ->sortKeys()
+                ->map(function ($group, $ym) {
+                    return [
+                        'label' => Carbon::createFromFormat('Y-m', $ym)->format('M Y'),
+                        'count' => $group->count(),
+                        'sales' => (float) $group->sum('sold_price'),
+                    ];
+                })
+                ->values();
+        }
+
+        return [
+            'has_data' => $unitCount > 0 && $performerCount > 0,
+            'view_label' => $viewLabel,
+            'summary' => [
+                ['label' => 'Released Units (range)', 'value' => $unitCount, 'is_currency' => false],
+                ['label' => 'Total Sales Amount', 'value' => $totalSales, 'is_currency' => true],
+                ['label' => $viewLabel.' in Ranking', 'value' => $performerCount, 'is_currency' => false],
+                [
+                    'label' => 'Top Performer',
+                    'value' => $leader
+                        ? ($leader['name'].' · '.number_format($leader['units']).' units')
+                        : '—',
+                    'is_text' => true,
+                ],
+            ],
+            'charts' => [
+                'top_units' => [
+                    'title' => 'Top '.$viewLabel.' by Units Released',
+                    'labels' => $topByUnits->pluck('name')->all(),
+                    'data' => $topByUnits->pluck('units')->all(),
+                    'type' => 'bar',
+                    'index_axis' => 'y',
+                    'dataset_label' => 'Units',
+                ],
+                'top_sales' => [
+                    'title' => 'Top '.$viewLabel.' by Sales Amount',
+                    'labels' => $topBySales->pluck('name')->all(),
+                    'data' => $topBySales->pluck('sales')->all(),
+                    'type' => 'bar',
+                    'index_axis' => 'y',
+                    'dataset_label' => 'Sales Amount (₱)',
+                ],
+                'leader_monthly' => [
+                    'title' => $leader
+                        ? ('Monthly Sales — '.$leader['name'])
+                        : 'Monthly Sales — Top Performer',
+                    'labels' => $monthlyByLeader->pluck('label')->all(),
+                    'data' => $monthlyByLeader->pluck('sales')->all(),
+                    'type' => 'line',
+                    'dataset_label' => 'Sales Amount (₱)',
+                ],
+            ],
+            'tables' => [
+                'ranking' => $activeRanking->values()->all(),
+                'team' => $teamRanking->values()->all(),
+                'agents' => $agentRanking->values()->all(),
+                'executives' => $executiveRanking->values()->all(),
+                'recent_deals' => $rows
+                    ->sortByDesc('release_date_raw')
+                    ->take(25)
+                    ->map(fn ($r) => [
+                        'date' => Carbon::parse($r['release_date_raw'])->format('M d, Y'),
+                        'plate' => $r['plate'],
+                        'unit' => $r['unit'],
+                        'name' => $r['name'],
+                        'role' => $r['role'],
+                        'sales' => $r['sold_price'],
+                    ])
+                    ->values()
+                    ->all(),
+            ],
+        ];
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, array<string, mixed>>  $rows
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    protected function aggregatePerformerRanking(Collection $rows): Collection
+    {
+        return $rows
+            ->groupBy(fn ($r) => $r['name_key'] !== '' ? $r['name_key'] : 'unassigned')
+            ->map(function ($group) {
+                $first = $group->first();
+                $units = $group->count();
+                $sales = (float) $group->sum('sold_price');
+
+                return [
+                    'name' => $first['name'] ?? 'Unassigned',
+                    'name_key' => $first['name_key'] ?? 'unassigned',
+                    'role' => $first['role'] ?? 'Sales Team',
+                    'executive_name' => $group->pluck('executive_name')->filter()->unique()->implode(', ') ?: null,
+                    'units' => $units,
+                    'sales' => $sales,
+                    'avg_sale' => $units > 0 ? $sales / $units : 0.0,
+                    'share_units' => 0.0,
+                    'share_sales' => 0.0,
+                ];
+            })
+            ->sortByDesc('units')
+            ->values()
+            ->pipe(function (Collection $ranking) {
+                $totalUnits = max((int) $ranking->sum('units'), 1);
+                $totalSales = max((float) $ranking->sum('sales'), 0.00001);
+
+                return $ranking->map(function ($row) use ($totalUnits, $totalSales) {
+                    $row['share_units'] = round(($row['units'] / $totalUnits) * 100, 1);
+                    $row['share_sales'] = round(($row['sales'] / $totalSales) * 100, 1);
+
+                    return $row;
+                });
+            });
+    }
+
+    /**
+     * Roll released-unit credit up to each executive (direct name match + linked sales agents).
+     *
+     * @param  \Illuminate\Support\Collection<int, array<string, mixed>>  $rows
+     * @param  \Illuminate\Support\Collection<int, \App\Models\ExecutiveAgent>  $executives
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    protected function buildExecutiveRanking(Collection $rows, Collection $executives): Collection
+    {
+        $totalUnits = max($rows->count(), 1);
+        $totalSales = max((float) $rows->sum('sold_price'), 0.00001);
+
+        $ranking = $executives->map(function ($exec) use ($rows) {
+            $names = collect([$exec->name])
+                ->merge($exec->salesAgents->pluck('name'))
+                ->map(fn ($n) => $this->normalizePersonName($n))
+                ->filter()
+                ->unique()
+                ->values();
+
+            $matched = $rows->filter(function ($r) use ($names, $exec) {
+                if ($names->contains($r['name_key'] ?? '')) {
+                    return true;
+                }
+                if ($this->normalizePersonName($r['executive_name'] ?? '') === $this->normalizePersonName($exec->name)) {
+                    return true;
+                }
+                if ($this->normalizePersonName($r['agent_name'] ?? '') !== '' && $names->contains($this->normalizePersonName($r['agent_name']))) {
+                    return true;
+                }
+
+                return false;
+            });
+
+            $units = $matched->count();
+            $sales = (float) $matched->sum('sold_price');
+
+            return [
+                'name' => $exec->name,
+                'name_key' => $this->normalizePersonName($exec->name),
+                'role' => 'Executive',
+                'executive_name' => $exec->name,
+                'team_size' => $exec->salesAgents->count(),
+                'units' => $units,
+                'sales' => $sales,
+                'avg_sale' => $units > 0 ? $sales / $units : 0.0,
+                'share_units' => 0.0,
+                'share_sales' => 0.0,
+            ];
+        })
+            ->filter(fn ($r) => $r['units'] > 0)
+            ->sortByDesc('units')
+            ->values();
+
+        // Also include people credited as Executive from status names that match no roster row
+        $rosterKeys = $ranking->pluck('name_key')->all();
+        $extra = $rows
+            ->filter(fn ($r) => ($r['role'] ?? '') === 'Executive')
+            ->groupBy('name_key')
+            ->filter(fn ($_, $key) => ! in_array($key, $rosterKeys, true))
+            ->map(function ($group) {
+                $first = $group->first();
+                $units = $group->count();
+                $sales = (float) $group->sum('sold_price');
+
+                return [
+                    'name' => $first['name'],
+                    'name_key' => $first['name_key'],
+                    'role' => 'Executive',
+                    'executive_name' => $first['name'],
+                    'team_size' => null,
+                    'units' => $units,
+                    'sales' => $sales,
+                    'avg_sale' => $units > 0 ? $sales / $units : 0.0,
+                    'share_units' => 0.0,
+                    'share_sales' => 0.0,
+                ];
+            })
+            ->values();
+
+        return $ranking->concat($extra)
+            ->sortByDesc('units')
+            ->values()
+            ->map(function ($row) use ($totalUnits, $totalSales) {
+                $row['share_units'] = round(($row['units'] / $totalUnits) * 100, 1);
+                $row['share_sales'] = round(($row['sales'] / $totalSales) * 100, 1);
+
+                return $row;
+            });
+    }
+
+    protected function normalizePersonName(?string $name): string
+    {
+        $name = strtoupper(trim((string) $name));
+        $name = preg_replace('/\s+/', ' ', $name) ?? $name;
+
+        return $name;
+    }
+
+    /**
+     * Sales analytics for Released units: monthly volume/revenue and fast-selling mix.
+     */
+    protected function buildSalesAnalytics(array $window): array
+    {
+        $vehicles = $this->soldVehiclesBase($window);
+
+        $rows = $vehicles->map(function (Vehicle $v) {
+            $attrs = $v->getAttributes();
+            $make = trim((string) ($attrs['make'] ?? ''));
+            $model = trim((string) ($attrs['model'] ?? ''));
+            $bodyType = trim((string) ($attrs['body_type'] ?? ''));
+            $event = $v->statusDetail?->release_date ?? $v->statusDetail?->sale_date ?? $v->updated_at;
+            $purchase = $v->purchase_date ?? $v->created_at;
+            $soldPrice = (float) ($v->sold_price ?? 0);
+            if ($soldPrice <= 0) {
+                $soldPrice = (float) ($v->statusDetail?->sales_price ?? 0);
+            }
+            $daysToSell = ($purchase && $event)
+                ? Carbon::parse($purchase)->diffInDays(Carbon::parse($event))
+                : null;
+
+            return [
+                'make' => $make !== '' ? $make : 'Unknown',
+                'model' => $model !== '' ? $model : 'Unknown',
+                'make_model' => trim(($make !== '' ? $make : 'Unknown').' '.($model !== '' ? $model : 'Unknown')),
+                'body_type' => $bodyType !== '' ? $bodyType : 'Unspecified',
+                'sold_price' => $soldPrice,
+                'days_to_sell' => $daysToSell,
+                'release_date_raw' => $event ? Carbon::parse($event)->toDateString() : null,
+            ];
+        })->filter(fn ($r) => ! empty($r['release_date_raw']))->values();
+
+        $unitCount = $rows->count();
+        $totalSales = (float) $rows->sum('sold_price');
+        $avgSold = $unitCount > 0 ? $totalSales / $unitCount : 0.0;
+        $daysValues = $rows->pluck('days_to_sell')->filter(fn ($d) => $d !== null);
+        $avgDays = $daysValues->count() > 0 ? (float) $daysValues->avg() : 0.0;
+
+        $monthly = $rows
+            ->groupBy(fn ($r) => Carbon::parse($r['release_date_raw'])->format('Y-m'))
+            ->sortKeys()
+            ->map(function ($group, $ym) {
+                return [
+                    'ym' => $ym,
+                    'label' => Carbon::createFromFormat('Y-m', $ym)->format('M Y'),
+                    'count' => $group->count(),
+                    'sales' => (float) $group->sum('sold_price'),
+                    'avg_days' => (float) ($group->pluck('days_to_sell')->filter(fn ($d) => $d !== null)->avg() ?? 0),
+                ];
+            })
+            ->values();
+
+        $topMakes = $rows
+            ->groupBy('make')
+            ->map(function ($group, $make) {
+                return [
+                    'label' => $make,
+                    'count' => $group->count(),
+                    'sales' => (float) $group->sum('sold_price'),
+                ];
+            })
+            ->sortByDesc('count')
+            ->take(10)
+            ->values();
+
+        $topModels = $rows
+            ->groupBy('make_model')
+            ->map(function ($group, $label) {
+                return [
+                    'label' => $label,
+                    'count' => $group->count(),
+                    'sales' => (float) $group->sum('sold_price'),
+                    'avg_days' => (float) ($group->pluck('days_to_sell')->filter(fn ($d) => $d !== null)->avg() ?? 0),
+                ];
+            })
+            ->sortByDesc('count')
+            ->take(10)
+            ->values();
+
+        $bodyTypes = $rows
+            ->groupBy('body_type')
+            ->map(function ($group, $label) {
+                return [
+                    'label' => $label,
+                    'count' => $group->count(),
+                ];
+            })
+            ->sortByDesc('count')
+            ->values();
+
+        $fastestModels = $rows
+            ->groupBy('make_model')
+            ->map(function ($group, $label) {
+                $days = $group->pluck('days_to_sell')->filter(fn ($d) => $d !== null);
+                return [
+                    'label' => $label,
+                    'count' => $group->count(),
+                    'sales' => (float) $group->sum('sold_price'),
+                    'avg_days' => $days->count() > 0 ? (float) $days->avg() : null,
+                ];
+            })
+            ->filter(fn ($r) => $r['count'] >= 3 && $r['avg_days'] !== null)
+            ->sortBy('avg_days')
+            ->take(10)
+            ->values();
+
+        return [
+            'has_data' => $unitCount > 0,
+            'summary' => [
+                ['label' => 'Units Released', 'value' => $unitCount, 'is_currency' => false],
+                ['label' => 'Total Sales Amount', 'value' => $totalSales, 'is_currency' => true],
+                ['label' => 'Average Sold Price', 'value' => $avgSold, 'is_currency' => true],
+                ['label' => 'Average Days to Sell', 'value' => round($avgDays, 1), 'is_currency' => false, 'suffix' => ' days'],
+            ],
+            'charts' => [
+                'monthly_units' => [
+                    'title' => 'Monthly Units Sold',
+                    'labels' => $monthly->pluck('label')->all(),
+                    'data' => $monthly->pluck('count')->all(),
+                    'type' => 'bar',
+                    'dataset_label' => 'Units Released',
+                ],
+                'monthly_sales' => [
+                    'title' => 'Monthly Sales Amount',
+                    'labels' => $monthly->pluck('label')->all(),
+                    'data' => $monthly->pluck('sales')->all(),
+                    'type' => 'line',
+                    'dataset_label' => 'Sales Amount (₱)',
+                ],
+                'top_makes' => [
+                    'title' => 'Top Makes by Units Sold',
+                    'labels' => $topMakes->pluck('label')->all(),
+                    'data' => $topMakes->pluck('count')->all(),
+                    'type' => 'bar',
+                    'index_axis' => 'y',
+                    'dataset_label' => 'Units',
+                ],
+                'top_models' => [
+                    'title' => 'Top Models by Units Sold',
+                    'labels' => $topModels->pluck('label')->all(),
+                    'data' => $topModels->pluck('count')->all(),
+                    'type' => 'bar',
+                    'index_axis' => 'y',
+                    'dataset_label' => 'Units',
+                ],
+                'body_type_mix' => [
+                    'title' => 'Body Type Mix',
+                    'labels' => $bodyTypes->pluck('label')->all(),
+                    'data' => $bodyTypes->pluck('count')->all(),
+                    'type' => 'doughnut',
+                    'dataset_label' => 'Units',
+                ],
+                'fastest_models' => [
+                    'title' => 'Fastest-Selling Models (Avg Days to Sell, min 3 units)',
+                    'labels' => $fastestModels->pluck('label')->all(),
+                    'data' => $fastestModels->map(fn ($r) => round((float) $r['avg_days'], 1))->all(),
+                    'type' => 'bar',
+                    'index_axis' => 'y',
+                    'dataset_label' => 'Avg Days to Sell',
+                ],
+            ],
+            'tables' => [
+                'monthly' => $monthly->all(),
+                'top_makes' => $topMakes->all(),
+                'top_models' => $topModels->all(),
+                'fastest_models' => $fastestModels->all(),
+            ],
+        ];
     }
 
     protected function resolveDateWindow(Request $request, string $period): array

@@ -65,6 +65,7 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Date</th>
+                                <th>P.O. No.</th>
                                 <th>Vehicle / Plate</th>
                                 <th>Driver</th>
                                 <th>Model</th>
@@ -78,6 +79,7 @@
                             @foreach($gasExpenses as $expense)
                                 <tr>
                                     <td>{{ $expense->date->format('M d, Y') }}</td>
+                                    <td>{{ $expense->po_number ?: '—' }}</td>
                                     <td>
                                         @if($expense->vehicle)
                                             <a href="{{ route('vehicles.show', $expense->vehicle) }}">{{ $expense->vehicle->full_name }}</a>
@@ -101,12 +103,14 @@
                                                 data-vehicle-id="{{ $expense->vehicle?->id ?? '' }}"
                                                 data-vehicle-label="{{ $expense->vehicle ? $expense->plate_number . ' — ' . $expense->vehicle->full_name : $expense->plate_number }}"
                                                 data-date="{{ $expense->date->format('Y-m-d') }}"
+                                                data-po-number="{{ $expense->po_number }}"
                                                 data-driver="{{ $expense->driver }}"
                                                 data-model="{{ $expense->model }}"
                                                 data-gas-amount="{{ $expense->gas_amount }}"
                                                 data-expense-sent-by="{{ $expense->expense_sent_by }}"
                                                 data-checked-by="{{ $expense->checked_by }}"
                                                 data-has-photo-video="{{ $expense->has_photo_video_in_groupchat ? '1' : '0' }}"
+                                                data-photo-po-slip="{{ $expense->photo_po_slip ? '1' : '0' }}"
                                                 data-photo-before="{{ $expense->photo_fuel_gauge_before ? '1' : '0' }}"
                                                 data-photo-after="{{ $expense->photo_fuel_gauge_after ? '1' : '0' }}"
                                                 data-photo-plate="{{ $expense->photo_car_license_plate_gas_boy ? '1' : '0' }}"
@@ -272,29 +276,40 @@
                             <input type="date" class="form-control form-control-sm" id="gas_date" name="date" required>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="gas_driver" class="form-label">Driver <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control form-control-sm" id="gas_driver" name="driver" required>
+                            <label for="gas_po_number" class="form-label">P.O. Number</label>
+                            <input type="text" class="form-control form-control-sm" id="gas_po_number" name="po_number" placeholder="Optional">
                         </div>
                     </div>
                     <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="gas_driver" class="form-label">Driver <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control form-control-sm" id="gas_driver" name="driver" required>
+                        </div>
                         <div class="col-md-6 mb-3">
                             <label for="gas_model" class="form-label">Model <span class="text-danger">*</span></label>
                             <input type="text" class="form-control form-control-sm" id="gas_model" name="model" required>
                         </div>
+                    </div>
+                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="gas_amount" class="form-label">Gas Amount (₱) <span class="text-danger">*</span></label>
                             <input type="number" class="form-control form-control-sm" id="gas_amount" name="gas_amount" step="0.01" min="0" required>
                         </div>
-                    </div>
-                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="gas_expense_sent_by" class="form-label">Expense Sent By <span class="text-danger">*</span></label>
-                            <select class="form-select form-select-sm" id="gas_expense_sent_by" name="expense_sent_by" required>
-                                <option value="">Select</option>
-                                <option value="MERLIN">MERLIN</option>
-                                <option value="ALYSSA">ALYSSA</option>
-                            </select>
+                            <input type="text" class="form-control form-control-sm" id="gas_expense_sent_by" name="expense_sent_by" list="gas_sent_by_options" required>
+                            <datalist id="gas_sent_by_options">
+                                <option value="MERLIN"></option>
+                                <option value="ALYSSA"></option>
+                                <option value="MARJ"></option>
+                                <option value="DOMS"></option>
+                                <option value="GOTCHI"></option>
+                                <option value="JAY"></option>
+                                <option value="MK"></option>
+                            </datalist>
                         </div>
+                    </div>
+                    <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="gas_checked_by" class="form-label">Checked By <span class="text-danger">*</span></label>
                             <input type="text" class="form-control form-control-sm" id="gas_checked_by" name="checked_by" required>
@@ -305,6 +320,12 @@
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="gas_has_photo_video" value="1">
                                 <label class="form-check-label" for="gas_has_photo_video">Photo/Video in Group Chat</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="gas_photo_po_slip" value="1">
+                                <label class="form-check-label" for="gas_photo_po_slip">Photo of P.O. Slip</label>
                             </div>
                         </div>
                         <div class="col-md-6 mb-2">
@@ -557,12 +578,14 @@ document.addEventListener('DOMContentLoaded', function() {
             clearSelectedVehicle();
         }
         document.getElementById('gas_date').value = btn.getAttribute('data-date') || '';
+        document.getElementById('gas_po_number').value = btn.getAttribute('data-po-number') || '';
         document.getElementById('gas_driver').value = btn.getAttribute('data-driver') || '';
         document.getElementById('gas_model').value = btn.getAttribute('data-model') || '';
         document.getElementById('gas_amount').value = btn.getAttribute('data-gas-amount') || '';
         document.getElementById('gas_expense_sent_by').value = btn.getAttribute('data-expense-sent-by') || '';
         document.getElementById('gas_checked_by').value = btn.getAttribute('data-checked-by') || '';
         document.getElementById('gas_has_photo_video').checked = btn.getAttribute('data-has-photo-video') === '1';
+        document.getElementById('gas_photo_po_slip').checked = btn.getAttribute('data-photo-po-slip') === '1';
         document.getElementById('gas_photo_before').checked = btn.getAttribute('data-photo-before') === '1';
         document.getElementById('gas_photo_after').checked = btn.getAttribute('data-photo-after') === '1';
         document.getElementById('gas_photo_plate').checked = btn.getAttribute('data-photo-plate') === '1';
@@ -573,12 +596,14 @@ document.addEventListener('DOMContentLoaded', function() {
         return {
             vehicle_id: gasVehicleIdInput.value,
             date: document.getElementById('gas_date').value,
+            po_number: document.getElementById('gas_po_number').value,
             driver: document.getElementById('gas_driver').value,
             model: document.getElementById('gas_model').value,
             gas_amount: document.getElementById('gas_amount').value,
             expense_sent_by: document.getElementById('gas_expense_sent_by').value,
             checked_by: document.getElementById('gas_checked_by').value,
             has_photo_video_in_groupchat: document.getElementById('gas_has_photo_video').checked ? 1 : 0,
+            photo_po_slip: document.getElementById('gas_photo_po_slip').checked ? 1 : 0,
             photo_fuel_gauge_before: document.getElementById('gas_photo_before').checked ? 1 : 0,
             photo_fuel_gauge_after: document.getElementById('gas_photo_after').checked ? 1 : 0,
             photo_car_license_plate_gas_boy: document.getElementById('gas_photo_plate').checked ? 1 : 0,

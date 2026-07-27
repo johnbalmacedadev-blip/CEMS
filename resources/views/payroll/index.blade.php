@@ -124,7 +124,9 @@
                                         <strong>{{ $employee->full_name }}</strong>
                                     </td>
                                     <td>{{ $employee->role ?: '—' }}</td>
-                                    <td>{{ $employee->location ?: '—' }}</td>
+                                    <td>
+                                        @include('partials.showroom-badge', ['name' => $employee->location])
+                                    </td>
                                     <td>
                                         @if($employee->contract_type === 'REGULAR')
                                             <span class="badge bg-primary">{{ $employee->contract_type }}</span>

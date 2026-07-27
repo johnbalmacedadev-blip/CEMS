@@ -38,10 +38,23 @@ class RecommendationTrackerController extends Controller
         $query = RecommendationTracker::with('vehicle');
 
         if ($request->filled('customer')) {
-            $query->where('customer', 'like', '%' . $request->customer . '%');
+            $query->where(function ($q) use ($request) {
+                $q->where('customer', 'like', '%'.$request->customer.'%')
+                    ->orWhere('purchased_from', 'like', '%'.$request->customer.'%');
+            });
         }
         if ($request->filled('make')) {
-            $query->where('make', 'like', '%' . $request->make . '%');
+            $query->where('make', 'like', '%'.$request->make.'%');
+        }
+        if ($request->filled('final_status')) {
+            $query->where('final_status', $request->final_status);
+        }
+        if ($request->filled('linked')) {
+            if ($request->linked === 'yes') {
+                $query->whereNotNull('vehicle_id');
+            } elseif ($request->linked === 'no') {
+                $query->whereNull('vehicle_id');
+            }
         }
         if ($request->filled('date_from')) {
             $query->where('date', '>=', $request->date_from);
@@ -49,8 +62,20 @@ class RecommendationTrackerController extends Controller
         if ($request->filled('date_to')) {
             $query->where('date', '<=', $request->date_to);
         }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('plate_number', 'like', "%{$search}%")
+                    ->orWhere('make', 'like', "%{$search}%")
+                    ->orWhere('model', 'like', "%{$search}%")
+                    ->orWhere('variant', 'like', "%{$search}%")
+                    ->orWhere('customer', 'like', "%{$search}%")
+                    ->orWhere('purchased_from', 'like', "%{$search}%")
+                    ->orWhere('paint_recommendation', 'like', "%{$search}%");
+            });
+        }
 
-        $records = $query->orderBy('date', 'desc')->orderBy('created_at', 'desc')->paginate(15)->withQueryString();
+        $records = $query->orderBy('date', 'desc')->orderBy('created_at', 'desc')->paginate(20)->withQueryString();
 
         return view('recommendation-tracker.index', compact('records'));
     }
@@ -69,28 +94,19 @@ class RecommendationTrackerController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'date' => 'required|date',
-            'year' => 'nullable|string|max:20',
-            'customer' => 'nullable|string|max:255',
-            'make' => 'nullable|string|max:255',
-            'model' => 'nullable|string|max:255',
-            'paint' => 'nullable|string|max:255',
-            'odometers' => 'nullable|string|max:100',
-            'authorized_drivers' => 'nullable|string|max:255',
-            'vehicle_id' => 'nullable|exists:vehicles,id',
-            'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
-        ]);
+        $validated = $this->validated($request);
 
         foreach (self::checkboxKeys() as $key) {
             $validated[$key] = $request->boolean($key);
         }
 
+        $validated = $this->resolveVehicleLink($validated);
+
         $record = RecommendationTracker::create($validated);
 
         $this->uploadImages($request, $record);
 
-        return redirect()->route('recommendation-tracker.edit', $record)->with('success', 'Recommendation record added successfully. You can add more images below.');
+        return redirect()->route('recommendation-tracker.index')->with('success', 'Recommendation record added successfully.');
     }
 
     /**
@@ -98,8 +114,7 @@ class RecommendationTrackerController extends Controller
      */
     public function show(RecommendationTracker $recommendation_tracker)
     {
-        $recommendation_tracker->load(['vehicle', 'images']);
-        return view('recommendation-tracker.show', compact('recommendation_tracker'));
+        return redirect()->route('recommendation-tracker.index');
     }
 
     /**
@@ -117,28 +132,88 @@ class RecommendationTrackerController extends Controller
      */
     public function update(Request $request, RecommendationTracker $recommendation_tracker)
     {
-        $validated = $request->validate([
+        $validated = $this->validated($request);
+
+        foreach (self::checkboxKeys() as $key) {
+            $validated[$key] = $request->boolean($key);
+        }
+
+        $validated = $this->resolveVehicleLink($validated);
+
+        $recommendation_tracker->update($validated);
+
+        $this->uploadImages($request, $recommendation_tracker);
+
+        return redirect()->route('recommendation-tracker.index')->with('success', 'Recommendation record updated successfully.');
+    }
+
+    private function validated(Request $request): array
+    {
+        $data = $request->validate([
             'date' => 'required|date',
             'year' => 'nullable|string|max:20',
             'customer' => 'nullable|string|max:255',
             'make' => 'nullable|string|max:255',
             'model' => 'nullable|string|max:255',
             'paint' => 'nullable|string|max:255',
+            'plate_number' => 'nullable|string|max:50',
+            'variant' => 'nullable|string|max:255',
+            'transmission' => 'nullable|string|max:50',
+            'fuel_type' => 'nullable|string|max:50',
+            'color' => 'nullable|string|max:100',
+            'purchase_price' => 'nullable|numeric|min:0',
+            'purchased_from' => 'nullable|string|max:255',
+            'purchase_date' => 'nullable|date',
+            'final_status' => 'nullable|string|max:100',
+            'paint_recommendation' => 'nullable|string|max:5000',
+            'paint_completion' => 'nullable|string|max:5000',
+            'mechanical_recommendation' => 'nullable|string|max:5000',
+            'mechanical_completion' => 'nullable|string|max:5000',
+            'electrical_recommendation' => 'nullable|string|max:5000',
+            'electrical_completion' => 'nullable|string|max:5000',
+            'ecu_cluster_recommendation' => 'nullable|string|max:5000',
+            'ecu_cluster_completion' => 'nullable|string|max:5000',
+            'aircon_recommendation' => 'nullable|string|max:5000',
+            'aircon_completion' => 'nullable|string|max:5000',
+            'interior_recommendation' => 'nullable|string|max:5000',
+            'interior_completion' => 'nullable|string|max:5000',
+            'tires_recommendation' => 'nullable|string|max:5000',
+            'tires_completion' => 'nullable|string|max:5000',
+            'battery_recommendation' => 'nullable|string|max:5000',
+            'battery_completion' => 'nullable|string|max:5000',
+            'misc_recommendation' => 'nullable|string|max:5000',
+            'misc_completion' => 'nullable|string|max:5000',
+            'notes' => 'nullable|string|max:2000',
             'odometers' => 'nullable|string|max:100',
             'authorized_drivers' => 'nullable|string|max:255',
             'vehicle_id' => 'nullable|exists:vehicles,id',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:5120',
         ]);
 
-        foreach (self::checkboxKeys() as $key) {
-            $validated[$key] = $request->boolean($key);
+        if (! empty($data['plate_number'])) {
+            $data['plate_number'] = strtoupper(trim($data['plate_number']));
         }
 
-        $recommendation_tracker->update($validated);
+        return $data;
+    }
 
-        $this->uploadImages($request, $recommendation_tracker);
+    private function resolveVehicleLink(array $data): array
+    {
+        if (! empty($data['vehicle_id'])) {
+            return $data;
+        }
 
-        return redirect()->route('recommendation-tracker.edit', $recommendation_tracker)->with('success', 'Recommendation record updated successfully.');
+        if (! empty($data['plate_number'])) {
+            $normalized = RecommendationTracker::normalizePlate($data['plate_number']);
+            $match = Vehicle::query()->get(['id', 'plate_number'])->first(function ($v) use ($normalized) {
+                return RecommendationTracker::normalizePlate($v->plate_number) === $normalized;
+            });
+            if ($match) {
+                $data['vehicle_id'] = $match->id;
+            }
+        }
+
+        return $data;
     }
 
     /**

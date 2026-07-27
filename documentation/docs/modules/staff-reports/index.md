@@ -12,8 +12,8 @@ sidebar_position: 1
 |--------|-----|------------|-------------|
 | **BUFFING TRACKER** | `/buffing-tracker` | `buffing-tracker` | Track buffing/detailing jobs per vehicle |
 | **INSURANCE TRACKER** | `/insurance-tracker` | `insurance-tracker` | Monitor insurance processing status |
-| **MECHANIC TRACKER** | `/expenses-inventory?section=tools-purchase` | `expenses-inventory` | Mechanic work linked to tools/expenses |
-| **DRIVER ACTIVITY TRACKER** | `/expenses-inventory?section=tools-purchase` | `expenses-inventory` | Driver activity records |
+| **MECHANIC TRACKER** | `/mechanic-tracker` | `mechanic-tracker` | Internal & external mechanic jobs |
+| **DRIVER ACTIVITY TRACKER** | `/driver-activity-tracker` | `driver-activity-tracker` | Driver trips (delivery, pickup, transfer, etc.) |
 | **RECOMMENDATION TRACKER** | `/recommendation-tracker` | `recommendation-tracker` | Vehicle recommendations with photo attachments |
 | **SALES AGENTS** | `/staff-reports/sales-agents` | `staff-reports.sales-agents` | Staff report view for sales agents |
 | **EXECUTIVE AGENTS** | `/staff-reports/executive-agents` | `staff-reports.executive-agents` | Executive agent records and reporting |
@@ -44,11 +44,21 @@ Record and follow up buffing/detailing work on inventory units.
 
 Track insurance applications and completion status per unit or client.
 
-## Mechanic & Driver Activity Trackers
+## Mechanic Tracker
 
-Both route to the **Expenses Inventory** tools section. Used for mechanic tool purchases and driver-related activity logging.
+Log internal shop jobs and external outsourced work.
 
-→ Also see [Equipment Lists](../equipment-lists/)
+- Internal: mechanic, plate, description, labor, parts, status
+- External: category (Mechanical/Electrical), item, cost, unit
+- Filter by job type, status, date range, or search
+
+## Driver Activity Tracker
+
+Log driver trips linked to vehicles and staff.
+
+- Activity types: Delivery, Pickup, Transfer, Test Drive, Errand, Other
+- Track destination, status, and notes
+- Filter by status, type, date range, or search
 
 ## Recommendation Tracker
 

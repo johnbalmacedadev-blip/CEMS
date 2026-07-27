@@ -17,14 +17,10 @@ class InsuranceTrackerController extends Controller
             $year = $request->filled('year') ? (int) $request->year : (int) date('Y');
             $query->whereMonth('release_date', $month)->whereYear('release_date', $year);
         }
-        if ($request->filled('showroom')) {
-            $query->where('showroom', 'LIKE', '%' . $request->showroom . '%');
-        }
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('showroom', 'LIKE', "%{$search}%")
-                    ->orWhere('sales', 'LIKE', "%{$search}%")
+                $q->where('sales', 'LIKE', "%{$search}%")
                     ->orWhere('year', 'LIKE', "%{$search}%")
                     ->orWhere('make', 'LIKE', "%{$search}%")
                     ->orWhere('model', 'LIKE', "%{$search}%")

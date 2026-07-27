@@ -12,9 +12,11 @@
             <a href="{{ route('home') }}" class="btn btn-outline-secondary me-2">
                 <i class="fas fa-home me-1"></i>Back to Main Menu
             </a>
+            @canPage('appointment-list', 'create')
             <a href="{{ route('appointment-list.create') }}" class="btn btn-primary">
                 <i class="fas fa-plus me-1"></i>Add Appointment
             </a>
+            @endcanPage
         </div>
     </div>
 
@@ -80,7 +82,9 @@
                                     <td>{{ $apt->added_by ?: '—' }}</td>
                                     <td><strong>{{ $apt->customer_full_name }}</strong></td>
                                     <td>{{ $apt->customer_phone_number ?: '—' }}</td>
-                                    <td>{{ $apt->showroom ?: '—' }}</td>
+                                    <td>
+                                        @include('partials.showroom-badge', ['name' => $apt->showroom])
+                                    </td>
                                     <td>{{ $apt->date_of_visit ? $apt->date_of_visit->format('M d, Y') : '—' }}</td>
                                     <td class="small">
                                         @if($apt->vehicle_id && $apt->vehicle)
@@ -92,12 +96,16 @@
                                     <td>{{ $apt->sales_exec_who_assisted ?: '—' }}</td>
                                     <td>{{ Str::limit($apt->outcome, 25) ?: '—' }}</td>
                                     <td class="text-center">
+                                        @canPage('appointment-list', 'update')
                                         <a href="{{ route('appointment-list.edit', $apt) }}" class="btn btn-sm btn-outline-primary" title="Edit"><i class="fas fa-edit"></i></a>
+                                        @endcanPage
+                                        @canPage('appointment-list', 'delete')
                                         <form action="{{ route('appointment-list.destroy', $apt) }}" method="POST" class="d-inline" onsubmit="return confirm('Remove this appointment?');">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="fas fa-trash-alt"></i></button>
                                         </form>
+                                        @endcanPage
                                     </td>
                                 </tr>
                             @endforeach
@@ -112,7 +120,9 @@
                     <i class="fas fa-calendar-check fa-3x text-muted mb-3"></i>
                     <h5 class="text-muted">No appointments yet</h5>
                     <p class="text-muted mb-3">Add appointments to schedule and track showroom visits.</p>
+                    @canPage('appointment-list', 'create')
                     <a href="{{ route('appointment-list.create') }}" class="btn btn-primary"><i class="fas fa-plus me-1"></i>Add Appointment</a>
+                    @endcanPage
                 </div>
             @endif
         </div>

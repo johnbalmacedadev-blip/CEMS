@@ -15,9 +15,9 @@
         <div class="card-body py-2">
             <form method="GET" action="{{ route('transfer-orcr.summary-report') }}" class="row g-2 align-items-end">
                 <div class="col-auto">
-                    <label class="form-label small mb-0">Branch / Store Location</label>
+                    <label class="form-label small mb-0">Showroom</label>
                     <select class="form-select form-select-sm" name="branch_location_id" style="min-width: 160px;">
-                        <option value="">All branches</option>
+                        <option value="">All showrooms</option>
                         @foreach($branches as $branch)
                             <option value="{{ $branch->id }}" {{ (string) request('branch_location_id') === (string) $branch->id ? 'selected' : '' }}>
                                 {{ $branch->name }}

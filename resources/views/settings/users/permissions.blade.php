@@ -14,11 +14,64 @@
         </div>
     </div>
 
-    @if($user->isAdmin())
-        <div class="alert alert-info">
-            <i class="fas fa-info-circle me-2"></i>Admins have full access to all pages. All permissions below are shown as granted.
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
     @endif
+
+    @if($user->isAdmin())
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>Super Admins have full access to all pages. All permissions below are shown as granted.
+        </div>
+    @endif
+
+    {{-- Access templates --}}
+    <div class="card mb-4 border-primary">
+        <div class="card-header bg-primary text-white">
+            <strong><i class="fas fa-layer-group me-2"></i>Access Templates</strong>
+        </div>
+        <div class="card-body">
+            <p class="text-muted small mb-3">
+                Apply a ready-made access level based on the current page list
+                ({{ count(config('pages.list', [])) }} features). You can still tweak individual checkboxes afterward.
+            </p>
+            <div class="row g-3">
+                @foreach($templates as $key => $tpl)
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 h-100 d-flex flex-column">
+                            <div class="d-flex align-items-center mb-2">
+                                <span class="badge bg-{{ $tpl['badge'] ?? 'secondary' }} me-2">
+                                    <i class="fas {{ $tpl['icon'] ?? 'fa-user' }}"></i>
+                                </span>
+                                <strong>{{ $tpl['label'] }}</strong>
+                            </div>
+                            <p class="text-muted small flex-grow-1">{{ $tpl['description'] }}</p>
+                            @if(($tpl['sets_role'] ?? null) === 'admin')
+                                <form action="{{ route('settings.users.permissions.update', $user) }}" method="POST" onsubmit="return confirm('Make this user a Super Admin with full access?');">
+                                    @csrf
+                                    @method('PUT')
+                                    <input type="hidden" name="apply_template" value="{{ $key }}">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+                                        <i class="fas fa-user-shield me-1"></i>Apply Super Admin
+                                    </button>
+                                </form>
+                            @elseif(!$user->isAdmin())
+                                <button type="button" class="btn btn-sm btn-outline-{{ $tpl['badge'] ?? 'secondary' }} w-100 apply-template-btn" data-template="{{ $key }}">
+                                    <i class="fas fa-magic me-1"></i>Fill checkboxes
+                                </button>
+                            @else
+                                <button type="button" class="btn btn-sm btn-outline-secondary w-100" disabled title="Change role on Edit User first">
+                                    Switch role first
+                                </button>
+                            @endif
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </div>
 
     {{-- Legend --}}
     <div class="card mb-4 border-secondary">
@@ -106,9 +159,9 @@
     <div class="card">
         <div class="card-body">
             <p class="text-muted mb-3">
-                Features are grouped by home page category (e.g. Car Reports, Staff Reports). Check the boxes to grant access; leave unchecked to deny.
+                Features are grouped by home page category and stay in sync with the main menu (including Units Masterlist, Video Posting Tracker, Showroom, trackers, and more).
                 @if(!$user->isAdmin())
-                    Changes take effect after you click <strong>Save Permissions</strong>.
+                    Use a template above to pre-fill, then adjust as needed. Changes take effect after you click <strong>Save Permissions</strong>.
                 @endif
             </p>
             <form action="{{ route('settings.users.permissions.update', $user) }}" method="POST" id="permissionsForm">
@@ -345,6 +398,8 @@
 @section('scripts')
 <script>
 (function () {
+    const templatePermissions = @json($templatePermissions ?? []);
+
     function updateRowState(row) {
         const viewCb = row.querySelector('.perm-check-input[name$="[can_view]"]');
         const hasAccess = viewCb && viewCb.checked;
@@ -363,11 +418,40 @@
         }
     }
 
+    function setCheckbox(input, checked) {
+        if (!input || input.disabled) return;
+        input.checked = !!checked;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function applyTemplateToForm(key) {
+        const map = templatePermissions[key];
+        if (!map) return;
+
+        Object.keys(map).forEach(function (slug) {
+            const flags = map[slug] || {};
+            const row = document.querySelector('[data-page-row="' + slug + '"]');
+            if (!row) return;
+
+            setCheckbox(row.querySelector('.perm-check-input[name$="[can_view]"]'), flags.can_view);
+            setCheckbox(row.querySelector('.perm-check-input[name$="[can_create]"]'), flags.can_create);
+            setCheckbox(row.querySelector('.perm-check-input[name$="[can_update]"]'), flags.can_update);
+            setCheckbox(row.querySelector('.perm-check-input[name$="[can_delete]"]'), flags.can_delete);
+            updateRowState(row);
+        });
+    }
+
     document.querySelectorAll('[data-page-row]').forEach(function (row) {
         row.querySelectorAll('.perm-check-input').forEach(function (cb) {
             cb.addEventListener('change', function () {
                 updateRowState(row);
             });
+        });
+    });
+
+    document.querySelectorAll('.apply-template-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            applyTemplateToForm(btn.dataset.template);
         });
     });
 })();

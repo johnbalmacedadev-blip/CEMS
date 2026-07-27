@@ -69,8 +69,8 @@
             padding-right: 30px !important;
         }
         
-        /* Apply padding to main content areas */
-        main, .main-content, [class*="content"] {
+        /* Apply padding to main content areas (exclude Bootstrap .modal-content) */
+        main, .main-content, [class*="content"]:not(.modal-content) {
             padding-left: 30px !important;
             padding-right: 30px !important;
         }
@@ -85,7 +85,7 @@
         @media (max-width: 768px) {
             .container-fluid:not(.navbar .container-fluid):not(.app-footer .container-fluid),
             .container,
-            main, .main-content, [class*="content"] {
+            main, .main-content, [class*="content"]:not(.modal-content) {
                 padding-left: 15px !important;
                 padding-right: 15px !important;
             }
@@ -94,7 +94,7 @@
         @media (max-width: 576px) {
             .container-fluid:not(.navbar .container-fluid):not(.app-footer .container-fluid),
             .container,
-            main, .main-content, [class*="content"] {
+            main, .main-content, [class*="content"]:not(.modal-content) {
                 padding-left: 10px !important;
                 padding-right: 10px !important;
             }
@@ -450,7 +450,7 @@
                 <!-- User identity -->
                 <span class="me-2 d-none d-md-inline text-white">
                     <i class="fas fa-user me-1"></i><span style="color: #ffffff !important;">{{ Auth::user()->name }}</span>
-                    <span class="badge bg-{{ Auth::user()->isAdmin() ? 'danger' : 'primary' }} ms-1">{{ ucfirst(Auth::user()->role) }}</span>
+                    <span class="badge bg-{{ Auth::user()->isAdmin() ? 'danger' : 'primary' }} ms-1">{{ Auth::user()->isAdmin() ? 'Super Admin' : 'User' }}</span>
                 </span>
 
                 <!-- Direct Logout Button -->
@@ -765,6 +765,42 @@
                 }
             });
         }
+    </script>
+
+    <script>
+    (function () {
+        window.escapeHtml = window.escapeHtml || function (text) {
+            const div = document.createElement('div');
+            div.textContent = text == null ? '' : String(text);
+            return div.innerHTML;
+        };
+
+        window.showroomBadgeHtml = function (name, emptyText) {
+            const empty = emptyText || '—';
+            const label = name == null ? '' : String(name).trim();
+            if (!label || label === '—') {
+                return '<span class="text-muted">' + escapeHtml(empty) + '</span>';
+            }
+            const loc = label.toLowerCase();
+            let badgeClass = '';
+            if (loc === 'annex') {
+                badgeClass = 'bg-warning text-dark';
+            } else if (loc === 'flagship') {
+                badgeClass = 'bg-info text-white';
+            }
+            if (badgeClass) {
+                return '<span class="badge rounded-pill ' + badgeClass + '">' + escapeHtml(label) + '</span>';
+            }
+            return escapeHtml(label);
+        };
+
+        window.setShowroomBadge = function (el, name, emptyText) {
+            if (!el) {
+                return;
+            }
+            el.innerHTML = window.showroomBadgeHtml(name, emptyText);
+        };
+    })();
     </script>
     
     @stack('scripts')

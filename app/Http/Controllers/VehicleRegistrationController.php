@@ -14,42 +14,36 @@ class VehicleRegistrationController extends Controller
 
     public function index(Request $request)
     {
-        $query = VehicleRegistration::with('vehicle.make', 'vehicle.vehicleModel', 'branchLocation');
-
-        if ($request->filled('branch_location_id')) {
-            $query->where('branch_location_id', $request->branch_location_id);
-        }
-        if ($request->filled('status')) {
-            $query->where('status', 'LIKE', '%' . $request->status . '%');
-        }
-        if ($request->filled('date_from')) {
-            $query->where('date', '>=', $request->date_from);
-        }
-        if ($request->filled('date_to')) {
-            $query->where('date', '<=', $request->date_to);
-        }
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('remarks', 'LIKE', "%{$search}%")
-                    ->orWhere('coc_no', 'LIKE', "%{$search}%")
-                    ->orWhere('status', 'LIKE', "%{$search}%")
-                    ->orWhereHas('vehicle', function ($vq) use ($search) {
-                        $vq->where('plate_number', 'LIKE', "%{$search}%")
-                            ->orWhereHas('make', fn($mq) => $mq->where('name', 'LIKE', "%{$search}%"))
-                            ->orWhereHas('vehicleModel', fn($mq) => $mq->where('name', 'LIKE', "%{$search}%"))
-                            ->orWhere('year', 'LIKE', "%{$search}%");
-                    });
-            });
-        }
-
-        $records = $query->orderBy('date', 'desc')->orderBy('created_at', 'desc')
+        $records = $this->filteredQuery($request)
+            ->orderBy('date', 'desc')
+            ->orderBy('created_at', 'desc')
             ->paginate(20)
             ->withQueryString();
 
         $branches = BranchLocation::ordered()->get();
 
-        return view('vehicle-registration.index', compact('records', 'branches'));
+        $locationSummaryBase = $this->filteredQuery($request, ignoreBranch: true);
+        $branchSummaries = $branches->map(function (BranchLocation $branch) use ($locationSummaryBase) {
+            $branchQuery = (clone $locationSummaryBase)->where('branch_location_id', $branch->id);
+
+            return [
+                'id' => $branch->id,
+                'name' => $branch->name,
+                'count' => (clone $branchQuery)->count(),
+                'fee_total' => $this->sumFeeTotals($branchQuery),
+            ];
+        })->values();
+
+        $grandCount = $branchSummaries->sum('count');
+        $grandFeeTotal = $branchSummaries->sum('fee_total');
+
+        return view('vehicle-registration.index', compact(
+            'records',
+            'branches',
+            'branchSummaries',
+            'grandCount',
+            'grandFeeTotal'
+        ));
     }
 
     public function create()
@@ -138,6 +132,56 @@ class VehicleRegistrationController extends Controller
         $date = $record->date?->format('j M Y') ?? '';
 
         return trim("{$plate}" . ($date ? " ({$date})" : ''));
+    }
+
+    private function filteredQuery(Request $request, bool $ignoreBranch = false)
+    {
+        $query = VehicleRegistration::with('vehicle.make', 'vehicle.vehicleModel', 'branchLocation');
+
+        if (! $ignoreBranch && $request->filled('branch_location_id')) {
+            $query->where('branch_location_id', $request->branch_location_id);
+        }
+        if ($request->filled('status')) {
+            $query->where('status', 'LIKE', '%'.$request->status.'%');
+        }
+        if ($request->filled('date_from')) {
+            $query->where('date', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->where('date', '<=', $request->date_to);
+        }
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('remarks', 'LIKE', "%{$search}%")
+                    ->orWhere('coc_no', 'LIKE', "%{$search}%")
+                    ->orWhere('status', 'LIKE', "%{$search}%")
+                    ->orWhereHas('vehicle', function ($vq) use ($search) {
+                        $vq->where('plate_number', 'LIKE', "%{$search}%")
+                            ->orWhereHas('make', fn ($mq) => $mq->where('name', 'LIKE', "%{$search}%"))
+                            ->orWhereHas('vehicleModel', fn ($mq) => $mq->where('name', 'LIKE', "%{$search}%"))
+                            ->orWhere('year', 'LIKE', "%{$search}%");
+                    });
+            });
+        }
+
+        return $query;
+    }
+
+    private function sumFeeTotals($query): float
+    {
+        return (float) (clone $query)->selectRaw(
+            'COALESCE(SUM(
+                COALESCE(renewal_reg_or, 0) +
+                COALESCE(renewal_sop, 0) +
+                COALESCE(smoke_na, 0) +
+                COALESCE(duplicate_plate, 0) +
+                COALESCE(migrate, 0) +
+                COALESCE(duplicate_cr, 0) +
+                COALESCE(pnp_clearance, 0) +
+                COALESCE(confirmation, 0)
+            ), 0) as fee_sum'
+        )->value('fee_sum');
     }
 
     private function validateRecord(Request $request): array

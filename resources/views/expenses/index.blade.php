@@ -3,9 +3,9 @@
 @section('title', 'Expenses & Inventory - Car Empire Management System')
 
 @section('content')
-<div class="container-fluid" style="overflow-x: hidden;">
-    <!-- Main Content -->
-    <main id="mainContent">
+<div class="container-fluid">
+    <div class="row">
+        <main class="col-12 px-md-4 main-content" id="mainContent">
             @if($section == 'expenses')
                 <!-- Expense Transactions Section -->
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -391,118 +391,122 @@
                 @endif
 
             @elseif($section == 'tools-purchase')
-                <!-- Purchase Inventory Section (Mechanic Tools / Expenses) - Revised design -->
-                <div class="tools-purchase-page">
-                    <div class="tools-purchase-header">
-                        <div class="tools-purchase-header-top">
-                            <div>
-                                <h1 class="tools-purchase-title">
-                                    <span class="tools-purchase-icon"><i class="fas fa-tools"></i></span>
-                                    Mechanic Tools / Purchase Inventory
-                                </h1>
-                                <p class="tools-purchase-subtitle">Track tool purchases by date. Add items and manage your equipment expenses.</p>
-                            </div>
-                            <div class="tools-purchase-actions">
-                                <button type="button" class="btn btn-primary btn-add-purchase" onclick="openAddToolModal()">
-                                    <i class="fas fa-plus me-2"></i>Add Inventory
-                                </button>
-                                <a href="{{ route('expenses-inventory', ['section' => 'tools-current']) }}" class="btn btn-outline-primary">
-                                    <i class="fas fa-boxes me-2"></i>Current Inventory
-                                </a>
-                                <a href="{{ route('home') }}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-home me-2"></i>Main Menu
-                                </a>
+                <!-- Purchase Inventory Section (Mechanic Tools / Expenses) -->
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="fas fa-tools me-2"></i>Mechanic Tools / Purchase Inventory
+                    </h1>
+                    <div class="btn-toolbar mb-2 mb-md-0 flex-wrap">
+                        <button type="button" class="btn btn-primary mb-2 mb-md-0" onclick="openAddToolModal()">
+                            <i class="fas fa-plus me-1"></i>Add Inventory
+                        </button>
+                        <a href="{{ route('expenses-inventory', ['section' => 'tools-current']) }}" class="btn btn-outline-primary ms-md-2 mb-2 mb-md-0">
+                            <i class="fas fa-boxes me-1"></i>Current Inventory
+                        </a>
+                        <a href="{{ route('home') }}" class="btn btn-outline-secondary ms-md-2 mb-2 mb-md-0">
+                            <i class="fas fa-home me-1"></i>Back to Main Menu
+                        </a>
+                    </div>
+                </div>
+
+                @if(!$groupedTools->isEmpty())
+                    @php
+                        $grandTotal = $groupedTools->sum(fn($tools) => $tools->sum('amount'));
+                        $totalEntries = $groupedTools->sum(fn($tools) => $tools->count());
+                    @endphp
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="text-muted small text-uppercase fw-semibold">Purchase dates</div>
+                                    <div class="fs-4 fw-bold">{{ $groupedTools->count() }}</div>
+                                </div>
                             </div>
                         </div>
-                        @if(!$groupedTools->isEmpty())
-                            @php
-                                $grandTotal = $groupedTools->sum(fn($tools) => $tools->sum('amount'));
-                                $totalEntries = $groupedTools->sum(fn($tools) => $tools->count());
-                            @endphp
-                            <div class="tools-purchase-summary">
-                                <div class="tools-purchase-summary-item">
-                                    <span class="tools-purchase-summary-label">Purchase dates</span>
-                                    <span class="tools-purchase-summary-value">{{ $groupedTools->count() }}</span>
-                                </div>
-                                <div class="tools-purchase-summary-item">
-                                    <span class="tools-purchase-summary-label">Total items</span>
-                                    <span class="tools-purchase-summary-value">{{ $totalEntries }}</span>
-                                </div>
-                                <div class="tools-purchase-summary-item tools-purchase-summary-total">
-                                    <span class="tools-purchase-summary-label">Total amount</span>
-                                    <span class="tools-purchase-summary-value">₱{{ number_format($grandTotal, 2) }}</span>
+                        <div class="col-md-4">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="text-muted small text-uppercase fw-semibold">Total items</div>
+                                    <div class="fs-4 fw-bold">{{ $totalEntries }}</div>
                                 </div>
                             </div>
-                        @endif
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card h-100 border-primary">
+                                <div class="card-body">
+                                    <div class="text-muted small text-uppercase fw-semibold">Total amount</div>
+                                    <div class="fs-4 fw-bold text-primary">₱{{ number_format($grandTotal, 2) }}</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
+                @endif
 
-                    @if($groupedTools->isEmpty())
-                        <div class="tools-purchase-empty">
-                            <div class="tools-purchase-empty-icon">
-                                <i class="fas fa-shopping-cart"></i>
-                            </div>
-                            <h3 class="tools-purchase-empty-title">No purchases yet</h3>
-                            <p class="tools-purchase-empty-text">Start recording mechanic tool purchases by date. Each entry can include tool name, quantity, and amount.</p>
-                            <button type="button" class="btn btn-primary btn-lg" onclick="openAddToolModal()">
-                                <i class="fas fa-plus me-2"></i>Add first purchase
+                @if($groupedTools->isEmpty())
+                    <div class="card">
+                        <div class="card-body text-center py-5">
+                            <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                            <h4 class="text-muted">No purchases yet</h4>
+                            <p class="text-muted mb-4">Start recording mechanic tool purchases by date. Each entry can include tool name, quantity, and amount.</p>
+                            <button type="button" class="btn btn-primary" onclick="openAddToolModal()">
+                                <i class="fas fa-plus me-1"></i>Add First Purchase
                             </button>
                         </div>
-                    @else
-                        <div class="tools-purchase-list">
-                            @foreach($groupedTools->sortKeysDesc() as $date => $tools)
-                                @php
-                                    $totalForDate = $dateTotals[$date] ?? $tools->sum('amount');
-                                    $dayName = \Carbon\Carbon::parse($date)->format('l');
-                                @endphp
-                                <div class="tools-purchase-card">
-                                    <div class="tools-purchase-card-header">
-                                        <div class="tools-purchase-card-date">
-                                            <span class="tools-purchase-card-day">{{ \Carbon\Carbon::parse($date)->format('F j, Y') }}</span>
-                                            <span class="tools-purchase-card-weekday">{{ $dayName }}</span>
-                                        </div>
-                                        <div class="tools-purchase-card-total">
-                                            <span class="tools-purchase-card-total-label">Day total</span>
-                                            <span class="tools-purchase-card-total-amount">₱{{ number_format($totalForDate, 2) }}</span>
-                                        </div>
-                                    </div>
-                                    <div class="tools-purchase-card-body">
-                                        <div class="table-responsive">
-                                            <table class="table tools-purchase-table">
-                                                <thead>
-                                                    <tr>
-                                                        <th class="col-num">#</th>
-                                                        <th class="col-name">Tool name</th>
-                                                        <th class="col-qty">Qty</th>
-                                                        <th class="col-amount">Amount</th>
-                                                        <th class="col-actions text-end">Actions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    @foreach($tools as $index => $tool)
-                                                        <tr data-tool-id="{{ $tool->id }}">
-                                                            <td class="col-num">{{ $index + 1 }}</td>
-                                                            <td class="col-name">{{ $tool->name }}</td>
-                                                            <td class="col-qty">{{ $tool->quantity }}</td>
-                                                            <td class="col-amount"><strong>₱{{ number_format($tool->amount, 2) }}</strong></td>
-                                                            <td class="col-actions text-end">
-                                                                <button type="button" class="btn btn-sm btn-action btn-action-edit" onclick="openEditToolModal({{ $tool->id }})" title="Edit">
-                                                                    <i class="fas fa-pen"></i>
-                                                                </button>
-                                                                <button type="button" class="btn btn-sm btn-action btn-action-delete" onclick="deleteTool({{ $tool->id }})" title="Delete">
-                                                                    <i class="fas fa-trash-alt"></i>
-                                                                </button>
-                                                            </td>
-                                                        </tr>
-                                                    @endforeach
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
+                    </div>
+                @else
+                    @foreach($groupedTools->sortKeysDesc() as $date => $tools)
+                        @php
+                            $totalForDate = $dateTotals[$date] ?? $tools->sum('amount');
+                            $dayName = \Carbon\Carbon::parse($date)->format('l');
+                        @endphp
+                        <div class="card mb-4">
+                            <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                <div>
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-calendar-day me-2"></i>{{ \Carbon\Carbon::parse($date)->format('F j, Y') }}
+                                    </h5>
+                                    <small class="text-muted">{{ $dayName }} · {{ $tools->count() }} item(s)</small>
                                 </div>
-                            @endforeach
+                                <span class="badge bg-primary fs-6">
+                                    Day total: ₱{{ number_format($totalForDate, 2) }}
+                                </span>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width: 4rem;">#</th>
+                                                <th>Tool name</th>
+                                                <th style="width: 6rem;">Qty</th>
+                                                <th style="width: 10rem;">Amount</th>
+                                                <th class="text-end" style="width: 8rem;">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($tools as $index => $tool)
+                                                <tr data-tool-id="{{ $tool->id }}">
+                                                    <td>{{ $index + 1 }}</td>
+                                                    <td><strong>{{ $tool->name }}</strong></td>
+                                                    <td>{{ $tool->quantity }}</td>
+                                                    <td><strong>₱{{ number_format($tool->amount, 2) }}</strong></td>
+                                                    <td class="text-end">
+                                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="openEditToolModal({{ $tool->id }})" title="Edit">
+                                                            <i class="fas fa-pen"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteTool({{ $tool->id }})" title="Delete">
+                                                            <i class="fas fa-trash-alt"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
-                    @endif
-                </div>
+                    @endforeach
+                @endif
 
             @elseif($section == 'tools-current')
                 <!-- Current Tools Inventory Section -->
@@ -1095,324 +1099,6 @@ html {
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
 
-/* ========== Tools Purchase Section (Mechanic Tools/Expenses) - Theme-aligned ========== */
-/* Uses app theme: navbar/footer red #dc3545, CSS vars for light/dark */
-.tools-purchase-page {
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-.tools-purchase-header {
-    margin-bottom: 1.75rem;
-}
-
-.tools-purchase-header-top {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.tools-purchase-title {
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0 0 0.35rem 0;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-}
-
-.tools-purchase-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 10px;
-    background: linear-gradient(135deg, #dc3545 0%, #bb2d3b 100%);
-    color: #fff;
-    font-size: 1.1rem;
-}
-
-.tools-purchase-subtitle {
-    color: var(--text-muted);
-    font-size: 0.95rem;
-    margin: 0;
-}
-
-.tools-purchase-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    align-items: center;
-}
-
-.tools-purchase-actions .btn-add-purchase {
-    font-weight: 600;
-    padding: 0.5rem 1rem;
-    background-color: #dc3545;
-    border-color: #dc3545;
-    color: #fff;
-}
-
-.tools-purchase-actions .btn-add-purchase:hover {
-    background-color: #bb2d3b;
-    border-color: #bb2d3b;
-    color: #fff;
-}
-
-.tools-purchase-actions .btn-outline-primary {
-    border-color: #dc3545;
-    color: #dc3545;
-}
-
-.tools-purchase-actions .btn-outline-primary:hover {
-    background-color: #dc3545;
-    border-color: #dc3545;
-    color: #fff;
-}
-
-.tools-purchase-summary {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1.5rem;
-    padding: 1rem 1.25rem;
-    background: var(--bg-secondary);
-    border-radius: 10px;
-    border: 1px solid var(--border-color);
-}
-
-.tools-purchase-summary-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-}
-
-.tools-purchase-summary-label {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
-    font-weight: 600;
-}
-
-.tools-purchase-summary-value {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-.tools-purchase-summary-total .tools-purchase-summary-value {
-    color: #dc3545;
-    font-size: 1.25rem;
-}
-
-.tools-purchase-empty {
-    text-align: center;
-    padding: 3rem 2rem;
-    background: var(--bg-primary);
-    border-radius: 12px;
-    border: 1px dashed var(--border-color);
-    box-shadow: 0 1px 3px var(--shadow);
-}
-
-.tools-purchase-empty-icon {
-    width: 4rem;
-    height: 4rem;
-    margin: 0 auto 1.25rem;
-    border-radius: 50%;
-    background: rgba(220, 53, 69, 0.12);
-    color: #dc3545;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-}
-
-.tools-purchase-empty-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0 0 0.5rem 0;
-}
-
-.tools-purchase-empty-text {
-    color: var(--text-muted);
-    margin: 0 0 1.5rem 0;
-    max-width: 400px;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-.tools-purchase-empty .btn-primary {
-    background-color: #dc3545;
-    border-color: #dc3545;
-    color: #fff;
-}
-
-.tools-purchase-empty .btn-primary:hover {
-    background-color: #bb2d3b;
-    border-color: #bb2d3b;
-    color: #fff;
-}
-
-.tools-purchase-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-}
-
-.tools-purchase-card {
-    background: var(--bg-primary);
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
-    box-shadow: 0 1px 3px var(--shadow);
-    overflow: hidden;
-}
-
-.tools-purchase-card-header {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1rem 1.25rem;
-    background: linear-gradient(135deg, #dc3545 0%, #bb2d3b 100%);
-    color: #fff;
-}
-
-.tools-purchase-card-date {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-}
-
-.tools-purchase-card-day {
-    font-size: 1.1rem;
-    font-weight: 700;
-}
-
-.tools-purchase-card-weekday {
-    font-size: 0.8rem;
-    opacity: 0.9;
-}
-
-.tools-purchase-card-total {
-    text-align: right;
-}
-
-.tools-purchase-card-total-label {
-    display: block;
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    opacity: 0.9;
-}
-
-.tools-purchase-card-total-amount {
-    font-size: 1.25rem;
-    font-weight: 700;
-}
-
-.tools-purchase-card-body {
-    padding: 0;
-}
-
-.tools-purchase-table {
-    margin: 0;
-    font-size: 0.95rem;
-    color: var(--text-primary);
-}
-
-.tools-purchase-table thead th {
-    background: var(--bg-secondary);
-    font-weight: 600;
-    color: var(--text-secondary);
-    font-size: 0.8rem;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.tools-purchase-table tbody td {
-    padding: 0.75rem 1rem;
-    vertical-align: middle;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.tools-purchase-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
-.tools-purchase-table tbody tr:hover {
-    background-color: var(--bg-secondary);
-}
-
-.tools-purchase-table .col-num { width: 3rem; }
-.tools-purchase-table .col-name { min-width: 180px; }
-.tools-purchase-table .col-qty { width: 4rem; }
-.tools-purchase-table .col-amount { min-width: 100px; }
-.tools-purchase-table .col-actions { width: 100px; }
-
-.tools-purchase-page .btn-action {
-    width: 2rem;
-    height: 2rem;
-    padding: 0;
-    border-radius: 6px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-left: 0.25rem;
-    border: 1px solid var(--border-color);
-    background: var(--bg-primary);
-    color: var(--text-muted);
-    transition: background 0.2s, color 0.2s, border-color 0.2s;
-}
-
-.tools-purchase-page .btn-action:hover {
-    background: var(--bg-secondary);
-    color: var(--text-primary);
-    border-color: var(--border-hover);
-}
-
-.tools-purchase-page .btn-action-edit:hover {
-    background: rgba(220, 53, 69, 0.12);
-    color: #dc3545;
-    border-color: #dc3545;
-}
-
-.tools-purchase-page .btn-action-delete:hover {
-    background: rgba(220, 53, 69, 0.15);
-    color: #dc3545;
-    border-color: #dc3545;
-}
-
-@media (max-width: 768px) {
-    .tools-purchase-header-top {
-        flex-direction: column;
-    }
-    .tools-purchase-actions {
-        width: 100%;
-    }
-    .tools-purchase-actions .btn {
-        flex: 1;
-        min-width: 0;
-    }
-    .tools-purchase-summary {
-        flex-direction: column;
-    }
-    .tools-purchase-card-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
-    .tools-purchase-card-total {
-        text-align: left;
-    }
-}
 </style>
 @endsection
 

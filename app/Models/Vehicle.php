@@ -43,6 +43,7 @@ class Vehicle extends Model
         'spare_key',
         'notes',
         'status',
+        'branch_location_id',
         'archived_at',
         'status_before_archive',
     ];
@@ -194,6 +195,14 @@ class Vehicle extends Model
     public function vehicleModel()
     {
         return $this->belongsTo(VehicleModel::class, 'model_id');
+    }
+
+    /**
+     * Branch / store location from Settings → Branch Locations.
+     */
+    public function branchLocation()
+    {
+        return $this->belongsTo(BranchLocation::class);
     }
 
     /**

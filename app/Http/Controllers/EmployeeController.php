@@ -18,44 +18,33 @@ class EmployeeController extends Controller
     public function index(Request $request)
     {
         $status = $request->get('status', 'all');
-        $contractType = $request->get('contract_type', 'all');
         $search = $request->get('search');
-        
+
         $query = Employee::query();
-        
-        // Filter by status if specified
+
         if ($status !== 'all') {
             $query->where('status', $status);
         }
-        
-        // Filter by contract type if specified
-        if ($contractType !== 'all') {
-            $query->where('contract_type', $contractType);
-        }
-        
-        // Add search functionality
+
         if ($search) {
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('first_name', 'LIKE', "%{$search}%")
-                  ->orWhere('middle_name', 'LIKE', "%{$search}%")
-                  ->orWhere('last_name', 'LIKE', "%{$search}%")
-                  ->orWhere('role', 'LIKE', "%{$search}%")
-                  ->orWhere('location', 'LIKE', "%{$search}%")
-                  ->orWhere('sss', 'LIKE', "%{$search}%")
-                  ->orWhere('philhealth', 'LIKE', "%{$search}%")
-                  ->orWhere('pagibig', 'LIKE', "%{$search}%");
+                    ->orWhere('middle_name', 'LIKE', "%{$search}%")
+                    ->orWhere('last_name', 'LIKE', "%{$search}%")
+                    ->orWhere('role', 'LIKE', "%{$search}%")
+                    ->orWhere('location', 'LIKE', "%{$search}%")
+                    ->orWhere('sss', 'LIKE', "%{$search}%")
+                    ->orWhere('philhealth', 'LIKE', "%{$search}%")
+                    ->orWhere('pagibig', 'LIKE', "%{$search}%");
             });
         }
-        
+
         $employees = $query->orderBy('last_name')->orderBy('first_name')->paginate(15);
-        
-        // Get counts for each status and contract type
+
         $activeCount = Employee::where('status', 'active')->count();
         $inactiveCount = Employee::where('status', 'inactive')->count();
-        $probationaryCount = Employee::where('contract_type', 'PROBATIONARY')->count();
-        $regularCount = Employee::where('contract_type', 'REGULAR')->count();
-        
-        return view('employees.index', compact('employees', 'status', 'contractType', 'search', 'activeCount', 'inactiveCount', 'probationaryCount', 'regularCount'));
+
+        return view('employees.index', compact('employees', 'status', 'search', 'activeCount', 'inactiveCount'));
     }
 
     /**

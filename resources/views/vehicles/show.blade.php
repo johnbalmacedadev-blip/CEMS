@@ -1925,36 +1925,77 @@
                             <div id="profitLossDetailsCollapse" class="accordion-collapse collapse" aria-labelledby="profitLossDetailsHeading" data-bs-parent="#acquisitionDetailsAccordion">
                                 <div class="accordion-body">
                                     @php
-                                        $purchasePricePl = $vehicle->purchase_price ?? 0;
-                                        $totalVehicleExpensesPl = $vehicle->expenseItems->sum('cost');
-                                        $grandTotalPl = $purchasePricePl + $totalVehicleExpensesPl;
-                                        $soldPricePl = $vehicle->sold_price ?? 0;
-                                        $postedPricePl = $vehicle->posted_price ?? 0;
-                                        if ($vehicle->sold_price) {
-                                            $profitPl = $soldPricePl - $grandTotalPl;
-                                            $profitLabelPl = 'Total Profit';
-                                            $profitFormulaPl = 'Sold Price - Expense Totals';
-                                            $profitDisplayValuePl = $soldPricePl;
-                                        } else {
-                                            $profitPl = $postedPricePl - $grandTotalPl;
-                                            $profitLabelPl = 'Potential Profit';
-                                            $profitFormulaPl = 'Posted Price - Expense Totals';
-                                            $profitDisplayValuePl = $postedPricePl;
+                                        $sdPl = $vehicle->statusDetail;
+                                        $vePl = $vehicle->expense;
+
+                                        $salesPricePl = (float) ($vehicle->sold_price ?? $sdPl->sales_price ?? 0);
+                                        $financeRev1Pl = (float) ($sdPl->finance_revenue_1 ?? 0);
+                                        $financeRev2Pl = (float) ($sdPl->finance_revenue_2 ?? 0);
+                                        // Excel: TOTAL REVENUE = Sales Price + Finance Revenue 1 + Finance Revenue 2
+                                        $totalRevenuePl = $salesPricePl + $financeRev1Pl + $financeRev2Pl;
+
+                                        $purchasePricePl = (float) ($vehicle->purchase_price ?? 0);
+                                        $repairCostPl = (float) ($vePl->total_repair_cost ?? 0);
+                                        $postRepairCostPl = (float) ($vePl->post_reservation_repairs_cost ?? 0);
+                                        $capitalPl = (float) ($vePl->total_capital_repair_capital_posted ?? 0);
+                                        if ($capitalPl <= 0) {
+                                            $capitalPl = $purchasePricePl + $repairCostPl + $postRepairCostPl;
                                         }
+                                        $agentCostPl = (float) ($sdPl->agent_cost ?? 0);
+                                        $transferCostPl = (float) ($sdPl->transfer_cost ?? 0);
+                                        // Excel: TOTAL COSTS = (Purchase + Repair Capital) + Agent Cost + Transfer Cost
+                                        $totalCostsPl = $capitalPl + $agentCostPl + $transferCostPl;
+
+                                        // Excel: TOTAL PROFIT = Total Revenue - Total Costs
+                                        $totalProfitPl = $totalRevenuePl - $totalCostsPl;
+                                        $hasSalesPl = $salesPricePl > 0;
                                     @endphp
-                                    <h6 class="text-center mb-3">
-                                        <i class="fas fa-receipt me-1"></i>Expense Totals
-                                    </h6>
-                                    <div class="row text-center mb-3">
-                                        <div class="col-12">
-                                            <div class="p-3 rounded" style="background-color: #fff3cd; border: 2px solid #ffc107;">
-                                                <h5 class="text-dark fw-bold mb-1">₱{{ number_format($grandTotalPl, 2) }}</h5>
-                                                <small class="text-muted">Purchase Price + Total Vehicle Expenses</small>
-                                                <small class="text-muted d-block">(₱{{ number_format($purchasePricePl, 2) }} + ₱{{ number_format($totalVehicleExpensesPl, 2) }})</small>
+
+                                    <div class="row g-3 mb-3">
+                                        <div class="col-md-4">
+                                            <div class="p-3 rounded h-100" style="background-color: #d4edda; border: 2px solid #28a745;">
+                                                <div class="text-muted small text-uppercase fw-semibold mb-1">
+                                                    <i class="fas fa-coins me-1"></i>Total Revenue
+                                                </div>
+                                                <h5 class="text-success fw-bold mb-1">₱{{ number_format($totalRevenuePl, 2) }}</h5>
+                                                <small class="text-muted d-block">Sales Price + Finance Revenue 1 + Finance Revenue 2</small>
+                                                <small class="text-muted d-block">
+                                                    (₱{{ number_format($salesPricePl, 2) }} + ₱{{ number_format($financeRev1Pl, 2) }} + ₱{{ number_format($financeRev2Pl, 2) }})
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="p-3 rounded h-100" style="background-color: #fff3cd; border: 2px solid #ffc107;">
+                                                <div class="text-muted small text-uppercase fw-semibold mb-1">
+                                                    <i class="fas fa-receipt me-1"></i>Total Cost
+                                                </div>
+                                                <h5 class="text-dark fw-bold mb-1">₱{{ number_format($totalCostsPl, 2) }}</h5>
+                                                <small class="text-muted d-block">Purchase + Repair Capital + Agent Cost + Transfer Cost</small>
+                                                <small class="text-muted d-block">
+                                                    (₱{{ number_format($capitalPl, 2) }} + ₱{{ number_format($agentCostPl, 2) }} + ₱{{ number_format($transferCostPl, 2) }})
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="p-3 rounded h-100" style="background-color: {{ $totalProfitPl >= 0 ? '#d4edda' : '#f8d7da' }}; border: 2px solid {{ $totalProfitPl >= 0 ? '#28a745' : '#dc3545' }};">
+                                                <div class="text-muted small text-uppercase fw-semibold mb-1">
+                                                    <i class="fas fa-chart-line me-1"></i>Total Profit
+                                                </div>
+                                                <h5 class="fw-bold mb-1 {{ $totalProfitPl >= 0 ? 'text-success' : 'text-danger' }}">
+                                                    {{ $totalProfitPl >= 0 ? '+' : '' }}₱{{ number_format($totalProfitPl, 2) }}
+                                                </h5>
+                                                <small class="text-muted d-block">Total Revenue − Total Cost</small>
+                                                <small class="text-muted d-block">
+                                                    (₱{{ number_format($totalRevenuePl, 2) }} − ₱{{ number_format($totalCostsPl, 2) }})
+                                                </small>
+                                                @if(!$hasSalesPl)
+                                                    <small class="text-danger d-block mt-1">Sales / sold price not set</small>
+                                                @endif
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="row mb-2">
+
+                                    <div class="row g-2 mb-2">
                                         <div class="col-6">
                                             <h6 class="mb-1"><i class="fas fa-tag me-1"></i>Posted Price</h6>
                                             <div class="p-2 rounded small" style="background-color: #e7f3ff; border: 1px solid #0d6efd;">
@@ -1962,32 +2003,13 @@
                                             </div>
                                         </div>
                                         <div class="col-6">
-                                            <h6 class="mb-1"><i class="fas fa-money-bill-wave me-1"></i>Sold Price</h6>
+                                            <h6 class="mb-1"><i class="fas fa-money-bill-wave me-1"></i>Sales Price</h6>
                                             <div class="p-2 rounded small" style="background-color: #d4edda; border: 1px solid #28a745;">
-                                                {{ $vehicle->sold_price ? '₱' . number_format($vehicle->sold_price, 2) : '—' }}
+                                                {{ $hasSalesPl ? '₱' . number_format($salesPricePl, 2) : '—' }}
                                             </div>
                                         </div>
                                     </div>
-                                    <h6 class="text-center mt-3 mb-2">
-                                        <i class="fas fa-chart-line me-1"></i>{{ $profitLabelPl }}
-                                    </h6>
-                                    <div class="row text-center mb-3">
-                                        <div class="col-12">
-                                            <div class="p-3 rounded" style="background-color: {{ $profitPl >= 0 ? '#d4edda' : '#f8d7da' }}; border: 2px solid {{ $profitPl >= 0 ? '#28a745' : '#dc3545' }};">
-                                                <h5 class="fw-bold mb-1 {{ $profitPl >= 0 ? 'text-success' : 'text-danger' }}">
-                                                    {{ $profitPl >= 0 ? '+' : '' }}₱{{ number_format($profitPl, 2) }}
-                                                </h5>
-                                                <small class="text-muted">{{ $profitFormulaPl }}</small>
-                                                @if($vehicle->sold_price && $grandTotalPl > 0)
-                                                    <small class="text-muted d-block">(₱{{ number_format($soldPricePl, 2) }} - ₱{{ number_format($grandTotalPl, 2) }})</small>
-                                                @elseif(!$vehicle->sold_price && $vehicle->posted_price && $grandTotalPl > 0)
-                                                    <small class="text-muted d-block">(₱{{ number_format($postedPricePl, 2) }} - ₱{{ number_format($grandTotalPl, 2) }})</small>
-                                                @elseif(!$vehicle->sold_price && !$vehicle->posted_price)
-                                                    <small class="text-danger d-block">Posted price not set</small>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    </div>
+
                                     @if($vehicle->gasExpenses->count() > 0)
                                         <hr class="my-2">
                                         <h6 class="text-center mb-2"><i class="fas fa-gas-pump me-1"></i>Vehicle Gas Expense</h6>
@@ -1996,10 +2018,6 @@
                                             <span class="text-muted small"> ({{ $vehicle->gasExpenses->count() }} transaction(s))</span>
                                         </div>
                                     @endif
-                                    <div class="mt-3 pt-3" style="border-top: 1px solid #dee2e6;">
-                                        <span class="fw-bold">POSTED PRICE :</span>
-                                        <span class="ms-1">{{ $vehicle->posted_price != null ? '₱' . number_format($vehicle->posted_price, 2) : '—' }}</span>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2390,22 +2408,47 @@
             </div>
             <div class="modal-body">
                             @php
-                                $purchasePrice = $vehicle->purchase_price ?? 0;
-                                $totalVehicleExpenses = $vehicle->expenseItems->sum('cost');
-                                $grandTotal = $purchasePrice + $totalVehicleExpenses;
+                                $sdSum = $vehicle->statusDetail;
+                                $veSum = $vehicle->expense;
+                                $salesPrice = (float) ($vehicle->sold_price ?? $sdSum->sales_price ?? 0);
+                                $financeRev1 = (float) ($sdSum->finance_revenue_1 ?? 0);
+                                $financeRev2 = (float) ($sdSum->finance_revenue_2 ?? 0);
+                                $totalRevenue = $salesPrice + $financeRev1 + $financeRev2;
+                                $purchasePrice = (float) ($vehicle->purchase_price ?? 0);
+                                $repairCost = (float) ($veSum->total_repair_cost ?? 0);
+                                $postRepairCost = (float) ($veSum->post_reservation_repairs_cost ?? 0);
+                                $capital = (float) ($veSum->total_capital_repair_capital_posted ?? 0);
+                                if ($capital <= 0) {
+                                    $capital = $purchasePrice + $repairCost + $postRepairCost;
+                                }
+                                $agentCost = (float) ($sdSum->agent_cost ?? 0);
+                                $transferCost = (float) ($sdSum->transfer_cost ?? 0);
+                                $totalCosts = $capital + $agentCost + $transferCost;
+                                $totalProfit = $totalRevenue - $totalCosts;
+                                $grandTotal = $totalCosts;
                             @endphp
-                            <h6 class="text-center mb-3">
-                                <i class="fas fa-receipt me-1"></i>Expense Totals
-                            </h6>
-                            
-                            <div class="row text-center">
-                                <div class="col-12">
-                                    <div class="p-3 rounded" style="background-color: #fff3cd; border: 2px solid #ffc107;">
-                                        <h3 class="text-dark fw-bold mb-2">₱{{ number_format($grandTotal, 2) }}</h3>
-                                        <small class="text-muted d-block">Purchase Price + Total Vehicle Expenses</small>
-                                        <small class="text-muted">
-                                            (₱{{ number_format($purchasePrice, 2) }} + ₱{{ number_format($totalVehicleExpenses, 2) }})
-                                        </small>
+                            <div class="row g-3 mb-3 text-center">
+                                <div class="col-md-4">
+                                    <div class="p-3 rounded h-100" style="background-color: #d4edda; border: 2px solid #28a745;">
+                                        <h6 class="mb-2"><i class="fas fa-coins me-1"></i>Total Revenue</h6>
+                                        <h4 class="text-success fw-bold mb-1">₱{{ number_format($totalRevenue, 2) }}</h4>
+                                        <small class="text-muted d-block">Sales + Finance Rev 1 + Finance Rev 2</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="p-3 rounded h-100" style="background-color: #fff3cd; border: 2px solid #ffc107;">
+                                        <h6 class="mb-2"><i class="fas fa-receipt me-1"></i>Total Cost</h6>
+                                        <h4 class="text-dark fw-bold mb-1">₱{{ number_format($totalCosts, 2) }}</h4>
+                                        <small class="text-muted d-block">Capital + Agent + Transfer</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="p-3 rounded h-100" style="background-color: {{ $totalProfit >= 0 ? '#d4edda' : '#f8d7da' }}; border: 2px solid {{ $totalProfit >= 0 ? '#28a745' : '#dc3545' }};">
+                                        <h6 class="mb-2"><i class="fas fa-chart-line me-1"></i>Total Profit</h6>
+                                        <h4 class="fw-bold mb-1 {{ $totalProfit >= 0 ? 'text-success' : 'text-danger' }}">
+                                            {{ $totalProfit >= 0 ? '+' : '' }}₱{{ number_format($totalProfit, 2) }}
+                                        </h4>
+                                        <small class="text-muted d-block">Total Revenue − Total Cost</small>
                                     </div>
                                 </div>
                             </div>
@@ -2491,23 +2534,12 @@
                             </div>
                             
                             @php
-                                $soldPrice = $vehicle->sold_price ?? 0;
+                                $soldPrice = $salesPrice;
                                 $postedPrice = $vehicle->posted_price ?? 0;
-                                
-                                // Calculate profit based on whether sold price exists
-                                if ($vehicle->sold_price) {
-                                    // Total Profit: Sold Price - Expense Totals
-                                    $profit = $soldPrice - $grandTotal;
-                                    $profitLabel = 'Total Profit';
-                                    $profitFormula = 'Sold Price - Expense Totals';
-                                    $profitDisplayValue = $soldPrice;
-                                } else {
-                                    // Potential Profit: Posted Price - Expense Totals
-                                    $profit = $postedPrice - $grandTotal;
-                                    $profitLabel = 'Potential Profit';
-                                    $profitFormula = 'Posted Price - Expense Totals';
-                                    $profitDisplayValue = $postedPrice;
-                                }
+                                $profit = $totalProfit;
+                                $profitLabel = 'Total Profit';
+                                $profitFormula = 'Total Revenue − Total Cost';
+                                $profitDisplayValue = $totalRevenue;
                             @endphp
                             
                             <!-- Profit Section -->
@@ -2521,17 +2553,9 @@
                                             {{ $profit >= 0 ? '+' : '' }}₱{{ number_format($profit, 2) }}
                                         </h3>
                                         <small class="text-muted d-block">{{ $profitFormula }}</small>
-                                        @if($vehicle->sold_price && $grandTotal > 0)
-                                            <small class="text-muted">
-                                                (₱{{ number_format($soldPrice, 2) }} - ₱{{ number_format($grandTotal, 2) }})
-                                            </small>
-                                        @elseif(!$vehicle->sold_price && $vehicle->posted_price && $grandTotal > 0)
-                                            <small class="text-muted">
-                                                (₱{{ number_format($postedPrice, 2) }} - ₱{{ number_format($grandTotal, 2) }})
-                                            </small>
-                                        @elseif(!$vehicle->sold_price && !$vehicle->posted_price)
-                                            <small class="text-danger">Posted price not set</small>
-                                        @endif
+                                        <small class="text-muted">
+                                            (₱{{ number_format($totalRevenue, 2) }} − ₱{{ number_format($totalCosts, 2) }})
+                                        </small>
                                     </div>
                                 </div>
                             </div>

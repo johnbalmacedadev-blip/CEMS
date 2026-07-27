@@ -97,7 +97,7 @@
             </div>
         </div>
 
-        <!-- Branch / Location -->
+        <!-- Showroom -->
         <div class="col-md-6 col-lg-4 mb-4">
             <div class="card h-100" style="border-color: #fd7e14;">
                 <div class="card-body text-center">
@@ -106,10 +106,10 @@
                             <i class="fas fa-map-marker-alt"></i>
                         </span>
                     </div>
-                    <h5 class="card-title mb-3">Branch / Location</h5>
-                    <p class="text-muted mb-4">Create and manage a list of branch or office locations (e.g. Muntinlupa, NCR, Laguna).</p>
+                    <h5 class="card-title mb-3">Showroom</h5>
+                    <p class="text-muted mb-4">Create and manage showrooms (e.g. Annex, Flagship).</p>
                     <a href="{{ route('settings.branch-locations.index') }}" class="btn btn-settings-orange">
-                        <i class="fas fa-list me-2"></i>Manage Locations
+                        <i class="fas fa-list me-2"></i>Manage Showrooms
                     </a>
                 </div>
             </div>

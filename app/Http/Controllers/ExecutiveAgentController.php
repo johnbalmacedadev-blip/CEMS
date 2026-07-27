@@ -81,6 +81,23 @@ class ExecutiveAgentController extends Controller
     }
 
     /**
+     * Executive agent account / profile.
+     */
+    public function show(ExecutiveAgent $executiveAgent)
+    {
+        $executiveAgent->load(['salesAgents' => function ($q) {
+            $q->orderBy('name');
+        }]);
+
+        $clientLeadCount = $executiveAgent->clientLeads()->count();
+
+        return view('staff-reports.executive-agent-show', [
+            'executive' => $executiveAgent,
+            'clientLeadCount' => $clientLeadCount,
+        ]);
+    }
+
+    /**
      * Next EA### code from existing executive_code values matching that pattern.
      */
     private function generateNextExecutiveCode(): string

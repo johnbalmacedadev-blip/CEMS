@@ -9,9 +9,9 @@
 
 <div class="row g-3 vehicle-registration-form">
     <div class="col-md-3">
-        <label for="branch_location_id" class="form-label">Branch / Store Location</label>
+        <label for="branch_location_id" class="form-label">Showroom</label>
         <select class="form-select @error('branch_location_id') is-invalid @enderror" id="branch_location_id" name="branch_location_id">
-            <option value="">— Select branch —</option>
+            <option value="">— Select showroom —</option>
             @foreach($branches as $branch)
                 <option value="{{ $branch->id }}" {{ (string) old('branch_location_id', $record?->branch_location_id) === (string) $branch->id ? 'selected' : '' }}>
                     {{ $branch->name }}
@@ -20,7 +20,7 @@
         </select>
         @error('branch_location_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
         @if($branches->isEmpty())
-            <div class="form-text">Add branches in <a href="{{ route('settings.branch-locations.index') }}">Settings → Branch / Location</a>.</div>
+            <div class="form-text">Add showrooms in <a href="{{ route('settings.branch-locations.index') }}">Settings → Showroom</a>.</div>
         @endif
     </div>
     <div class="col-md-3">

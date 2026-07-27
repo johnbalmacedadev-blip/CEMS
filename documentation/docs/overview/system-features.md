@@ -313,7 +313,7 @@ flowchart LR
 
 | Module | Route | Features |
 |--------|-------|----------|
-| **Client Follow-up List** | `/client-follow-up-list` | Client contact and follow-up status |
+| **Client List** | `/client-follow-up-list` | Client contact and follow-up status |
 | **Appointment List** | `/appointment-list` | Scheduled client appointments |
 | **Trail Form List** | `/admin-docs` | Activity / trail references |
 

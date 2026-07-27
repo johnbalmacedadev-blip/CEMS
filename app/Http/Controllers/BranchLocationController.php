@@ -25,11 +25,11 @@ class BranchLocationController extends Controller
             ?? ((int) BranchLocation::max('sort_order')) + 1;
 
         $branch = BranchLocation::create($validated);
-        $this->logCreate($branch, 'Created branch/location: ' . $branch->name, 'Branch Locations');
+        $this->logCreate($branch, 'Created showroom: '.$branch->name, 'Showrooms');
 
         return redirect()
             ->route('settings.branch-locations.index')
-            ->with('success', 'Branch/location added successfully.')
+            ->with('success', 'Showroom added successfully.')
             ->with('swal_title', 'Saved');
     }
 
@@ -48,26 +48,26 @@ class BranchLocationController extends Controller
 
         $this->logUpdate(
             $branch_location,
-            !empty($changes) ? $changes : null,
-            'Updated branch/location: ' . $branch_location->name,
-            'Branch Locations'
+            ! empty($changes) ? $changes : null,
+            'Updated showroom: '.$branch_location->name,
+            'Showrooms'
         );
 
         return redirect()
             ->route('settings.branch-locations.index')
-            ->with('success', 'Branch/location updated successfully.')
+            ->with('success', 'Showroom updated successfully.')
             ->with('swal_title', 'Saved');
     }
 
     public function destroy(BranchLocation $branch_location)
     {
         $name = $branch_location->name;
-        $this->logDelete($branch_location, 'Deleted branch/location: ' . $name, 'Branch Locations');
+        $this->logDelete($branch_location, 'Deleted showroom: '.$name, 'Showrooms');
         $branch_location->delete();
 
         return redirect()
             ->route('settings.branch-locations.index')
-            ->with('success', 'Branch/location removed.')
+            ->with('success', 'Showroom removed.')
             ->with('swal_title', 'Deleted');
     }
 

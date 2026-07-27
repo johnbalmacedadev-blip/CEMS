@@ -38,8 +38,12 @@
 
             <!-- Search & filters -->
             @php
-                $hasExtraFilters = ($yearFrom ?? null) || ($yearTo ?? null) || ($transmission ?? null) || ($fuelType ?? null) || ($bodyType ?? null) || ($purchasedFrom ?? null) || ($reservationDate ?? null);
+                $hasExtraFilters = ($yearFrom ?? null) || ($yearTo ?? null) || ($transmission ?? null) || ($fuelType ?? null) || ($bodyType ?? null) || ($purchasedFrom ?? null) || ($reservationDate ?? null) || ($releaseDateFrom ?? null) || ($releaseDateTo ?? null) || ($branchLocationId ?? null);
                 $hasActiveFilters = $search || $status !== 'all' || $hasExtraFilters;
+                $selectedBranchName = null;
+                if (!empty($branchLocationId) && isset($branches)) {
+                    $selectedBranchName = optional($branches->firstWhere('id', (int) $branchLocationId))->name;
+                }
             @endphp
             <div class="card mb-4">
                 <div class="accordion accordion-flush" id="vehicleFiltersAccordion">
@@ -77,6 +81,17 @@
                                 <option value="Under Maintenance" {{ $status === 'Under Maintenance' ? 'selected' : '' }}>Under Maintenance</option>
                                 <option value="Forfeited" {{ $status === 'Forfeited' ? 'selected' : '' }}>Forfeited</option>
                                 <option value="Archived" {{ $status === 'Archived' ? 'selected' : '' }}>Archived</option>
+                            </select>
+                        </div>
+                        <div class="col-lg-2 col-md-6">
+                            <label class="form-label small mb-0">Showroom</label>
+                            <select class="form-select" name="branch_location_id">
+                                <option value="">All showrooms</option>
+                                @foreach($branches ?? [] as $branch)
+                                    <option value="{{ $branch->id }}" {{ (string) ($branchLocationId ?? '') === (string) $branch->id ? 'selected' : '' }}>
+                                        {{ $branch->name }}
+                                    </option>
+                                @endforeach
                             </select>
                         </div>
                         <div class="col-lg-2 col-md-3">
@@ -122,19 +137,22 @@
                             <input type="date" class="form-control" name="reservation_date"
                                    value="{{ $reservationDate ?? '' }}">
                         </div>
+                        <div class="col-lg-3 col-md-6 release-date-filter-field">
+                            <label class="form-label small mb-0">Release date from</label>
+                            <input type="date" class="form-control" name="release_date_from" id="release_date_from"
+                                   value="{{ $releaseDateFrom ?? '' }}">
+                        </div>
+                        <div class="col-lg-3 col-md-6 release-date-filter-field">
+                            <label class="form-label small mb-0">Release date to</label>
+                            <input type="date" class="form-control" name="release_date_to" id="release_date_to"
+                                   value="{{ $releaseDateTo ?? '' }}">
+                        </div>
                         <div class="col-12 d-flex flex-wrap align-items-end gap-2">
                             <button type="submit" class="btn btn-primary">
                                 <i class="fas fa-search me-1"></i>Apply filters
                             </button>
                             <a href="{{ route('vehicles.index') }}" class="btn btn-outline-secondary">
                                 <i class="fas fa-times me-1"></i>Clear all
-                            </a>
-                            <span class="text-muted small ms-lg-2">Export current results:</span>
-                            <a href="{{ route('vehicles.export-list') }}?{{ http_build_query(array_merge(request()->except('page'), ['format' => 'csv'])) }}" class="btn btn-outline-success btn-sm">
-                                <i class="fas fa-file-excel me-1"></i>Excel (CSV)
-                            </a>
-                            <a href="{{ route('vehicles.export-list') }}?{{ http_build_query(array_merge(request()->except('page'), ['format' => 'pdf'])) }}" class="btn btn-outline-danger btn-sm">
-                                <i class="fas fa-file-pdf me-1"></i>PDF
                             </a>
                         </div>
                                 </form>
@@ -157,6 +175,12 @@
                                     <a href="{{ route('vehicles.index', array_merge(request()->except('status', 'page'), ['status' => 'all'])) }}" class="text-white ms-1">&times;</a>
                                 </span>
                             @endif
+                            @if($branchLocationId)
+                                <span class="badge badge-neutral">
+                                    Showroom: {{ $selectedBranchName ?? ('#'.$branchLocationId) }}
+                                    <a href="{{ route('vehicles.index', request()->except('branch_location_id', 'page')) }}" class="text-white ms-1">&times;</a>
+                                </span>
+                            @endif
                             @if($yearFrom)
                                 <span class="badge badge-neutral">Year ≥ {{ $yearFrom }} <a href="{{ route('vehicles.index', request()->except('year_from', 'page')) }}" class="text-white ms-1">&times;</a></span>
                             @endif
@@ -177,6 +201,12 @@
                             @endif
                             @if($reservationDate)
                                 <span class="badge badge-neutral">Reservation: {{ date('M d, Y', strtotime($reservationDate)) }} <a href="{{ route('vehicles.index', request()->except('reservation_date', 'page')) }}" class="text-white ms-1">&times;</a></span>
+                            @endif
+                            @if($releaseDateFrom)
+                                <span class="badge badge-neutral">Release ≥ {{ date('M d, Y', strtotime($releaseDateFrom)) }} <a href="{{ route('vehicles.index', request()->except('release_date_from', 'page')) }}" class="text-white ms-1">&times;</a></span>
+                            @endif
+                            @if($releaseDateTo)
+                                <span class="badge badge-neutral">Release ≤ {{ date('M d, Y', strtotime($releaseDateTo)) }} <a href="{{ route('vehicles.index', request()->except('release_date_to', 'page')) }}" class="text-white ms-1">&times;</a></span>
                             @endif
                         </div>
                     </div>
@@ -239,38 +269,102 @@
                     </ul>
                 </div>
                 <div class="card-body">
-                    <h5 class="card-title mb-3">
-                        @if($search && $status !== 'all')
-                            Search Results - {{ $status }} Vehicles
-                        @elseif($search)
-                            Search Results
-                        @elseif($status === 'all')
-                            All Vehicles
-                        @else
-                            {{ $status }} Vehicles
+                    <div class="d-flex justify-content-between align-items-center gap-2 mb-3">
+                        <h5 class="card-title mb-0">
+                            @if($search && $status !== 'all')
+                                Search Results - {{ $status }} Vehicles
+                            @elseif($search)
+                                Search Results
+                            @elseif($status === 'all')
+                                All Vehicles
+                            @else
+                                {{ $status }} Vehicles
+                            @endif
+                            @php
+                                $totalBadgeClass = match ($status) {
+                                    'Available', 'Released' => 'badge-green',
+                                    'Reserved', 'Forfeited' => 'badge-red',
+                                    'Under Maintenance', 'Archived' => 'badge-neutral',
+                                    default => 'badge-all-units',
+                                };
+                            @endphp
+                            <span class="badge {{ $totalBadgeClass }} ms-2" data-vehicle-count-badge>{{ $vehicles->total() }} total</span>
+                            @if($search)
+                                <span class="badge badge-neutral ms-1">for "{{ $search }}"</span>
+                            @endif
+                            @if($status !== 'all')
+                                <span class="badge badge-neutral ms-1">{{ $status }}</span>
+                            @endif
+                        </h5>
+
+                        @if($status === 'Released' && $vehicles->count() > 0)
+                            <div class="dropdown flex-shrink-0">
+                                <button class="btn btn-outline-primary dropdown-toggle" type="button"
+                                        data-bs-toggle="dropdown" aria-expanded="false"
+                                        title="Export filtered Released results">
+                                    <i class="fas fa-file-export me-1"></i>Export
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li>
+                                        <a class="dropdown-item" href="{{ route('vehicles.export-list') }}?{{ http_build_query(array_merge(request()->except('page'), ['status' => 'Released', 'format' => 'csv'])) }}">
+                                            <i class="fas fa-file-excel text-success me-2"></i>Excel (CSV)
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="{{ route('vehicles.export-list') }}?{{ http_build_query(array_merge(request()->except('page'), ['status' => 'Released', 'format' => 'pdf'])) }}">
+                                            <i class="fas fa-file-pdf text-danger me-2"></i>PDF
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
                         @endif
-                        @php
-                            $totalBadgeClass = match ($status) {
-                                'Available', 'Released' => 'badge-green',
-                                'Reserved', 'Forfeited' => 'badge-red',
-                                'Under Maintenance', 'Archived' => 'badge-neutral',
-                                default => 'badge-all-units',
-                            };
-                        @endphp
-                        <span class="badge {{ $totalBadgeClass }} ms-2" data-vehicle-count-badge>{{ $vehicles->total() }} total</span>
-                        @if($search)
-                            <span class="badge badge-neutral ms-1">for "{{ $search }}"</span>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        @foreach(($locationCounts ?? []) as $loc)
+                            @php
+                                $locKey = strtolower(trim($loc['name']));
+                                $cardStyle = match (true) {
+                                    $locKey === 'annex' => 'background-color: #fff3cd; border-color: #ffc107 !important;',
+                                    $locKey === 'flagship' => 'background-color: #cff4fc; border-color: #0dcaf0 !important;',
+                                    default => 'background-color: #f8f9fa; border-color: #ced4da !important;',
+                                };
+                                $badgeClass = match (true) {
+                                    $locKey === 'annex' => 'bg-warning text-dark',
+                                    $locKey === 'flagship' => 'bg-info text-white',
+                                    default => 'bg-secondary text-white',
+                                };
+                            @endphp
+                            <div class="col-sm-6 col-lg-3">
+                                <div class="border rounded px-3 py-2 h-100 d-flex align-items-center justify-content-between" style="{{ $cardStyle }}">
+                                    <div>
+                                        <div class="small text-muted text-uppercase fw-semibold">Location {{ $loc['name'] }}</div>
+                                        <div class="fs-5 fw-bold text-dark">{{ number_format($loc['count']) }}</div>
+                                    </div>
+                                    <span class="badge {{ $badgeClass }}">{{ $loc['name'] }}</span>
+                                </div>
+                            </div>
+                        @endforeach
+                        @if(($unassignedLocationCount ?? 0) > 0)
+                            <div class="col-sm-6 col-lg-3">
+                                <div class="border rounded px-3 py-2 h-100 d-flex align-items-center justify-content-between" style="background-color: #f8f9fa; border-color: #adb5bd !important;">
+                                    <div>
+                                        <div class="small text-muted text-uppercase fw-semibold">No Location</div>
+                                        <div class="fs-5 fw-bold text-dark">{{ number_format($unassignedLocationCount) }}</div>
+                                    </div>
+                                    <span class="badge bg-light text-dark border">—</span>
+                                </div>
+                            </div>
                         @endif
-                        @if($status !== 'all')
-                            <span class="badge badge-neutral ms-1">{{ $status }}</span>
-                        @endif
-                    </h5>
+                    </div>
+
                     @if($vehicles->count() > 0)
                         <div class="table-responsive" id="vehiclesTableWrap">
                             <table class="table table-striped table-hover" id="vehiclesTable">
                                 <thead class="table-dark">
                                     <tr>
                                         <th>#</th>
+                                        <th>Location</th>
                                         <th>Vehicle</th>
                                         <th>Year</th>
                                         <th>Make</th>
@@ -286,6 +380,13 @@
                                     @foreach($vehicles as $vehicle)
                                     <tr data-vehicle-id="{{ $vehicle->id }}">
                                         <td>{{ ($vehicles->currentPage() - 1) * $vehicles->perPage() + $loop->iteration }}</td>
+                                        <td>
+                                            @if($vehicle->branchLocation)
+                                                @include('partials.showroom-badge', ['name' => $vehicle->branchLocation->name])
+                                            @else
+                                                <span class="text-muted">—</span>
+                                            @endif
+                                        </td>
                                         <td>
                                             <div class="d-flex align-items-center">
                                                 @if($vehicle->primaryImage)
@@ -534,6 +635,26 @@
     const currentStatus = @json($status);
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
+    // Show release-date range when filtering Released (or when range values are already set)
+    const statusSelect = document.querySelector('form[action="{{ route('vehicles.index') }}"] select[name="status"]');
+    const releaseDateFields = document.querySelectorAll('.release-date-filter-field');
+    const releaseFromInput = document.getElementById('release_date_from');
+    const releaseToInput = document.getElementById('release_date_to');
+
+    function toggleReleaseDateFilters() {
+        const selected = statusSelect ? statusSelect.value : currentStatus;
+        const hasRangeValues = Boolean((releaseFromInput && releaseFromInput.value) || (releaseToInput && releaseToInput.value));
+        const show = selected === 'Released' || hasRangeValues;
+        releaseDateFields.forEach(function (el) {
+            el.style.display = show ? '' : 'none';
+        });
+    }
+
+    if (statusSelect) {
+        statusSelect.addEventListener('change', toggleReleaseDateFilters);
+    }
+    toggleReleaseDateFilters();
+
     function escapeHtml(value) {
         return String(value ?? '')
             .replace(/&/g, '&amp;')
@@ -604,6 +725,7 @@
 
         return '<tr data-vehicle-id="' + vehicle.id + '">' +
             '<td>' + rowNumber + '</td>' +
+            '<td>' + window.showroomBadgeHtml(vehicle.location) + '</td>' +
             '<td><div class="d-flex align-items-center">' + thumb +
                 '<div><strong>' + escapeHtml(vehicle.full_name) + '</strong><br>' +
                 '<small class="text-muted">' + escapeHtml(vehicle.transmission) + ' • ' + escapeHtml(vehicle.fuel_type) + '</small></div></div></td>' +

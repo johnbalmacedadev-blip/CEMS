@@ -38,14 +38,28 @@ Comprehensive financial overview across the business.
 
 ## Sales Report
 
-Sales performance metrics — units sold, trends, and agent contribution.
+Sales performance for **released units**:
+
+- Summary: units released, total sales, average sold price, average days to sell
+- Charts: monthly units, monthly sales amount, top makes/models, body type mix, fastest-selling models (avg days to sell)
+- Tables: top makes/models, fastest models, monthly breakdown
+- Filters: period (daily / weekly / monthly / quarterly / annually / custom range)
+- **Export PDF** of the current filtered report (summary, charts, tables)
+
+URL: `/analytics-report/sales`
 
 ## Sales Executive Report
 
-Higher-level view for executive agents and management.
+Higher-level view of **who** is driving released-unit sales:
 
-- Filter by executive agent
-- Compare performance across the executive team
+- Rankings for **Sales Team** (credited names from reservation/release), **Sales Agents**, and **Sales Executives**
+- Charts: top by units, top by sales amount, monthly trend for the #1 performer
+- Tables: full ranking with unit/sales share and average sale, plus recent deals
+- Filters: view mode + period / custom date range
+
+Credit order per released unit: sales person (reserved) → sales person (release) → sales agent name.
+
+URL: `/analytics-report/sales-executive`
 
 ## Data sources
 

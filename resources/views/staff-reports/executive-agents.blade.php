@@ -48,7 +48,11 @@
         <div class="card mb-4">
             <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <div>
-                    <h5 class="mb-0"><i class="fas fa-user-shield me-2 text-primary"></i>{{ $executive->name }}</h5>
+                    <h5 class="mb-0">
+                        <a href="{{ route('staff-reports.executive-agents.show', $executive) }}" class="text-decoration-none text-dark">
+                            <i class="fas fa-user-shield me-2 text-primary"></i>{{ $executive->name }}
+                        </a>
+                    </h5>
                     <small class="text-muted">{{ $executive->executive_code }} · {{ $executive->email ?: 'No email' }} · {{ $executive->phone ?: '—' }}</small>
                 </div>
                 <div class="text-end">

@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Edit Client Follow Up - Car Empire Management System')
+@section('title', 'Edit Client - Car Empire Management System')
 
 @section('content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
         <h1 class="h2">
-            <i class="fas fa-user-edit me-2"></i>Edit Client Follow Up
+            <i class="fas fa-user-edit me-2"></i>Edit Client
         </h1>
         <div class="btn-toolbar mb-2 mb-md-0">
             <a href="{{ route('client-follow-up-list.index') }}" class="btn btn-outline-secondary">
@@ -27,18 +27,28 @@
             <div class="card-body">
                 <div class="row g-3">
                     <div class="col-md-4">
+                        <label for="executive_agent_id" class="form-label">Sales Executive</label>
+                        <select class="form-select @error('executive_agent_id') is-invalid @enderror" id="executive_agent_id" name="executive_agent_id">
+                            <option value="">— Select —</option>
+                            @foreach($executives as $exec)
+                                <option value="{{ $exec->id }}" {{ (string) old('executive_agent_id', $client_follow_up_list->executive_agent_id) === (string) $exec->id ? 'selected' : '' }}>{{ $exec->name }}</option>
+                            @endforeach
+                        </select>
+                        @error('executive_agent_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                    </div>
+                    <div class="col-md-4">
                         <label for="date_of_first_inquiry" class="form-label">Date of First Inquiry</label>
                         <input type="date" class="form-control @error('date_of_first_inquiry') is-invalid @enderror" id="date_of_first_inquiry" name="date_of_first_inquiry" value="{{ old('date_of_first_inquiry', $client_follow_up_list->date_of_first_inquiry?->format('Y-m-d')) }}">
                         @error('date_of_first_inquiry')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-4">
                         <label for="application" class="form-label">Application</label>
-                        <select class="form-select @error('application') is-invalid @enderror" id="application" name="application">
-                            <option value="">— Select —</option>
+                        <input type="text" class="form-control @error('application') is-invalid @enderror" id="application" name="application" value="{{ old('application', $client_follow_up_list->application) }}" list="application_options" placeholder="e.g. FACEBOOK, WALK-IN">
+                        <datalist id="application_options">
                             @foreach(\App\Models\ClientFollowUp::applicationOptions() as $opt)
-                                <option value="{{ $opt }}" {{ old('application', $client_follow_up_list->application) === $opt ? 'selected' : '' }}>{{ $opt }}</option>
+                                <option value="{{ $opt }}"></option>
                             @endforeach
-                        </select>
+                        </datalist>
                         @error('application')<div class="invalid-feedback">{{ $message }}</div>@enderror
                     </div>
                     <div class="col-md-4">

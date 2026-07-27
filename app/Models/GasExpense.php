@@ -12,12 +12,14 @@ class GasExpense extends Model
 
     protected $fillable = [
         'date',
+        'po_number',
         'driver',
         'model',
         'plate_number',
         'gas_amount',
         'expense_sent_by',
         'has_photo_video_in_groupchat',
+        'photo_po_slip',
         'photo_fuel_gauge_before',
         'photo_fuel_gauge_after',
         'photo_car_license_plate_gas_boy',
@@ -29,6 +31,7 @@ class GasExpense extends Model
         'date' => 'date',
         'gas_amount' => 'decimal:2',
         'has_photo_video_in_groupchat' => 'boolean',
+        'photo_po_slip' => 'boolean',
         'photo_fuel_gauge_before' => 'boolean',
         'photo_fuel_gauge_after' => 'boolean',
         'photo_car_license_plate_gas_boy' => 'boolean',

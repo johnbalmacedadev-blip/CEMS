@@ -1,21 +1,21 @@
 @extends('layouts.app')
 
-@section('title', 'Branch / Location - Car Empire Management System')
+@section('title', 'Showroom - Car Empire Management System')
 
 @section('content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-        <h1 class="h2"><i class="fas fa-map-marker-alt me-2"></i>Branch / Location</h1>
+        <h1 class="h2"><i class="fas fa-map-marker-alt me-2"></i>Showroom</h1>
         <a href="{{ route('settings') }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-left me-1"></i>Back to Settings
         </a>
     </div>
 
-    <p class="text-muted mb-4">Create and manage your list of branches or office locations used across the system.</p>
+    <p class="text-muted mb-4">Create and manage your list of showrooms used across the system.</p>
 
     <div class="card mb-4">
         <div class="card-header bg-primary text-white">
-            <h5 class="mb-0"><i class="fas fa-plus me-2"></i>Add Branch / Location</h5>
+            <h5 class="mb-0"><i class="fas fa-plus me-2"></i>Add Showroom</h5>
         </div>
         <div class="card-body">
             <form action="{{ route('settings.branch-locations.store') }}" method="POST" class="row g-3 align-items-end">
@@ -23,7 +23,7 @@
                 <div class="col-md-4">
                     <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
                     <input type="text" class="form-control @error('name') is-invalid @enderror" id="name" name="name"
-                        value="{{ old('name') }}" placeholder="e.g. Muntinlupa, NCR Office" required>
+                        value="{{ old('name') }}" placeholder="e.g. Annex, Flagship" required>
                     @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
                 </div>
                 <div class="col-md-4">
@@ -52,7 +52,7 @@
 
     <div class="card">
         <div class="card-header">
-            <h5 class="mb-0"><i class="fas fa-list me-2"></i>Branch / Location List ({{ $branches->count() }})</h5>
+            <h5 class="mb-0"><i class="fas fa-list me-2"></i>Showroom List ({{ $branches->count() }})</h5>
         </div>
         <div class="card-body p-0">
             @if($branches->isNotEmpty())
@@ -93,7 +93,7 @@
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <form action="{{ route('settings.branch-locations.destroy', $branch) }}" method="POST" class="d-inline"
-                                            onsubmit="return confirm('Delete this branch/location?');">
+                                            onsubmit="return confirm('Delete this showroom?');">
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete">
@@ -109,7 +109,7 @@
             @else
                 <div class="text-center py-5 text-muted">
                     <i class="fas fa-map-marker-alt fa-3x mb-3"></i>
-                    <p class="mb-0">No branches or locations yet. Add one using the form above.</p>
+                    <p class="mb-0">No showrooms yet. Add one using the form above.</p>
                 </div>
             @endif
         </div>
@@ -123,7 +123,7 @@
                 @csrf
                 @method('PUT')
                 <div class="modal-header">
-                    <h5 class="modal-title" id="editBranchModalLabel">Edit Branch / Location</h5>
+                    <h5 class="modal-title" id="editBranchModalLabel">Edit Showroom</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">

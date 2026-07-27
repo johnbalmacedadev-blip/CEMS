@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\BranchLocation;
 use App\Models\TransferOrcr;
+use App\Models\TransferOrcrOtherTransaction;
 use App\Models\Vehicle;
 use App\Traits\LogsActivity;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -17,6 +18,7 @@ class TransferOrcrController extends Controller
     public function index(Request $request)
     {
         $records = $this->filteredQuery($request)
+            ->with('otherTransactions')
             ->orderBy('date', 'desc')
             ->orderBy('created_at', 'desc')
             ->paginate(20)
@@ -24,7 +26,29 @@ class TransferOrcrController extends Controller
 
         $branches = BranchLocation::ordered()->get();
 
-        return view('transfer-orcr.index', compact('records', 'branches'));
+        // Branch totals respect current filters, but ignore branch filter so all locations show
+        $locationSummaryBase = $this->filteredQuery($request, ignoreBranch: true);
+        $branchSummaries = $branches->map(function (BranchLocation $branch) use ($locationSummaryBase) {
+            $branchQuery = (clone $locationSummaryBase)->where('branch_location_id', $branch->id);
+
+            return [
+                'id' => $branch->id,
+                'name' => $branch->name,
+                'count' => (clone $branchQuery)->count(),
+                'fee_total' => $this->sumFeeTotals($branchQuery),
+            ];
+        })->values();
+
+        $grandCount = $branchSummaries->sum('count');
+        $grandFeeTotal = $branchSummaries->sum('fee_total');
+
+        return view('transfer-orcr.index', compact(
+            'records',
+            'branches',
+            'branchSummaries',
+            'grandCount',
+            'grandFeeTotal'
+        ));
     }
 
     public function exportPdf(Request $request)
@@ -335,11 +359,46 @@ class TransferOrcrController extends Controller
         return $dates->first()->format('M d') . ' – ' . $dates->last()->format('M d, Y');
     }
 
-    private function filteredQuery(Request $request)
+    /**
+     * Sum fee totals for a Transfer OR/CR query (base fee columns + other transaction lines).
+     */
+    private function sumFeeTotals($query): float
+    {
+        $ids = (clone $query)->pluck('id');
+        if ($ids->isEmpty()) {
+            return 0.0;
+        }
+
+        $base = (float) TransferOrcr::query()
+            ->whereIn('id', $ids)
+            ->selectRaw(
+                'COALESCE(SUM(
+                    COALESCE(transfer_sop, 0) +
+                    COALESCE(transfer_or, 0) +
+                    COALESCE(others, 0) +
+                    COALESCE(notary, 0) +
+                    COALESCE(pnp_clearance, 0) +
+                    COALESCE(confirmation, 0) +
+                    COALESCE(rd_sop, 0) +
+                    COALESCE(rd_or, 0) +
+                    COALESCE(renewal_reg_or, 0) +
+                    COALESCE(renewal_sop, 0)
+                ), 0) as fee_sum'
+            )
+            ->value('fee_sum');
+
+        $other = (float) TransferOrcrOtherTransaction::query()
+            ->whereIn('transfer_orcr_id', $ids)
+            ->sum('amount');
+
+        return $base + $other;
+    }
+
+    private function filteredQuery(Request $request, bool $ignoreBranch = false)
     {
         $query = TransferOrcr::with('vehicle.make', 'vehicle.vehicleModel', 'branchLocation');
 
-        if ($request->filled('branch_location_id')) {
+        if (! $ignoreBranch && $request->filled('branch_location_id')) {
             $query->where('branch_location_id', $request->branch_location_id);
         }
         if ($request->filled('status')) {
@@ -370,7 +429,7 @@ class TransferOrcrController extends Controller
 
         if ($request->filled('branch_location_id')) {
             $branch = BranchLocation::find($request->branch_location_id);
-            $labels[] = 'Branch: ' . ($branch?->name ?? $request->branch_location_id);
+            $labels[] = 'Showroom: ' . ($branch?->name ?? $request->branch_location_id);
         }
         if ($request->filled('status')) {
             $labels[] = 'Status: ' . $request->status;

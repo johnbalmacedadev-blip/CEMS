@@ -18,10 +18,22 @@ class VideoPostingRecord extends Model
         'vehicle_id',
         'status',
         'notes',
+        'vlogger',
+        'category',
+        'showroom',
+        'featured_car_or_client',
+        'plate_number',
+        'active_unit',
+        'date_uploaded_gdrive',
+        'date_posted_social',
+        'gdrive_file_name',
+        'source_sheet',
     ];
 
     protected $casts = [
         'record_date' => 'date',
+        'date_uploaded_gdrive' => 'date',
+        'date_posted_social' => 'date',
     ];
 
     const TYPE_VIDEO = 'Video';

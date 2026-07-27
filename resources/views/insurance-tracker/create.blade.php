@@ -21,11 +21,6 @@
                 @csrf
                 <div class="row g-3">
                     <div class="col-md-4">
-                        <label for="showroom" class="form-label">Showroom</label>
-                        <input type="text" class="form-control @error('showroom') is-invalid @enderror" id="showroom" name="showroom" value="{{ old('showroom') }}" placeholder="e.g. FLAGSHIP">
-                        @error('showroom')<div class="invalid-feedback">{{ $message }}</div>@enderror
-                    </div>
-                    <div class="col-md-4">
                         <label for="sales" class="form-label">Sales</label>
                         <input type="text" class="form-control @error('sales') is-invalid @enderror" id="sales" name="sales" value="{{ old('sales') }}" placeholder="e.g. THYRA">
                         @error('sales')<div class="invalid-feedback">{{ $message }}</div>@enderror

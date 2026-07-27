@@ -12,6 +12,8 @@ class ClientFollowUp extends Model
     protected $table = 'client_follow_up_list';
 
     protected $fillable = [
+        'executive_agent_id',
+        'team_lead',
         'date_of_first_inquiry',
         'application',
         'client_name',
@@ -25,6 +27,7 @@ class ClientFollowUp extends Model
         'sales_exec_2', 'date_followed_up_2', 'outcome_2', 'notes_2',
         'sales_exec_3', 'date_followed_up_3', 'outcome_3', 'notes_3',
         'sales_exec_4', 'date_followed_up_4', 'outcome_4', 'notes_4',
+        'sales_exec_5', 'date_followed_up_5', 'outcome_5', 'notes_5',
         'follow_up_date',
         'status',
     ];
@@ -36,11 +39,12 @@ class ClientFollowUp extends Model
         'date_followed_up_2' => 'date',
         'date_followed_up_3' => 'date',
         'date_followed_up_4' => 'date',
+        'date_followed_up_5' => 'date',
     ];
 
     public static function applicationOptions(): array
     {
-        return ['FB', 'IG', 'TIKTOK', 'EMAIL', 'PHONE', 'WALK-IN'];
+        return ['FB', 'IG', 'TIKTOK', 'EMAIL', 'PHONE', 'WALK-IN', 'FACEBOOK', 'OTHER'];
     }
 
     const STATUS_PENDING = 'Pending';
@@ -56,5 +60,30 @@ class ClientFollowUp extends Model
     public function vehicle()
     {
         return $this->belongsTo(Vehicle::class);
+    }
+
+    public function executiveAgent()
+    {
+        return $this->belongsTo(ExecutiveAgent::class);
+    }
+
+    public function latestFollowUpSummary(): string
+    {
+        for ($i = 5; $i >= 1; $i--) {
+            $date = $this->{"date_followed_up_{$i}"};
+            $outcome = $this->{"outcome_{$i}"};
+            $exec = $this->{"sales_exec_{$i}"};
+            if ($date || $outcome || $exec) {
+                $parts = array_filter([
+                    $date ? $date->format('m/d/Y') : null,
+                    $exec,
+                    $outcome,
+                ]);
+
+                return implode(' - ', $parts);
+            }
+        }
+
+        return '—';
     }
 }

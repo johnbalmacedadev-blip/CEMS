@@ -17,7 +17,7 @@ return [
             'items' => [
                 ['label' => 'CAR PHOTOS FOLDER', 'route' => 'car-photos-folder', 'icon' => 'fa-images'],
                 ['label' => 'UNIT REPORT', 'route' => 'vehicles.index', 'icon' => 'fa-car'],
-                ['label' => 'PRICELIST', 'route' => 'pricelist', 'icon' => 'fa-tags'],
+                ['label' => 'UNITS MASTERLIST', 'route' => 'units-masterlist.index', 'icon' => 'fa-list'],
             ],
         ],
         [
@@ -30,8 +30,8 @@ return [
             'items' => [
                 ['label' => 'BUFFING TRACKER', 'route' => 'buffing-tracker.index', 'icon' => 'fa-spray-can'],
                 ['label' => 'INSURANCE TRACKER', 'route' => 'insurance-tracker.index', 'icon' => 'fa-shield-alt'],
-                ['label' => 'MECHANIC TRACKER', 'route' => 'expenses-inventory', 'route_params' => ['section' => 'tools-purchase'], 'icon' => 'fa-wrench'],
-                ['label' => 'DRIVER ACTIVITY TRACKER', 'route' => 'expenses-inventory', 'route_params' => ['section' => 'tools-purchase'], 'icon' => 'fa-id-card'],
+                ['label' => 'MECHANIC TRACKER', 'route' => 'mechanic-tracker.index', 'icon' => 'fa-wrench'],
+                ['label' => 'DRIVER ACTIVITY TRACKER', 'route' => 'driver-activity-tracker.index', 'icon' => 'fa-id-card'],
                 ['label' => 'RECOMMENDATION TRACKER', 'route' => 'recommendation-tracker.index', 'icon' => 'fa-clipboard-check'],
                 ['label' => 'SALES AGENTS', 'route' => 'staff-reports.sales-agents', 'icon' => 'fa-user-tie'],
                 ['label' => 'EXECUTIVE AGENTS', 'route' => 'staff-reports.executive-agents', 'icon' => 'fa-user-shield'],
@@ -88,7 +88,7 @@ return [
             'icon_style' => 'color: #0d6efd; border-color: #0d6efd;',
             'icon' => 'fa-address-book',
             'items' => [
-                ['label' => 'CLIENT FOLLOW UP LIST', 'route' => 'client-follow-up-list.index', 'icon' => 'fa-user-friends'],
+                ['label' => 'CLIENT LIST', 'route' => 'client-follow-up-list.index', 'icon' => 'fa-user-friends'],
                 ['label' => 'APPOINTMENT LIST', 'route' => 'appointment-list.index', 'icon' => 'fa-calendar-check'],
                 ['label' => 'TRAIL FORM LIST', 'route' => 'trail-form-list.index', 'icon' => 'fa-clipboard-list'],
             ],

@@ -164,6 +164,7 @@ Route::middleware(['auth', 'page.permission', 'log.activity'])->group(function (
     Route::get('/analytics-report/financial', [App\Http\Controllers\AnalyticsReportController::class, 'financial'])->name('analytics-report.financial');
     Route::get('/analytics-report/financial/export', [App\Http\Controllers\AnalyticsReportController::class, 'exportFinancial'])->name('analytics-report.financial.export');
     Route::get('/analytics-report/sales', [App\Http\Controllers\AnalyticsReportController::class, 'sales'])->name('analytics-report.sales');
+    Route::get('/analytics-report/sales/export', [App\Http\Controllers\AnalyticsReportController::class, 'exportSales'])->name('analytics-report.sales.export');
     Route::get('/analytics-report/sales-executive', [App\Http\Controllers\AnalyticsReportController::class, 'salesExecutive'])->name('analytics-report.sales-executive');
     Route::get('/settings', function() { return view('settings.index'); })->name('settings');
     Route::get('/settings/financing', [App\Http\Controllers\CarFinancingSettingController::class, 'index'])->name('settings.financing.index');
@@ -238,17 +239,16 @@ Route::middleware(['auth', 'page.permission', 'log.activity'])->group(function (
     // Car Photos Folder (Car Reports)
     Route::get('/car-photos-folder', [App\Http\Controllers\VehicleImageController::class, 'carPhotosFolder'])->name('car-photos-folder');
     
-    // Pricelist (Car Reports)
-    Route::get('/pricelist', [VehicleController::class, 'pricelist'])->name('pricelist');
-    Route::get('/pricelist/export/pdf', [VehicleController::class, 'exportPricelistPdf'])->name('pricelist.exportPdf');
-    Route::post('/pricelist/vehicles/{vehicle}/financing-details', [VehicleController::class, 'storePricelistFinancing'])->name('pricelist.financing.store');
-    Route::post('/pricelist/financing-details-bulk', [VehicleController::class, 'storePricelistFinancingBulk'])->name('pricelist.financing.storeBulk');
-    Route::post('/pricelist/update-all-financing', [VehicleController::class, 'updateAllPricelistFinancing'])->name('pricelist.financing.updateAll');
-    Route::post('/pricelist/set-posted-price-10-percent', [VehicleController::class, 'setPostedPrice10Percent'])->name('pricelist.setPostedPrice10Percent');
+    // Units Masterlist (Car Reports)
+    Route::resource('units-masterlist', App\Http\Controllers\UnitsMasterlistController::class)
+        ->parameters(['units-masterlist' => 'units_masterlist'])
+        ->names('units-masterlist');
     
     // Buffing Tracker (Staff Reports)
     Route::resource('buffing-tracker', App\Http\Controllers\BuffingTrackerController::class)->names('buffing-tracker');
     Route::resource('insurance-tracker', App\Http\Controllers\InsuranceTrackerController::class)->parameters(['insurance-tracker' => 'insurance_tracker'])->names('insurance-tracker');
+    Route::resource('mechanic-tracker', App\Http\Controllers\MechanicTrackerController::class)->parameters(['mechanic-tracker' => 'mechanic_tracker'])->names('mechanic-tracker');
+    Route::resource('driver-activity-tracker', App\Http\Controllers\DriverActivityTrackerController::class)->parameters(['driver-activity-tracker' => 'driver_activity_tracker'])->names('driver-activity-tracker');
     Route::resource('recommendation-tracker', App\Http\Controllers\RecommendationTrackerController::class)->parameters(['recommendation-tracker' => 'recommendation_tracker'])->names('recommendation-tracker');
     Route::delete('recommendation-tracker/{recommendation_tracker}/images/{image}', [App\Http\Controllers\RecommendationTrackerController::class, 'destroyImage'])->name('recommendation-tracker.images.destroy');
     
@@ -387,6 +387,7 @@ Route::middleware(['auth', 'page.permission', 'log.activity'])->group(function (
         Route::get('/staff-reports/sales-agents', [App\Http\Controllers\SalesAgentController::class, 'staffReport'])->name('staff-reports.sales-agents');
         Route::get('/staff-reports/executive-agents', [App\Http\Controllers\ExecutiveAgentController::class, 'index'])->name('staff-reports.executive-agents');
         Route::post('/staff-reports/executive-agents', [App\Http\Controllers\ExecutiveAgentController::class, 'store'])->name('staff-reports.executive-agents.store');
+        Route::get('/staff-reports/executive-agents/{executiveAgent}', [App\Http\Controllers\ExecutiveAgentController::class, 'show'])->name('staff-reports.executive-agents.show');
         Route::resource('sales-agents', App\Http\Controllers\SalesAgentController::class);
 
         // Employees routes
@@ -408,3 +409,10 @@ Route::middleware(['auth', 'page.permission', 'log.activity'])->group(function (
         Route::delete('/api/soa/daily-record', [App\Http\Controllers\SOAController::class, 'destroySoaForDate'])->name('soa.daily-record.destroy');
         Route::get('/api/soa/floated-funds', [App\Http\Controllers\SOAController::class, 'getFloatedFunds'])->name('soa.floated-funds');
 });
+
+// Pre-built API docs at /docs when Scribe is not installed (production deploy)
+if (! class_exists(\Knuckles\Scribe\Config\AuthIn::class)) {
+    Route::middleware(['web', 'auth'])->get('/docs', function () {
+        return view('scribe.index');
+    })->name('scribe.docs');
+}
