@@ -23,6 +23,11 @@ use App\Http\Controllers\GasExpenseController;
 // Public routes
 Route::redirect('/', '/login');
 
+// Post-deploy helper for cPanel Git (no SSH). Disabled unless DEPLOY_TOKEN is set.
+Route::match(['GET', 'POST'], '/deploy/run', [\App\Http\Controllers\DeployController::class, 'run'])
+    ->middleware('throttle:5,1')
+    ->name('deploy.run');
+
 // Test route for debugging (temporary)
 Route::get('/test-models', function() {
     $camry = \App\Models\VehicleModel::where('name', 'LIKE', '%Camry%')->first();

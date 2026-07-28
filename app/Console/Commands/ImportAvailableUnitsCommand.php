@@ -117,7 +117,7 @@ class ImportAvailableUnitsCommand extends Command
                     [$modelId, $modelName] = $this->resolveModel($makeId, $row['model'] ?? 'Unknown', $modelCache);
 
                     $payload = [
-                        'year' => (int) ($row['year'] ?? 2000),
+                        'year' => $this->parseYear($row['year'] ?? $row['year_raw'] ?? null),
                         'make_id' => $makeId,
                         'model_id' => $modelId,
                         'make' => $makeName,
@@ -251,6 +251,24 @@ class ImportAvailableUnitsCommand extends Command
         );
 
         return $errors > 0 ? self::FAILURE : self::SUCCESS;
+    }
+
+    private function parseYear($value): int
+    {
+        if ($value === null || $value === '') {
+            return 2000;
+        }
+        if (is_int($value) || is_float($value)) {
+            $year = (int) $value;
+
+            return ($year >= 1980 && $year <= 2100) ? $year : 2000;
+        }
+
+        if (preg_match('/(19|20)\d{2}/', (string) $value, $m)) {
+            return (int) $m[0];
+        }
+
+        return 2000;
     }
 
     private function normalizePlate(?string $plate): string

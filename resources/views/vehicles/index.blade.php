@@ -38,7 +38,7 @@
 
             <!-- Search & filters -->
             @php
-                $hasExtraFilters = ($yearFrom ?? null) || ($yearTo ?? null) || ($transmission ?? null) || ($fuelType ?? null) || ($bodyType ?? null) || ($purchasedFrom ?? null) || ($reservationDate ?? null) || ($releaseDateFrom ?? null) || ($releaseDateTo ?? null) || ($branchLocationId ?? null);
+                $hasExtraFilters = ($yearFrom ?? null) || ($yearTo ?? null) || ($transmission ?? null) || ($fuelType ?? null) || ($bodyType ?? null) || ($purchasedFrom ?? null) || ($reservationDateFrom ?? null) || ($reservationDateTo ?? null) || ($releaseDateFrom ?? null) || ($releaseDateTo ?? null) || ($branchLocationId ?? null);
                 $hasActiveFilters = $search || $status !== 'all' || $hasExtraFilters;
                 $selectedBranchName = null;
                 if (!empty($branchLocationId) && isset($branches)) {
@@ -132,10 +132,15 @@
                             <input type="text" class="form-control" name="purchased_from" placeholder="Seller / source"
                                    value="{{ $purchasedFrom ?? '' }}">
                         </div>
-                        <div class="col-lg-3 col-md-6">
-                            <label class="form-label small mb-0">Reservation date</label>
-                            <input type="date" class="form-control" name="reservation_date"
-                                   value="{{ $reservationDate ?? '' }}">
+                        <div class="col-lg-3 col-md-6 reservation-date-filter-field" @if(($status ?? '') !== 'Reserved' && empty($reservationDateFrom) && empty($reservationDateTo)) style="display:none" @endif>
+                            <label class="form-label small mb-0">Reservation date from</label>
+                            <input type="date" class="form-control" name="reservation_date_from" id="reservation_date_from"
+                                   value="{{ $reservationDateFrom ?? '' }}">
+                        </div>
+                        <div class="col-lg-3 col-md-6 reservation-date-filter-field" @if(($status ?? '') !== 'Reserved' && empty($reservationDateFrom) && empty($reservationDateTo)) style="display:none" @endif>
+                            <label class="form-label small mb-0">Reservation date to</label>
+                            <input type="date" class="form-control" name="reservation_date_to" id="reservation_date_to"
+                                   value="{{ $reservationDateTo ?? '' }}">
                         </div>
                         <div class="col-lg-3 col-md-6 release-date-filter-field">
                             <label class="form-label small mb-0">Release date from</label>
@@ -199,8 +204,11 @@
                             @if($purchasedFrom)
                                 <span class="badge badge-neutral">From: {{ Str::limit($purchasedFrom, 24) }} <a href="{{ route('vehicles.index', request()->except('purchased_from', 'page')) }}" class="text-white ms-1">&times;</a></span>
                             @endif
-                            @if($reservationDate)
-                                <span class="badge badge-neutral">Reservation: {{ date('M d, Y', strtotime($reservationDate)) }} <a href="{{ route('vehicles.index', request()->except('reservation_date', 'page')) }}" class="text-white ms-1">&times;</a></span>
+                            @if($reservationDateFrom)
+                                <span class="badge badge-neutral">Reservation ≥ {{ date('M d, Y', strtotime($reservationDateFrom)) }} <a href="{{ route('vehicles.index', request()->except('reservation_date_from', 'page')) }}" class="text-white ms-1">&times;</a></span>
+                            @endif
+                            @if($reservationDateTo)
+                                <span class="badge badge-neutral">Reservation ≤ {{ date('M d, Y', strtotime($reservationDateTo)) }} <a href="{{ route('vehicles.index', request()->except('reservation_date_to', 'page')) }}" class="text-white ms-1">&times;</a></span>
                             @endif
                             @if($releaseDateFrom)
                                 <span class="badge badge-neutral">Release ≥ {{ date('M d, Y', strtotime($releaseDateFrom)) }} <a href="{{ route('vehicles.index', request()->except('release_date_from', 'page')) }}" class="text-white ms-1">&times;</a></span>
@@ -357,6 +365,55 @@
                             </div>
                         @endif
                     </div>
+
+                    @if(!empty($excelReconcileNotes))
+                        @foreach($excelReconcileNotes as $note)
+                            <div class="alert alert-warning border-warning mb-3" role="alert">
+                                <div class="d-flex align-items-start gap-2">
+                                    <i class="fas fa-exclamation-triangle mt-1"></i>
+                                    <div class="flex-grow-1">
+                                        <div class="fw-semibold mb-1">
+                                            Excel vs database count mismatch
+                                            @if(!empty($note['label']))
+                                                — {{ $note['label'] }}
+                                            @endif
+                                        </div>
+                                        <div class="mb-2">{{ $note['summary'] }}</div>
+                                        <div class="row g-2 mb-2 small">
+                                            <div class="col-auto">
+                                                <span class="badge bg-secondary">Excel rows: {{ number_format($note['excel_row_count'] ?? 0) }}</span>
+                                            </div>
+                                            <div class="col-auto">
+                                                <span class="badge bg-secondary">Excel unique plates: {{ number_format($note['excel_unique_plates'] ?? 0) }}</span>
+                                            </div>
+                                            <div class="col-auto">
+                                                <span class="badge bg-dark">Database: {{ number_format($note['db_count'] ?? 0) }}</span>
+                                            </div>
+                                            @if(!empty($note['tab']))
+                                                <div class="col-auto">
+                                                    <span class="badge bg-light text-dark border">Tab: {{ $note['tab'] }}</span>
+                                                </div>
+                                            @endif
+                                        </div>
+                                        @if(!empty($note['reasons']))
+                                            <div class="small mb-1 fw-semibold">Why it doesn’t match:</div>
+                                            <ul class="mb-0 small ps-3">
+                                                @foreach($note['reasons'] as $reason)
+                                                    <li class="mb-1">{{ $reason['message'] }}</li>
+                                                @endforeach
+                                            </ul>
+                                            @if(($note['hidden_reason_count'] ?? 0) > 0)
+                                                <div class="small text-muted mt-1">…and {{ $note['hidden_reason_count'] }} more reason(s).</div>
+                                            @endif
+                                        @endif
+                                        @if(!empty($note['source_name']))
+                                            <div class="small text-muted mt-2">Source: {{ $note['source_name'] }}</div>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+                        @endforeach
+                    @endif
 
                     @if($vehicles->count() > 0)
                         <div class="table-responsive" id="vehiclesTableWrap">
@@ -640,6 +697,9 @@
     const releaseDateFields = document.querySelectorAll('.release-date-filter-field');
     const releaseFromInput = document.getElementById('release_date_from');
     const releaseToInput = document.getElementById('release_date_to');
+    const reservationDateFields = document.querySelectorAll('.reservation-date-filter-field');
+    const reservationFromInput = document.getElementById('reservation_date_from');
+    const reservationToInput = document.getElementById('reservation_date_to');
 
     function toggleReleaseDateFilters() {
         const selected = statusSelect ? statusSelect.value : currentStatus;
@@ -650,10 +710,27 @@
         });
     }
 
+    function toggleReservationDateFilter() {
+        const selected = statusSelect ? statusSelect.value : currentStatus;
+        const hasValue = Boolean((reservationFromInput && reservationFromInput.value) || (reservationToInput && reservationToInput.value));
+        const show = selected === 'Reserved' || hasValue;
+        reservationDateFields.forEach(function (el) {
+            el.style.display = show ? '' : 'none';
+        });
+        if (!show) {
+            if (reservationFromInput) reservationFromInput.value = '';
+            if (reservationToInput) reservationToInput.value = '';
+        }
+    }
+
     if (statusSelect) {
-        statusSelect.addEventListener('change', toggleReleaseDateFilters);
+        statusSelect.addEventListener('change', function () {
+            toggleReleaseDateFilters();
+            toggleReservationDateFilter();
+        });
     }
     toggleReleaseDateFilters();
+    toggleReservationDateFilter();
 
     function escapeHtml(value) {
         return String(value ?? '')

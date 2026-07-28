@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>403 — Forbidden</title>
+    <title>500 — Server Error</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { box-sizing: border-box; }
@@ -70,19 +70,34 @@
             font-size: 0.875rem;
             color: #718096;
         }
+        .error-id {
+            margin-top: 0.75rem;
+            font-size: 0.875rem;
+            color: #a0aec0;
+        }
     </style>
 </head>
 <body>
     <div class="error-wrap">
         <div class="error-line">
-            <span class="error-code">403</span>
-            <span class="error-message">Forbidden</span>
+            <span class="error-code">500</span>
+            <span class="error-message">Server Error</span>
         </div>
         <a href="{{ route('home') }}" class="btn-home">
             <i class="fas fa-home" aria-hidden="true"></i>
             Return Home
         </a>
-        <p class="error-hint">Contact your administrator if you need access to this page.</p>
+
+        <p class="error-hint">Something went wrong. Please try again or contact your administrator.</p>
+        @if(isset($error_id) && $error_id)
+            <div class="error-id">Reference ID: {{ $error_id }}</div>
+        @endif
     </div>
+
+    <script>
+        // Helps you correlate the browser error page with the server logs.
+        console.error('Server error page shown.', { error_id: @json($error_id ?? null) });
+    </script>
 </body>
 </html>
+

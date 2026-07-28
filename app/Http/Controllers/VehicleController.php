@@ -7,6 +7,7 @@ use App\Models\VehicleIncentive;
 use App\Models\CarFinancingSetting;
 use App\Models\FinancingScheme;
 use App\Models\BranchLocation;
+use App\Support\ExcelUnitReconcile;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -293,6 +294,9 @@ class VehicleController extends Controller
         $fuelType = $request->get('fuel_type');
         $bodyType = $request->get('body_type');
         $purchasedFrom = $request->get('purchased_from');
+        $reservationDateFrom = $request->get('reservation_date_from');
+        $reservationDateTo = $request->get('reservation_date_to');
+        // Backward compatibility for old single-date filter.
         $reservationDate = $request->get('reservation_date');
         $releaseDateFrom = $request->get('release_date_from');
         $releaseDateTo = $request->get('release_date_to');
@@ -343,9 +347,22 @@ class VehicleController extends Controller
             $query->where('branch_location_id', (int) $branchLocationId);
         }
 
-        if (is_string($reservationDate) && trim($reservationDate) !== '') {
-            $query->whereHas('statusDetail', function ($q) use ($reservationDate) {
-                $q->whereDate('sale_date', $reservationDate);
+        $hasReservationFrom = is_string($reservationDateFrom) && trim($reservationDateFrom) !== '';
+        $hasReservationTo = is_string($reservationDateTo) && trim($reservationDateTo) !== '';
+        $hasLegacyReservation = is_string($reservationDate) && trim($reservationDate) !== '';
+        if ($hasReservationFrom || $hasReservationTo || $hasLegacyReservation) {
+            $query->whereHas('statusDetail', function ($q) use ($hasReservationFrom, $hasReservationTo, $hasLegacyReservation, $reservationDateFrom, $reservationDateTo, $reservationDate) {
+                if ($hasLegacyReservation && ! $hasReservationFrom && ! $hasReservationTo) {
+                    $q->whereDate('sale_date', trim($reservationDate));
+
+                    return;
+                }
+                if ($hasReservationFrom) {
+                    $q->whereDate('sale_date', '>=', trim($reservationDateFrom));
+                }
+                if ($hasReservationTo) {
+                    $q->whereDate('sale_date', '<=', trim($reservationDateTo));
+                }
             });
         }
 
@@ -461,7 +478,8 @@ class VehicleController extends Controller
         $fuelType = $request->get('fuel_type');
         $bodyType = $request->get('body_type');
         $purchasedFrom = $request->get('purchased_from');
-        $reservationDate = $request->get('reservation_date');
+        $reservationDateFrom = $request->get('reservation_date_from');
+        $reservationDateTo = $request->get('reservation_date_to');
         $releaseDateFrom = $request->get('release_date_from');
         $releaseDateTo = $request->get('release_date_to');
         $branchLocationId = $request->get('branch_location_id');
@@ -501,6 +519,8 @@ class VehicleController extends Controller
 
         $unassignedLocationCount = (clone $locationSummaryBase)->whereNull('branch_location_id')->count();
 
+        $excelReconcileNotes = ExcelUnitReconcile::notesForRequest($request);
+
         return view('vehicles.index', compact(
             'vehicles',
             'status',
@@ -511,7 +531,8 @@ class VehicleController extends Controller
             'fuelType',
             'bodyType',
             'purchasedFrom',
-            'reservationDate',
+            'reservationDateFrom',
+            'reservationDateTo',
             'releaseDateFrom',
             'releaseDateTo',
             'branchLocationId',
@@ -522,7 +543,8 @@ class VehicleController extends Controller
             'underMaintenanceCount',
             'forfeitedCount',
             'locationCounts',
-            'unassignedLocationCount'
+            'unassignedLocationCount',
+            'excelReconcileNotes'
         ));
     }
 
