@@ -152,6 +152,18 @@
                                                                                 <li class="tocify-item level-2" data-unique="other-endpoints-DELETEapi-tools--id-">
                                 <a href="#other-endpoints-DELETEapi-tools--id-">Remove the specified tool</a>
                             </li>
+                                                                                <li class="tocify-item level-2" data-unique="other-endpoints-POSTapi-mechanic-expense-records">
+                                <a href="#other-endpoints-POSTapi-mechanic-expense-records">POST api/mechanic-expense-records</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="other-endpoints-GETapi-mechanic-expense-records--mechanicExpenseRecord_id-">
+                                <a href="#other-endpoints-GETapi-mechanic-expense-records--mechanicExpenseRecord_id-">GET api/mechanic-expense-records/{mechanicExpenseRecord_id}</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="other-endpoints-PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-">
+                                <a href="#other-endpoints-PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-">PUT api/mechanic-expense-records/{mechanicExpenseRecord_id}</a>
+                            </li>
+                                                                                <li class="tocify-item level-2" data-unique="other-endpoints-DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-">
+                                <a href="#other-endpoints-DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-">DELETE api/mechanic-expense-records/{mechanicExpenseRecord_id}</a>
+                            </li>
                                                                                 <li class="tocify-item level-2" data-unique="other-endpoints-GETapi-models--make-">
                                 <a href="#other-endpoints-GETapi-models--make-">GET api/models/{make}</a>
                             </li>
@@ -202,7 +214,7 @@
     </ul>
 
     <ul class="toc-footer" id="last-updated">
-        <li>Last updated: July 21, 2026</li>
+        <li>Last updated: August 16, 2026</li>
     </ul>
 </div>
 
@@ -387,14 +399,14 @@ You can check the Dev Tools console for debugging information.</code></pre>
 
 <div class="bash-example">
     <pre><code class="language-bash">curl --request POST \
-    "http://localhost/vehicles/1/archive" \
+    "http://localhost/vehicles/274/archive" \
     --header "Content-Type: application/json" \
     --header "Accept: application/json"</code></pre></div>
 
 
 <div class="javascript-example">
     <pre><code class="language-javascript">const url = new URL(
-    "http://localhost/vehicles/1/archive"
+    "http://localhost/vehicles/274/archive"
 );
 
 const headers = {
@@ -514,10 +526,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="number" style="display: none"
                step="any"               name="vehicle_id"                data-endpoint="POSTvehicles--vehicle_id--archive"
-               value="1"
+               value="274"
                data-component="url">
     <br>
-<p>The ID of the vehicle. Example: <code>1</code></p>
+<p>The ID of the vehicle. Example: <code>274</code></p>
             </div>
                     <div style="padding-left: 28px; clear: unset;">
                 <b style="line-height: 2;"><code>vehicle</code></b>&nbsp;&nbsp;
@@ -703,7 +715,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     --header "Accept: application/json" \
     --form "body=Good morning team!"\
     --form "link_url=https://example.com"\
-    --form "attachment=@C:\Users\VJ Kyle\AppData\Local\Temp\php851B.tmp" </code></pre></div>
+    --form "attachment=@C:\Users\VJ Kyle\AppData\Local\Temp\php30C9.tmp" </code></pre></div>
 
 
 <div class="javascript-example">
@@ -859,7 +871,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
                value=""
                data-component="body">
     <br>
-<p>optional File attachment (jpg, png, pdf, doc, xls, zip — max 10MB). Example: <code>C:\Users\VJ Kyle\AppData\Local\Temp\php851B.tmp</code></p>
+<p>optional File attachment (jpg, png, pdf, doc, xls, zip — max 10MB). Example: <code>C:\Users\VJ Kyle\AppData\Local\Temp\php30C9.tmp</code></p>
         </div>
         </form>
 
@@ -1329,7 +1341,7 @@ fetch(url, {
             </summary>
             <pre><code class="language-http">cache-control: no-cache, private
 content-type: application/json
-set-cookie: XSRF-TOKEN=eyJpdiI6IlllbVhqcE1wNlZRR09mZ0V2WFdLb3c9PSIsInZhbHVlIjoibXdEdExXdkw2MGloc21BUWRSSGMrWjRkUnpuRHFVeTlEZXByaFNhQXZnRWRwOGJ6UFF6R2RKQmxLOTVRLzRONm5zRHowazBVSElBcHhBYnBocEt0YjlWaTFyWVEwY25laEhNTVM0ZUdqcXpjT056TjJkNmh4U3Jjc0l2R2hRZTUiLCJtYWMiOiIwYmM1MDZhZjQ4YzRmYmI2ODQ1MzY2MjNlMmY2NWQ0M2I5MWVlMjkxY2Q5MTBjNzJkM2E3NjkyNTI5ZDBmYjcyIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6Ilk5d2lUOWE2ZHRjazMvUjg4ZFlwZ3c9PSIsInZhbHVlIjoiSVBKSFl6c1NmbFcwU0pSMVRrQXdxd01nWHdsR0U3RFpWaUJSeFM5U2doTVZmRE84ekF5d1FlaHFEdE5aSnljdUN3QWZuSUFiS1pzRFF0dmV6ZmU1OUZSNUY1c2V2OHF6RXZLSTd3Y2RVZDUrdnM2VWdCN2x1Z011ZHlTSFQzSDUiLCJtYWMiOiJkZjMwNjM3OGM4MTU5NjNiM2M0YjllYzBjMWI4YTA4YjNkNjdjYzU2ZjhhZDk3NmQyMTdjNzQ3Y2VkODI2ZDU4IiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6IndzcWFwQ0J4eStNRzVubWhZd2lTM0E9PSIsInZhbHVlIjoiSGUwbVd3M0U5ZEFjWnRlMFMvMjhqckdGN0hjYnlVTmZXME1qdU40MjhHbnZlclpGaTk5VTh2VkQ1R1U5UkpHTEp5cVRLSkwzV0J1ME42WFdzalU1SUZDTDFqcGJmaVNpb2ZXWWZsd0F4R3ZGY3dDQndkL005RENJM0xMVm5VN3MiLCJtYWMiOiI0NDNhZDFlZWE5OTQyYjI0NjkxNDg4ZTJjMmExNzdmYWEyZjQ1NGQzMTFjYTRjN2NkZWRmYjQ0MTg1M2EyZWEwIiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:57 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6ImVzMFFnN3YrRktMcWo1eUxHTkFlZ1E9PSIsInZhbHVlIjoiK085N1h4S1ZTRkN0OWQ0UEczcTIwSmI5Q3RyeHFYWVhiT3gvUjgxcHBubWI2clV6U2VDalpyR2FQZG5wMTNzS2tpYzZrQmRGL2lSOFQ4NWp6eHVuZERuclowbE45aWJRbE56RW9TM2poVzB5UUVFUWNiblkxY0lJSSt6Tzc4bWsiLCJtYWMiOiIzOGJjMjRlNDRlNTk3Njc1ODUxZGQzZWI3MzkxNDYzYTRhMGIzYjgwOTRjY2I4NjhjMjEwYzhkYmVhYzZlZWI2IiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:57 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">[]</code>
@@ -1454,7 +1466,7 @@ fetch(url, {
             </summary>
             <pre><code class="language-http">cache-control: no-cache, private
 content-type: application/json
-set-cookie: XSRF-TOKEN=eyJpdiI6IjlHTFF0OEFmekVrLy80UXcvTmhJdHc9PSIsInZhbHVlIjoiWk1iMmJEMXNvdGhyTFc2ams1c0NqMU83N1lTTVgzTWJIT2VjUHVVZ1JXNTRaYzJHTDBzYW9FRmVITG5HS2k2Kzk1OFA4ZjlkQWlJQkRpNk1vRmsrTWViTld0eHVOOTZUSVRRYU1ibEs5NW5KZjRiR0ZXMHZwVjFBN1h4cjZDdGQiLCJtYWMiOiI1NDA2ZjRjYmM4MGUyZWFlYzc1ZDVlYmIwYTJjYzIxYWNiMjgwYzI4NGEyNGQ3ZjgzOTI0MTQ1MjU5MTc2MjYzIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IlhrVndjRzlUdXkvLzFRSnhIMXRiQ0E9PSIsInZhbHVlIjoiN1dZMTJzL2JQMjR1WDMwL2c4NEg4M3ZYV0E1eFBKTlc4REVPMmg2cDF0UWpkQWJReENHTFM0MkdVSk5jS1VsOHhqa0cxU2lnNTdXajFjZi9RNGpGcTRTV3NtaitjMjIxdVFFNVczbk8rdEY1WFJSTmhXeStxMzcwd0tJOEoyVXkiLCJtYWMiOiI2MWNkN2E4ZDc5ODc3NjRiMWU2NDRiZjE1OTJlZDBhY2RkOWY3MTBiODBiYWVhNTI1OWI3OGE5NzZmNDZlZmY1IiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6InRGNWlxRWNDWFllVkZJdUc3azRXQlE9PSIsInZhbHVlIjoiTjBzaGU3K0EwVHRiMXYraW1FL3RjVzNOM1FRSUI2TCsxNCs3dWNlV2kyUldkYkFRdC9VNmxsVnAvZEpHZkp3bE91ZnJNTmhFWmRwZThUZnZ3WTFZUFN2dW5IVC8zd1BLZmtwS1lUUWtxUEVnYTc0Y3JpRDgzbTIxdnpIeFFpRGciLCJtYWMiOiIxYmI0NDM0ZDBiNGQ3M2FiYTI2MjJmY2E5ZDExMWFkYjBjMGFmZDljMzQ4OGE0M2Q4M2RmNmMwMGQyMzkzODY3IiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:57 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IkhHaEZOK2l3RWQyUDI3di9zWHVRYmc9PSIsInZhbHVlIjoiWXc1dEVKVk9WQWxWNGtuM1NUWUVKTWhtb0ZKSkh1ajNVOXVQeUNRSGNHWDZDaHFJM1U1RnVJb0dpSXorZVVmcEdDcnExVFFkNjZVMThrd2NKV2NNL2U5WlRiaVhUZkphWjFYVkMvUUloelFERFgyUzhNOUV0bGxDd1FxZU5FOFAiLCJtYWMiOiJkZjM1NTdjNzllNWJhN2UyMTQ1YjM4N2ViOWQ3MmViNDRjOTdmOTQ2NWM0MmNlNDc1ODE1MDc3YTU3YzMxOWI3IiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:57 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">[]</code>
@@ -1580,7 +1592,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6Ik1nUkd1Z2xEWFM5ODBrdDVubmthTkE9PSIsInZhbHVlIjoiNC9yclZCaW13WEFQVnNRcHQvY2hTcjR1SkpNWk50VFFqcjRCSGk1V1BBOWxCU1g2WEJnaVN4cEozN3pNeGxTLzhKRVU4TmRTZFo3WHFZWlFUQ3F6NUo4a2orZ2hVS0dnSVBrNW9QWmo1UmlWTW1PMlFSbnVhUnpZbExJeGovRisiLCJtYWMiOiI5YjVhZDcwYzMwOGVhNjE2ODc3NTc2MzVlYjA2NmQxZjg5YTg1NDM1YzAxMDdiODM2YTJmZTA5MTFiYWI4ZDA1IiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IlVtdGcvUW1ZV0JhS09jQjV5dHhhRkE9PSIsInZhbHVlIjoiM1RTOTVvVHZwMXgwWjRFNm05VUQvMUY4WnlxajVvNHc0RXF5V1phNTRhRFVDdzdrMzIxT3Rua1N3aDZkc2hZc3FvNGRSL3dIRmxPUUxUOVVSSFBhQUpGOFM3VDhsYVljKzVUbmVZaHFMTzdKMUNFVjNEbTB2UUlKT1ZqeTFZMC8iLCJtYWMiOiI0NTRlYTA3MzE2YzUwMDc5OGNkYWY0Zjg4ZmFiYmY2OGQ0NjhhNGUxNTQ2ZDcxNmEzMjRkY2UwMjU1ZTJkODc4IiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6IlBjS094Vyt2REo4bFJJTGM3SmRKUlE9PSIsInZhbHVlIjoiZ3I1SFptUTgwUXFRTFdSVGZIN3Q5dDlLdUs5djJyU3NZUEx0Y2FOSzdnYnYzZHFxVklIdDgyMVU1eVZOUjNvVkhjek5XMlVFeC9qcDZncGhHeUdFZkdhTGIyY0pjTUNWcWZKMzRYZlY5QnpXWTVaNWNvNUg1ZnE1S2xpSnRDcHgiLCJtYWMiOiI4M2EyNGZlNmMyZWRiMGNjNmZiNDY3MGQ1NDg0NGY4MTFlNWQxZGNmMjg4MjhiY2MxZmNjNDhhOGViZmE5OTQ3IiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:57 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IjY0SS9PYzI2Wk1vT0hkKzF2LysweWc9PSIsInZhbHVlIjoiQTZjREhNY3AyQlhXTVY5dUZCbkF3ODVqZ29uZ3N5dVNUcmVsamMyZHpVZmhScjFMb25GSi90TGl2OGQyV25IU1hrZ0Z6TFZ5bTFXNnJGQUN3Lzk1TmNETWJqQ01YSFlOditDVXRmb05ibHpDUGlGODR0d2s3TEhTalh4Sm1QVWciLCJtYWMiOiJmMjA1NGI4MjQ4MjFlYTk2Y2FjYmI2OThjMzFmZDE4MDBjMTI0NTZjMWQ3MTkzOTFkNzY2NGYyMzE4Y2IyNGI3IiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:57 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -1717,7 +1729,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6ImRMUWwzU1I5cjBIRWJQUUgvV25nc1E9PSIsInZhbHVlIjoiMElIa2J5VTIyS3Rpa09oVjJwTjI5MjJhNDNxOG1ZUTFRY1RCNEVlOXZES0lxemZRaEpOMGd5bTJrU3FMQ251ZkpVYWFKNytiY1VwLzkxMzJUdHp2NG13ZVE2Ym9YWW10VVdpa0FmSGVXaUQvZk82bkp1d1RiTzFtME9xTUd5WlYiLCJtYWMiOiJkMjM0NTUxMDU3ZWE1Y2YzZWY2MzMxYjNjOWQ4Mjk1YTc1OWQzYjllZjE4OWQyZGI5ODc4NGNhZWQ4NzRjYTc3IiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6InlqbEI5UmhqTGpac2FxUXd6Q3hIUkE9PSIsInZhbHVlIjoiUG1JbkFsd2VmSmlPdzlhbkJKcjI2NFdQNk1xR05SNGY0SDdySkd1QWt2OHVMaGNPWVFkbDNqTk55RVBNZUxmRDg3VU9yN1VJa1RRbWUvcEloTEZQTThrdENpMHBDZHArU1JRd1N5cVQ1czE1SEpOZ21oUERhYTRySWVMUCtmejQiLCJtYWMiOiJiZmRjNGIzYWNmYzE4YjNmNzk5MDAyYTc2MTYzYjlhM2E5NTI5MzExZTZjMmMxY2Y3NThiYTEzYWM4NGFmY2FjIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6ImU5Qm8weXg0cldBZmprSlo5SW1ucnc9PSIsInZhbHVlIjoieHNYdUtzS3A5Y0pMdmcweWNCbldQZ0hTTjRvQndkd3YvNUtLWUVURnhzeFVMM3hCWmhzY0dkdVBXWmpEMVZwRGZGRVowWk5FY2FQdkFCUEVEZ2tzdmZXMDU3WHltTm1yV0krUXU4QzJKbWZmSGEwWlZKVFBxUHMwV2xXbUpnSjgiLCJtYWMiOiJjOGU5NDg2YjM0NjgwMDhhNjc2MDk0NzU2MmYxMmE4MzU5ODI5N2Q5OGEwMmFlNDcwNjRiOTJlMDUzNDQzZmYyIiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:57 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6InpUV3N3cUQ4RWd3QXhYZGtHMkR0aHc9PSIsInZhbHVlIjoidkZyRkIvdnVOL3ZhR1JGaS9kTlJtcU1VSjQ0R1lJN3VRdERMUG1ncXJtMVRMbURhZFl6SFluVTM3cjBNbXVEUkp6b3V2ZE9naFUvTmVQV282SGE5cmZPa3UrL2xqTmcvN1d2Nk1mbHVta0ZCem95RzhoNDBDT0cvc2ZTc0V2OTMiLCJtYWMiOiIwY2JhMjNmNTRlZDhhMWIxYTkxZmRhOGQ4MDY1MzcxZDg2OTY3YWQ1Y2Q4YzIwNWQ5MGFmMmJmZWY0MjE3M2EyIiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:57 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -1854,7 +1866,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6IkRnbFI0RWpvdFRVREVoclJkRWlwcXc9PSIsInZhbHVlIjoiVG9DRnp1QU9Oc2dLOWdWZ0pMclgxb0s0UGtUdFdiVys2a3MxVlUwODViMG9DYWtaNUZ6enJQQVhPODM2NnptcmV1RVJKcnNkRlZmSDVPdWFMbnJSajFqRmNIV0Q5cUJrenZyclNmdGtkM0RMcExpN2F3RU43em9UOHdnTXhzdWwiLCJtYWMiOiJiMGM3MWZhZjFlODczZmIzOTcxNmQ4Mzg4NThlMjAwNGVlM2FjZmQzZjZiODgzZDU0MDVjZjExOGQzMTliZjMyIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6ImYybDEwQWJEVnVJTTJucStRQ1JCZ2c9PSIsInZhbHVlIjoiR0h0SHNNQklBZlJqcWRkSGIvY0piN0ZZNWZDVTVRVWFoSXc2V3JYWXpHZnpsMFJnTVlkeTFzRFo3Qk9uMFpOczBiaXcyZFUrUFVHZ3VFdkNnSGFkQWpCUmxRUCs0YkVlbTkzTlpaS2dpaWNHOFJ3VUs5bFVhM2lOQ3ZjbXo5MEEiLCJtYWMiOiJmZjE1ODkzMDdiNjBkZjUzYzc4ZTEyODM0ZDM1NDFjZDM5NWM4MjdkMTliOGY3MTRkNzY2NWZmN2UxNGNlY2QzIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6IjlSTXhlRHBFZEJCYm9IekFqSG55OXc9PSIsInZhbHVlIjoiaERmUjJRcjFTdUZIT3FFbzFGU0xlVXJ2eXgvYWRjeUN0UTgvbmF2WEhDa0tMVVBCTGhFTzR1QlZqZERpei9DK2Q5WlBUVXcyWHk1VXFuNEduOUxiZkNxajI1ZmVhUTFWNXlGNTBpYXhVUFFqT29mQ3FqcW0walk3Zk9hbUVsM1AiLCJtYWMiOiJjYTlkNTMyNzg0OGEyNGY2NWJkMGM4YWIxYTlhNTVhYmIyMzAwMzhkZWEzYjAwOGQzNjdhNjg1Y2Y2MjdhMWU3IiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:58 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6ImtMdkZVT2pWOXFjZWw2NHhtQWJvS0E9PSIsInZhbHVlIjoiM1Z0OTZZditZS21GWDRiN3lVUlIwaEFwSThVeG1yK1JWMit0OEJkMVRnVlVZb1JTNTc1NWRUTThEK002QVBQZURHSjY1cEp1eHhEbFpQL2RXN1pnZU9JN0VuQk5GRmRzc0QyQ0huem1vVmN3NVJDTTQ1aDZrT1Z4Q1NRQjROcFUiLCJtYWMiOiJmZWZmODc0Y2E1M2Q1ZGY0NDQ2YTljY2JjYzhkNTdhODdmOWY3NTUyY2IyYjY0YmNjNDE1YjE5OTZlNmZhNTZkIiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:58 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -2102,7 +2114,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6IkZ6STl2cGVCU09HWURnVTVwS01Qb1E9PSIsInZhbHVlIjoiNzNsc0x6QWRMK1NqRTZxQmRYT1NNSWFBUWVNTXdqRGJMQnBCcmw4eGViWWd6dU91WDBZR1JqSGNnNCsxSlZvNnJmNUNkL0pzazZUTGFwekpPQ1QyNjBXVjU0VnE5andZaVZMYjl4TTBmMzdxTTY2Y0Z6WDVGL3BKUFNQU25JTlkiLCJtYWMiOiI4ZTQwODdjYjhlMWE4YzliYzRmZTJiNjc0OTM4ZGU3ZWI4MmU0NmJjYjE1YWMyM2IwMjMwNTVlY2FhNjRkMTQxIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6InFFQ21hdzNsUS84YzFOUExhcXozelE9PSIsInZhbHVlIjoiK240Q3NCdHpFdlZBNEJpWGlkSWN2NFBscUZpUkFBZWIvdG4yZGxsUitGVHFVVi9odVJ6dVhXL2xHQkVWY3JZd2wxZklSamRYWGF4TzhIYXVhZmNFQkx5YVRxQUQwQ2ZWc1U2Wk43U3Q2L0JXRUVjYWQ1QXVEM3RVTExsWS9qNlkiLCJtYWMiOiI4YmYyNTc2NjM2YmIyZTM1ZmE4MzYzN2NhMjRlYjJlMDI0ZDYzZGNjNGNmZWFhODE0MTljNWI3NTY5YjVjMzYzIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6IlhwaFVsR3dwdlNUU3EzMVB5eEkwcEE9PSIsInZhbHVlIjoiNVMzUGNmbTZlUGNWd1dMeGc5Sjg4cC9SZzN3SDNwTzlvUjZQM0F6M282YkFkejlkdGp0NWtTREx4azZ5N2toNWswdm5sMUZEeE5Ya2tSRGgva3poTXdFN1pxUFNtU0lkSExYTUMrWEVnbmF6dlNLb3YzLzRpMlJNaG9YcGZFZk0iLCJtYWMiOiJmZTAxNTI2N2M3ODI3ZmFkMDk4NGM0M2U3ZDEzYTQ0ZWZiZjNiOGExZTllMjYyNzUzNzdkNzRkNzM1ZjkyNDRlIiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:58 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6InZWZEdJaG8zbVlxQjBXZUNBS2RpSnc9PSIsInZhbHVlIjoiU2tWd2VFUWxBTnkzNkxDU2NkeXVVWmNiaXNiV2pPMkxkNlNpSFU2aXdFdFpkVnIyRWVXbE1DWFpmeWYzY1pVWWFqWHlWZDlBSzE3d251bzA1cUVlYmdiOC9HazhnbW9KbmFRa1g5NHVvcGE3alhvVE1zOEdEODROOVVqV040ZVMiLCJtYWMiOiIyNGI3NGFlNGJhY2M2YTJiZjRhYjlmMTQ5NGJhMmVkODBmMTYyZWE5NzA3MmEzMzhkY2VkOGI2M2JjYmIwMDNmIiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:58 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -2239,7 +2251,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6IldqVU50UGxrOXNSa0hIM2MwaDhrMnc9PSIsInZhbHVlIjoiZ2ZHSEk2MmgyWTcvdXdEUkdpd1RhcWd6NHhxVkRzRWk0bWpwanZxYlF4UFAxZ3Y4NjRScW1MaldGWTlPbVNMMjhQbDdVQUVWUU1PbldOZ1dTWGV4TVN0czRpV0FBaGdtVnJ0aHFXWmcybWxzRkhydW0vQXV5NEFXRUhONDA3SW0iLCJtYWMiOiI4M2JiNzFmMGQyYjY3ZjY2ODViZmI2OGE4ZDBhMjQ3OTEzMzcyYjc3ZjQ5MDI4MTMwNmQ2NGNjZjI0MmQzOGZmIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6Im1FM1BlREQzYnJ3aVJUMFF6M0dDb2c9PSIsInZhbHVlIjoieTA1UytaVjNPSnQ3ZmxHZytOd1ZrOS9wWHdFZXZ2WEl2dWoxcTYyNVl0UHZNSXA4ZWpjUVhPWTcrUm5ScjdzOFJJTnNvR214bkJ4ZjRyMWxaSk5vL1VyUlRzZGo0R3hhZWJsaURMVm5OUEM1cjJrVlZldEJ6MmdjU1E1YzUwTWUiLCJtYWMiOiIxMTUzNmY5NWM3ZmNiZjllZmUyYjIwZGQ5MzYwYTc3YWE1OTE0NWY3OTliODY3NzNhYWQ3NjhmYmZiZDM1MjU4IiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6IlRqaXlnUmYzTG9PaW4zMm9ZVFQ5bVE9PSIsInZhbHVlIjoiaWdoREVQV2Rhd0V6OG0waTk1Rll3UGREeEp6amUrLzhybVJFTVh6Nnkrbk5MdUhsSEtlY25vQW1SbGhudW9ESG92c1dZVDJaVWtMN1F1NEJMMUFIS0xQT2pIRVlYeGFzVWNVaTNiS1N3SFp5ZHdLYkRaQmhlc0F5TFVFL0hFMmwiLCJtYWMiOiJlYjViYmMyYzkyMmJjOWZlYmY3YmQ3YWIwMGNlNTllYjM4YzNjY2FkOGM1NTU5ZmI1YzBlN2VmM2ViODE5NTFhIiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:58 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IjZHWHZHSnJaRGxOUjBPaUE3WWQwMmc9PSIsInZhbHVlIjoiTEx5SEwybHJrUit3cmdqb1ViNTYrVUtXOWpYTDVBYXN0YWlTNWMyWkJnOExsMnhZcHBNVHZySmxEZ2F2Yk52VFdnWVhHWlRaUmtzQ204UFFyWFNjOHUwdE9sbzdlZWdNQ2hzVW0yM0U0bkc4UC9NT0twejNNTC9Wa3hHQTlHZkIiLCJtYWMiOiIyOGMzNTgzMzYxOWEzNjFhZDM3MDdhN2IwZTc0MWI3OGU3MjI0MWMwMDk5NzVjZjUzMzgyNGI1OTliZWEzYzJhIiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:58 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -2376,7 +2388,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6IjhzOGlqd3hpeGNRSzRiTTg0MVpuK3c9PSIsInZhbHVlIjoibG5PSHd6a0poU3NsNFdkekYxcXU5WEtBMWsyN0NubGRKajFEbUwrTUY0bGFRWFBDeERWWjNhczZBS3VzYjNLYThxSTc4ODlqQlI5L1ZINjZvMDlwOU0rcTlIYXNadXo3ektodFNCekl0Y3huWFFqN0x3V1pseTdrVm1FeUVIMTUiLCJtYWMiOiJkMWRkMDJlNTQxZjQxZTliN2JjNjVkZGM3ODRlODQ1MmE5Mzc2ZWNiNWFlNTYxZTEzZmYwZjdiNmFiN2JjNDJhIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IkFRZEtQU1h5dTEyeUtYVXRUQW4xWGc9PSIsInZhbHVlIjoieXRET3ZVd1VSQ1NDc1R6WkRwanRRaEwxUjJFVGNqVE9PcE5xRlBETzEwd0pxNlhSbkNvZHZZQTRBWDk3OEljVnQ2MnNxWTNCMTJ5M0Eyb0tWUVlSOGw1M3pwREgyL0hUSVlZQzcxczF2OFdmZ3Q2NmQyM2pZczhidGZoR3E4SVYiLCJtYWMiOiJlYjI0NmE3OTVmZmZkYTAwOWFjMzc1N2Q0MTViMjBkMzQzZGFlNjU5ZWFjMmQ2OTZkMjM1MDdiYzEyMDA3NDNmIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:36 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6Ik1mNEhYMDl1S1hLakxObVMzODFGMFE9PSIsInZhbHVlIjoiZGhwMzN4N0JIbTJjWFdINDc2enBTL3pLbXR4cUx6emdYQm9HZzdHQUEwYnc3eE5WTm5jRTc5cTd4dHRjV2I4a0xwS2pFTUFLUytkSndHdEhFWmlNaHNBWllrdUkrZTdmYXVWTWtvUXZleXUyL3NZaU5nSSt6elJscDY2SytBeUYiLCJtYWMiOiI3MTgyYWMxYzUyYjA5YTVhNmY1NTBhNGNiNTcwZDE5Yzc3ODEwOGUzMThlMjU3YzM3OGVjNWU5NjcyYzJlOWQxIiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:58 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6ImFvVDlKRUxJMzN1V05LOCtpNjVJOGc9PSIsInZhbHVlIjoiY1liSlNybExPOU9sYU5WUWtmbitTOUFoaldhaUgrZ2pyY1pLWUtta1Y2K1YrK0FQWW8ycVQzaWhlcVV1U3d5VlRQN3k2TGZaTk9pSkhBRmVvMHJQNVpQT2JKWlkyMjIyTm9mdGNuYlFRRHZsZEhsSEl2aDA2UjFXcjBBYWlKYXYiLCJtYWMiOiJiNTc4ODM5YTJkNGJlNjc1NzI0ZTEyZTRhZjEzM2YxZTZjZTFiMzQwNTIzNDRkMjNmZTc0OWZkODk0YTBiY2U3IiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:58 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -2486,7 +2498,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     \"name\": \"vmqeopfuudtdsufvyvddq\",
     \"quantity\": 2,
     \"amount\": 45,
-    \"date_acquired\": \"2026-07-21T02:28:36\"
+    \"date_acquired\": \"2026-08-16T16:09:58\"
 }"
 </code></pre></div>
 
@@ -2505,7 +2517,7 @@ let body = {
     "name": "vmqeopfuudtdsufvyvddq",
     "quantity": 2,
     "amount": 45,
-    "date_acquired": "2026-07-21T02:28:36"
+    "date_acquired": "2026-08-16T16:09:58"
 };
 
 fetch(url, {
@@ -2633,10 +2645,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="text" style="display: none"
                               name="date_acquired"                data-endpoint="POSTapi-tools"
-               value="2026-07-21T02:28:36"
+               value="2026-08-16T16:09:58"
                data-component="body">
     <br>
-<p>Must be a valid date. Example: <code>2026-07-21T02:28:36</code></p>
+<p>Must be a valid date. Example: <code>2026-08-16T16:09:58</code></p>
         </div>
         </form>
 
@@ -2687,7 +2699,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6IkpwSTg1TE5tdUdOenlsbWFDMUtjOGc9PSIsInZhbHVlIjoiMGQzYUxjd05BOVkvanVqL3RWUk45OEVmcEdSY3orQjFEOHB3WXhhMmhQTkF0TzlLNTc1UitjYVZSTVJWRWY1TURYL0Y2Tm5GWnM2eDVZb0dId1hWZURZekdjVTV5MWFlZHorVzZ1cG8yTmF1N21waS9Ea1ZFUG9lSHF5VHVrREsiLCJtYWMiOiJkMDI4YmRlYTVhOTQzZTM0OTAxNzk4ODg0ODliNWI1N2M5YWFhNjNiZGQzM2VhNjBmMGZkODFlZTNlZjNjYmFiIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IlNKZk1yZkFCNzlXTDczSStsc2JXRHc9PSIsInZhbHVlIjoiQVc5THM4SmE2MjhKZzJRMzc0T0g4eXJON2RmM3BhWHd4dFFtL3Vzb2pFS0xIb1hiK1c4UUMrQXZMbnRESDhsZ3JuR255WktwUW42YjV4N2xYbndyN0ljd1ZmV0UyQnkrb1NHN2tGWjZERVNtaGFmRlVnNnZ5WnZZZDN3c1E2dUciLCJtYWMiOiIyODQ1MGQwNmIyMTEyYjQzYjdkNTkzM2Y1MTE1ZmY5ZjJlNzljZDkyMjcxNGUwZDY1OWIwM2NlNjY1MTI0Y2Y0IiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6IlRqN3RTZGdLb28vV2wrY0tXcGlWOVE9PSIsInZhbHVlIjoiM1JmbFhXR3lXQlFmSWMrY3lTZzYrS3I1UCtSM1BiZWdNZm1kN1ZRc2lEWlVMaGJJVjg2WDEzdDBzYm5xU3Q0VlBoa2xNZEgrZ292SHF0bDZSeFNycGg4aTl4NnJPRFY4N1cvYVNnekdVaXpHK0RKN0tXSUlNRmNRK2x5N3ZpVmoiLCJtYWMiOiJmYzI1N2VlODMwMGI1MTY3NmUwODQ3ODBjMGUzZWQyMjdkODY4YjczMDE3MDBlOWZiMjVhZGY2NDMxNjAzZTQzIiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:58 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6ImlOVUdFcXdsNS92K1p1eHlNRHY3M3c9PSIsInZhbHVlIjoiVmttM0pFdHlZSnAwQ3RPOFN2bUc2MXdXcjN5dnhDRG1VeldMeWl4aDU2OWYyUHRzYXNWM09acHBESzcwQ2NoMnBxaXVaREhaMVNNZWp6UVQ2S1V1UWZ1NlpjZEtpbnRXV0MxTmtXU0xLaktCdDY4YWJlTkhiSUk5SlFOTGNhY2YiLCJtYWMiOiJkNDE5YzY0ODJiMTM1NzM0MDI3NTMwNzA5MDU1OGNjNzZjZThiNDg4NzYxMDMxYmY0YTgzNGZiMWRiZjc3MjA3IiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:58 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -2810,7 +2822,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     \"name\": \"vmqeopfuudtdsufvyvddq\",
     \"quantity\": 2,
     \"amount\": 45,
-    \"date_acquired\": \"2026-07-21T02:28:37\"
+    \"date_acquired\": \"2026-08-16T16:09:58\"
 }"
 </code></pre></div>
 
@@ -2829,7 +2841,7 @@ let body = {
     "name": "vmqeopfuudtdsufvyvddq",
     "quantity": 2,
     "amount": 45,
-    "date_acquired": "2026-07-21T02:28:37"
+    "date_acquired": "2026-08-16T16:09:58"
 };
 
 fetch(url, {
@@ -2970,10 +2982,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="text" style="display: none"
                               name="date_acquired"                data-endpoint="PUTapi-tools--id-"
-               value="2026-07-21T02:28:37"
+               value="2026-08-16T16:09:58"
                data-component="body">
     <br>
-<p>Must be a valid date. Example: <code>2026-07-21T02:28:37</code></p>
+<p>Must be a valid date. Example: <code>2026-08-16T16:09:58</code></p>
         </div>
         </form>
 
@@ -3101,6 +3113,515 @@ You can check the Dev Tools console for debugging information.</code></pre>
             </div>
                     </form>
 
+                    <h2 id="other-endpoints-POSTapi-mechanic-expense-records">POST api/mechanic-expense-records</h2>
+
+<p>
+</p>
+
+
+
+<span id="example-requests-POSTapi-mechanic-expense-records">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request POST \
+    "http://localhost/api/mechanic-expense-records" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost/api/mechanic-expense-records"
+);
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+
+fetch(url, {
+    method: "POST",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-POSTapi-mechanic-expense-records">
+</span>
+<span id="execution-results-POSTapi-mechanic-expense-records" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-POSTapi-mechanic-expense-records"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-POSTapi-mechanic-expense-records"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-POSTapi-mechanic-expense-records" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-POSTapi-mechanic-expense-records">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-POSTapi-mechanic-expense-records" data-method="POST"
+      data-path="api/mechanic-expense-records"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('POSTapi-mechanic-expense-records', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-POSTapi-mechanic-expense-records"
+                    onclick="tryItOut('POSTapi-mechanic-expense-records');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-POSTapi-mechanic-expense-records"
+                    onclick="cancelTryOut('POSTapi-mechanic-expense-records');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-POSTapi-mechanic-expense-records"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-black">POST</small>
+            <b><code>api/mechanic-expense-records</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="POSTapi-mechanic-expense-records"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="POSTapi-mechanic-expense-records"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        </form>
+
+                    <h2 id="other-endpoints-GETapi-mechanic-expense-records--mechanicExpenseRecord_id-">GET api/mechanic-expense-records/{mechanicExpenseRecord_id}</h2>
+
+<p>
+</p>
+
+
+
+<span id="example-requests-GETapi-mechanic-expense-records--mechanicExpenseRecord_id-">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request GET \
+    --get "http://localhost/api/mechanic-expense-records/1" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost/api/mechanic-expense-records/1"
+);
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+
+fetch(url, {
+    method: "GET",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-GETapi-mechanic-expense-records--mechanicExpenseRecord_id-">
+            <blockquote>
+            <p>Example response (302):</p>
+        </blockquote>
+                <details class="annotation">
+            <summary style="cursor: pointer;">
+                <small onclick="textContent = parentElement.parentElement.open ? 'Show headers' : 'Hide headers'">Show headers</small>
+            </summary>
+            <pre><code class="language-http">cache-control: no-cache, private
+location: http://localhost/login
+content-type: text/html; charset=utf-8
+set-cookie: XSRF-TOKEN=eyJpdiI6IndTUU0zakk1UGsxL29JZE9aUDZWUGc9PSIsInZhbHVlIjoiRlNKdWxIaW9Jc05MTXBTL3JvK1krNzN5a2xZYWsvUzFsWWR2bENkWmJrV0tYZDZISVFqSGRxeGYxalN5Q0J3bTRiQ2JJKzRCNXNzK2NFK01rZmVScU1wdENiVk9FeGRYWHA2QUZTYzNWNkllWlU2R1BQTEFtOG45Y2NvTVoxM1giLCJtYWMiOiI4YjhhM2Y5NTNjNWM2YTMwZGU1OGQ1MmYwODllZTQ1MWVlZGUyYTM4MGNjNjlmOTNkNmRkMjA5ZmZiNDhkMGQ4IiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:58 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6ImhsRlVLTFFJaVNOQU5WM1B1eXArUEE9PSIsInZhbHVlIjoiTlpkZ2tDc013b1cwSWlWOC9NSVgwazdPQ0RyQ2cvODQvR3FlSHFaRFE0NWJzQlpRMUFOQWZzbkNQMjU3c01XdWo0Uk05dFNKaSs2R1NMUVZZcVA4SjRNYWxNZVZnMk1CN0tXczJHaFpVdTFKOGRRenAxa1VCU3Q4YWY2WnltbW4iLCJtYWMiOiJkY2M0NTU5ZTM4OWFlZTM1MWI1OGYxNjhjOThlNDlhMWQxOTU3ZTVlZGNkMjVjNDVhMmJmMGFmZmUyOWE3ODdkIiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:58 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+ </code></pre></details>         <pre>
+
+<code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+    &lt;head&gt;
+        &lt;meta charset=&quot;UTF-8&quot; /&gt;
+        &lt;meta http-equiv=&quot;refresh&quot; content=&quot;0;url=&#039;http://localhost/login&#039;&quot; /&gt;
+
+        &lt;title&gt;Redirecting to http://localhost/login&lt;/title&gt;
+    &lt;/head&gt;
+    &lt;body&gt;
+        Redirecting to &lt;a href=&quot;http://localhost/login&quot;&gt;http://localhost/login&lt;/a&gt;.
+    &lt;/body&gt;
+&lt;/html&gt;</code>
+ </pre>
+    </span>
+<span id="execution-results-GETapi-mechanic-expense-records--mechanicExpenseRecord_id-" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-GETapi-mechanic-expense-records--mechanicExpenseRecord_id-"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-GETapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-GETapi-mechanic-expense-records--mechanicExpenseRecord_id-" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-GETapi-mechanic-expense-records--mechanicExpenseRecord_id-">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-GETapi-mechanic-expense-records--mechanicExpenseRecord_id-" data-method="GET"
+      data-path="api/mechanic-expense-records/{mechanicExpenseRecord_id}"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('GETapi-mechanic-expense-records--mechanicExpenseRecord_id-', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-GETapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+                    onclick="tryItOut('GETapi-mechanic-expense-records--mechanicExpenseRecord_id-');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-GETapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+                    onclick="cancelTryOut('GETapi-mechanic-expense-records--mechanicExpenseRecord_id-');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-GETapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-green">GET</small>
+            <b><code>api/mechanic-expense-records/{mechanicExpenseRecord_id}</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="GETapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="GETapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>mechanicExpenseRecord_id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="mechanicExpenseRecord_id"                data-endpoint="GETapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+               value="1"
+               data-component="url">
+    <br>
+<p>The ID of the mechanicExpenseRecord. Example: <code>1</code></p>
+            </div>
+                    </form>
+
+                    <h2 id="other-endpoints-PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-">PUT api/mechanic-expense-records/{mechanicExpenseRecord_id}</h2>
+
+<p>
+</p>
+
+
+
+<span id="example-requests-PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request PUT \
+    "http://localhost/api/mechanic-expense-records/1" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost/api/mechanic-expense-records/1"
+);
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+
+fetch(url, {
+    method: "PUT",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-">
+</span>
+<span id="execution-results-PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-" data-method="PUT"
+      data-path="api/mechanic-expense-records/{mechanicExpenseRecord_id}"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+                    onclick="tryItOut('PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+                    onclick="cancelTryOut('PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-darkblue">PUT</small>
+            <b><code>api/mechanic-expense-records/{mechanicExpenseRecord_id}</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>mechanicExpenseRecord_id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="mechanicExpenseRecord_id"                data-endpoint="PUTapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+               value="1"
+               data-component="url">
+    <br>
+<p>The ID of the mechanicExpenseRecord. Example: <code>1</code></p>
+            </div>
+                    </form>
+
+                    <h2 id="other-endpoints-DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-">DELETE api/mechanic-expense-records/{mechanicExpenseRecord_id}</h2>
+
+<p>
+</p>
+
+
+
+<span id="example-requests-DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-">
+<blockquote>Example request:</blockquote>
+
+
+<div class="bash-example">
+    <pre><code class="language-bash">curl --request DELETE \
+    "http://localhost/api/mechanic-expense-records/1" \
+    --header "Content-Type: application/json" \
+    --header "Accept: application/json"</code></pre></div>
+
+
+<div class="javascript-example">
+    <pre><code class="language-javascript">const url = new URL(
+    "http://localhost/api/mechanic-expense-records/1"
+);
+
+const headers = {
+    "Content-Type": "application/json",
+    "Accept": "application/json",
+};
+
+
+fetch(url, {
+    method: "DELETE",
+    headers,
+}).then(response =&gt; response.json());</code></pre></div>
+
+</span>
+
+<span id="example-responses-DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-">
+</span>
+<span id="execution-results-DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-" hidden>
+    <blockquote>Received response<span
+                id="execution-response-status-DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-"></span>:
+    </blockquote>
+    <pre class="json"><code id="execution-response-content-DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+      data-empty-response-text="<Empty response>" style="max-height: 400px;"></code></pre>
+</span>
+<span id="execution-error-DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-" hidden>
+    <blockquote>Request failed with error:</blockquote>
+    <pre><code id="execution-error-message-DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-">
+
+Tip: Check that you&#039;re properly connected to the network.
+If you&#039;re a maintainer of ths API, verify that your API is running and you&#039;ve enabled CORS.
+You can check the Dev Tools console for debugging information.</code></pre>
+</span>
+<form id="form-DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-" data-method="DELETE"
+      data-path="api/mechanic-expense-records/{mechanicExpenseRecord_id}"
+      data-authed="0"
+      data-hasfiles="0"
+      data-isarraybody="0"
+      autocomplete="off"
+      onsubmit="event.preventDefault(); executeTryOut('DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-', this);">
+    <h3>
+        Request&nbsp;&nbsp;&nbsp;
+                    <button type="button"
+                    style="background-color: #8fbcd4; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-tryout-DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+                    onclick="tryItOut('DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-');">Try it out ⚡
+            </button>
+            <button type="button"
+                    style="background-color: #c97a7e; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-canceltryout-DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+                    onclick="cancelTryOut('DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-');" hidden>Cancel 🛑
+            </button>&nbsp;&nbsp;
+            <button type="submit"
+                    style="background-color: #6ac174; padding: 5px 10px; border-radius: 5px; border-width: thin;"
+                    id="btn-executetryout-DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+                    data-initial-text="Send Request 💥"
+                    data-loading-text="⏱ Sending..."
+                    hidden>Send Request 💥
+            </button>
+            </h3>
+            <p>
+            <small class="badge badge-red">DELETE</small>
+            <b><code>api/mechanic-expense-records/{mechanicExpenseRecord_id}</code></b>
+        </p>
+                <h4 class="fancy-heading-panel"><b>Headers</b></h4>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Content-Type</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Content-Type"                data-endpoint="DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                                <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>Accept</code></b>&nbsp;&nbsp;
+&nbsp;
+ &nbsp;
+ &nbsp;
+                <input type="text" style="display: none"
+                              name="Accept"                data-endpoint="DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+               value="application/json"
+               data-component="header">
+    <br>
+<p>Example: <code>application/json</code></p>
+            </div>
+                        <h4 class="fancy-heading-panel"><b>URL Parameters</b></h4>
+                    <div style="padding-left: 28px; clear: unset;">
+                <b style="line-height: 2;"><code>mechanicExpenseRecord_id</code></b>&nbsp;&nbsp;
+<small>integer</small>&nbsp;
+ &nbsp;
+ &nbsp;
+                <input type="number" style="display: none"
+               step="any"               name="mechanicExpenseRecord_id"                data-endpoint="DELETEapi-mechanic-expense-records--mechanicExpenseRecord_id-"
+               value="1"
+               data-component="url">
+    <br>
+<p>The ID of the mechanicExpenseRecord. Example: <code>1</code></p>
+            </div>
+                    </form>
+
                     <h2 id="other-endpoints-GETapi-models--make-">GET api/models/{make}</h2>
 
 <p>
@@ -3148,7 +3669,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6IkhLMXZyNDliWGV1VVZuTm56N3JnN0E9PSIsInZhbHVlIjoiempuSndtYXp4dzkvN0Z2WGhqeTE5S1B2TGhlZnJ2V2dQMEdEK1BMNWlWNUJVdzhZMHkybDFlaDZrVlYyK3ZuT0FQd3htYlpwQzh0eTZoRlVNZ1VoOW5iTk1IWXRzcGt4a3hoTEY1TmJmRGdCSE92M1c2WnhBay8wY3l2KzZ4MS8iLCJtYWMiOiJmMGVlMjEwNWM5MjhiYzg1MTBmZmY2ZmFhMGUwMDRmZWYyODMyYWVjZWNiMGQ4Njk4ZTFlZDBmMTNiMDQ3ZWQ0IiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IjhKaUIrVGdER3FuUXBNVnRhWkxDMVE9PSIsInZhbHVlIjoiVnVkZTRSUkYzSW0zY3VId0RxRDFXWUtiMnBjSFVVSGQ5RU14SllLMUNUVGkzRlpsZnRLSGFVN0dtMzNvOGp4dk42c0Z3a2hEbml0S2h0bXFXYnFGaS9MQmZlZXVjWTkxQnFVa3dLVkdiSHpmL0h4UEJZNGxZYnVFbkNqSU9DekEiLCJtYWMiOiJiM2RjMjBiNzY1M2UxNThlYzE1ZGMzM2EzMjZlMzVkZWE5NTE1OTQ1NWRiZjUzNzQ5ZGFmYmRkODdiNzQwMmJmIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6InVLVTgwNjZVYnVWRytESm9hTEdNRkE9PSIsInZhbHVlIjoiTmVkd3NiV2ljRys5MXRFdFozRzNESjZ6NTAyQVh5L1RFbWZhb1VJRjU3WjIxUFgrcUVTaEpnZEcyM3RKd0cyR2F2dzlnS1pIaGprNkZIckRNYWZnVXcvZmFmTFpKYXIwaVJsU216ZHlZYVlPRGd2ZFF6L0VZNXVNWGwwc0FHM3IiLCJtYWMiOiIyOWNkZWEwNjVjMjlhMmE4NjlkYTNmZTYwZjA5ZWJkZmI4MjcyZjg3YjZiZDk0Y2Q5OTU4YzUyNjhhZWE1NTkyIiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:59 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IlAzckFQak90K3ZBMWdEYVZ5YkRiM2c9PSIsInZhbHVlIjoiY1hhTmEvNWp2WndVVXVGVGsvbERhYTlBbkZ3TUxYNWRQam15UjBMcWdLQlN0RFdNVk83ZnB1aUVSbXNOYjlSMmduMFpjWVRvQUMweW01RDZZWVk5VEtpVzFYOGtmQnE3ZlZiYUx3TEFJYXE5dXlMUWJURTA4TEZ5Rnc4b0dPNlAiLCJtYWMiOiIxOTI4ZTZlMmY4YmE4YjRjMTlmMjA0MjUyODU0NGE5MDQyYmQwNmE2ZTViOWQxYTJlODA5ZGI3NDRiMmQ0YTc2IiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:59 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -3298,7 +3819,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6IjlPcUlyM0RvNVlJRDBSUTFpWHYyZkE9PSIsInZhbHVlIjoiOXR4VjhWYjNITzdFVWNxMkNmK0JNTjROZUNxc3FkZmgyaFVsSXl0QlVVVldMOE1ZaW9RWTYyRVpxbU5vb0RlWnNSWEx6bzlONVRRZmd1dW9kSWNEL2xDbnFwcXhUNDJmZGsyL2xWL1hLZTJxczFoZVRkOExRTGNFbytmYyt5NFoiLCJtYWMiOiIxMDE2YTg1MWViM2YzNzdmZDk2YmIxZWQzNWYzMzZmNzE1ZjgyNmJiNWYwMDUwMzNlYjA1YWZlNjMzYTk0YzVjIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IkZWemhNR29jWExNaGlFZCt0WUFGN3c9PSIsInZhbHVlIjoiMkxGY2lhd0hPd2swRkUxekV1MmN0Rmw4S2NVRllXMysrdnN6VXZ0Tk1HTE0vUU44YS9UN2JTeHArcDk0dDNZZ1pHbjFQVjFqM2swaVBBUW5GZUJXbFhqV3ptZWx2WWRacGhJQ3UwYS9IK0JSOGhPK3d3MnpRT3Ewam9CK1lXS2MiLCJtYWMiOiIyMDA2NmVmNWNiYzdlOWVmZTFhOGExOGVmZTgzMTAyZjhiMDA0MzU1MTk2MDQ1M2VhYWUwZTRhMDlkNWNmYzRiIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6Imx2TmhUWDAvRmJkQkpKS3U1T2JFNHc9PSIsInZhbHVlIjoib1FXWGNYV3pOTlJIQWNuZk9VcmtkMkhCZUxhZ1I0c2RMQUR5TG8wREttaDN5WDZ2em1WMENRR2hFT3dwN3p4aGhPa0g4Sm9Yd2NIMWU1cTlvUkwvNXRPZFZBYW5Sais2NERvK2MyVkxLVGdUWTBOQit3WHdhRTI0L3YxL2pDVngiLCJtYWMiOiIyMTgzNWYzMmZmMjEwZjBhMjExNGNlNzY2NmI4OTU2YzQyYzBhM2UxOTI4MWQ1MDI5MDAxMTE0YzZhMzMxNGQ0IiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:59 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6ImhJaFJ2TzA3RFE4Z3dmZjJzR1NndEE9PSIsInZhbHVlIjoiaEtJcEM2WUNDVGtld012MUtMZW9zU1VXREFpelc4K2MzVm5BT0JFK3lPTGxrc3h5R2xJYU1ES1FuQUEwelkwMTQzK043Mk1qb3RJQjdSb1JtVlA1WFV4TEhQcTR1bDEyYUJFMDBVVlowZ1pDVnNhQ09uOXlzak5VS2xOWWIvaXUiLCJtYWMiOiI5OTAwNGQwMWQ2OGQ2Y2QzMTk4MjYyNzNlMzVmZTM5Yzc5N2Y3YzU2YTdkNDEyYjRhOThlN2RmM2FhZWE3ZjAxIiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:59 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -3406,7 +3927,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     --header "Accept: application/json" \
     --data "{
     \"payment_method_id\": \"consequatur\",
-    \"budget_date\": \"2026-07-21T02:28:37\",
+    \"budget_date\": \"2026-08-16T16:09:59\",
     \"starting_balance\": 45,
     \"added_cash\": 56,
     \"notes\": \"eopfuudtdsufvyvddqamn\"
@@ -3426,7 +3947,7 @@ const headers = {
 
 let body = {
     "payment_method_id": "consequatur",
-    "budget_date": "2026-07-21T02:28:37",
+    "budget_date": "2026-08-16T16:09:59",
     "starting_balance": 45,
     "added_cash": 56,
     "notes": "eopfuudtdsufvyvddqamn"
@@ -3533,10 +4054,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="text" style="display: none"
                               name="budget_date"                data-endpoint="POSTapi-soa-daily-budget"
-               value="2026-07-21T02:28:37"
+               value="2026-08-16T16:09:59"
                data-component="body">
     <br>
-<p>Must be a valid date. Example: <code>2026-07-21T02:28:37</code></p>
+<p>Must be a valid date. Example: <code>2026-08-16T16:09:59</code></p>
         </div>
                 <div style=" padding-left: 28px;  clear: unset;">
             <b style="line-height: 2;"><code>starting_balance</code></b>&nbsp;&nbsp;
@@ -3594,7 +4115,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     --header "Accept: application/json" \
     --data "{
     \"payment_method_id\": \"consequatur\",
-    \"addition_date\": \"2026-07-21T02:28:37\",
+    \"addition_date\": \"2026-08-16T16:09:59\",
     \"amount\": 45,
     \"description\": \"Amet iste laborum eius est dolor dolores.\"
 }"
@@ -3613,7 +4134,7 @@ const headers = {
 
 let body = {
     "payment_method_id": "consequatur",
-    "addition_date": "2026-07-21T02:28:37",
+    "addition_date": "2026-08-16T16:09:59",
     "amount": 45,
     "description": "Amet iste laborum eius est dolor dolores."
 };
@@ -3719,10 +4240,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="text" style="display: none"
                               name="addition_date"                data-endpoint="POSTapi-soa-add-cash"
-               value="2026-07-21T02:28:37"
+               value="2026-08-16T16:09:59"
                data-component="body">
     <br>
-<p>Must be a valid date. Example: <code>2026-07-21T02:28:37</code></p>
+<p>Must be a valid date. Example: <code>2026-08-16T16:09:59</code></p>
         </div>
                 <div style=" padding-left: 28px;  clear: unset;">
             <b style="line-height: 2;"><code>amount</code></b>&nbsp;&nbsp;
@@ -3797,7 +4318,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6ImNTZ01Bd25rK1ljVExna1IwYm12Q2c9PSIsInZhbHVlIjoiaEREQ29vTmoyM0hoWjhDY2V2ditRSzF1UCtsK1hQajlCd3dvaG9wUFVUdnZVRjdZSDFRRXFMYjZrVFFBYlBXc1BrUGdISU1BMVRSbEVCK0ZHQk9BR3RJM1NCcU1IZHVqS28rckI5bUkrQTVyY1lHZFJGa2pDV0JCbnNkTVpXbzgiLCJtYWMiOiJlZDg5YmMyMzA0ZjcwY2U2ZWZiY2M5YjgzMzkyYTdjN2NmMGZjN2MxOWZlZTUxOGQxYTVmZjljMGViMjI3MjIyIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6Ik5WZXc2M1hqUi9wVk5Qck9LV1luc3c9PSIsInZhbHVlIjoiSVNjWXFGSDZqUWJ0eU9OSDJic0RxNUpvMlF4bGRaWDhVUlBVVnRaMTZWejJLZE5zVW5KenU1bHRJR01wcGt3c0ZwYnh2MHdEbnBaQWNTZEJzeHFrbVNjSytwaHJxQXBZRkJDQVo3UjZmWVduVzVFcjdHVk1uTUwyTzBKZ1dycTAiLCJtYWMiOiJiZWZjNzIwMWJlN2ZmZDdmYTQzMzA4OWFlNDZlZTI1M2Y1MGQ4MGU3YmIzN2U5ZjhhMGVlZjUxODA1ZTZhZGEzIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6IkhIREd2ZXhJcDJZcHVCVk0wTXROVEE9PSIsInZhbHVlIjoicE1oZUhmRDMwQ3dkcGI5YWx2RWovSVh0QjBtZVZPSGdBRXB5c0tJQkhKQWttT05SUWYrYkNlcFJMbmJXZ2VEaUloN2hGQTc2YXZzUkdMOE9pQ1B4c0NBZVM1TGNnWGN0Qnc2WTlyeGZIVWNHVVJiTlN3akRRM2JlWXNmeUYyV1giLCJtYWMiOiIwYjNiNTMxN2U5ZTRmMjBmNmMxNTk0YmEzNjIyNzZhYjFiZDViMTQ5ZDhhZDczN2MwZWE2MTUwNjlkMDRkZTA4IiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:59 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6IjF0Q3NJYlBDZ1Z1NEV1bEhHK1lKd0E9PSIsInZhbHVlIjoiNkI5VUtlU0xZU25YdExVdjlQbkV0L296aWJKWEV3NlpjT2hvNGFJZ2t2OEV5R1dZRlJBb21Ebnp4MzZFV2owbmxPaWpWNXZFQWZUK0pnSFFQRVZWeWk1T1VjYitsa2xMSXJLMHRIZDFtQzBsNGNvZGljQXJCbGJnbnBzVmh6eWciLCJtYWMiOiJiOGM5MjBjNTBjOTAyZGI3MWE4MTRhOGU1NzgzNjA2MzFlMzE2YTUyMjZmYTZhYjQyYjUzYTg2ZTI1YmQ4MWFhIiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:59 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;
@@ -3906,7 +4427,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     --data "{
     \"amount\": 73,
     \"description\": \"Dolorum amet iste laborum eius est dolor.\",
-    \"addition_date\": \"2026-07-21T02:28:37\"
+    \"addition_date\": \"2026-08-16T16:09:59\"
 }"
 </code></pre></div>
 
@@ -3924,7 +4445,7 @@ const headers = {
 let body = {
     "amount": 73,
     "description": "Dolorum amet iste laborum eius est dolor.",
-    "addition_date": "2026-07-21T02:28:37"
+    "addition_date": "2026-08-16T16:09:59"
 };
 
 fetch(url, {
@@ -4053,10 +4574,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="text" style="display: none"
                               name="addition_date"                data-endpoint="PUTapi-soa-cash--id-"
-               value="2026-07-21T02:28:37"
+               value="2026-08-16T16:09:59"
                data-component="body">
     <br>
-<p>Must be a valid date. Example: <code>2026-07-21T02:28:37</code></p>
+<p>Must be a valid date. Example: <code>2026-08-16T16:09:59</code></p>
         </div>
         </form>
 
@@ -4202,7 +4723,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     --header "Accept: application/json" \
     --data "{
     \"payment_method_id\": \"consequatur\",
-    \"budget_date\": \"2026-07-21T02:28:37\",
+    \"budget_date\": \"2026-08-16T16:09:59\",
     \"starting_balance\": 45
 }"
 </code></pre></div>
@@ -4220,7 +4741,7 @@ const headers = {
 
 let body = {
     "payment_method_id": "consequatur",
-    "budget_date": "2026-07-21T02:28:37",
+    "budget_date": "2026-08-16T16:09:59",
     "starting_balance": 45
 };
 
@@ -4325,10 +4846,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="text" style="display: none"
                               name="budget_date"                data-endpoint="PUTapi-soa-update-starting-cash"
-               value="2026-07-21T02:28:37"
+               value="2026-08-16T16:09:59"
                data-component="body">
     <br>
-<p>Must be a valid date. Example: <code>2026-07-21T02:28:37</code></p>
+<p>Must be a valid date. Example: <code>2026-08-16T16:09:59</code></p>
         </div>
                 <div style=" padding-left: 28px;  clear: unset;">
             <b style="line-height: 2;"><code>starting_balance</code></b>&nbsp;&nbsp;
@@ -4362,7 +4883,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     --header "Accept: application/json" \
     --data "{
     \"payment_method_id\": \"consequatur\",
-    \"entry_date\": \"2026-07-21T02:28:37\",
+    \"entry_date\": \"2026-08-16T16:09:59\",
     \"description\": \"Dolorum amet iste laborum eius est dolor.\",
     \"type\": \"credit\",
     \"amount\": 66,
@@ -4385,7 +4906,7 @@ const headers = {
 
 let body = {
     "payment_method_id": "consequatur",
-    "entry_date": "2026-07-21T02:28:37",
+    "entry_date": "2026-08-16T16:09:59",
     "description": "Dolorum amet iste laborum eius est dolor.",
     "type": "credit",
     "amount": 66,
@@ -4495,10 +5016,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="text" style="display: none"
                               name="entry_date"                data-endpoint="POSTapi-soa-manual-entries"
-               value="2026-07-21T02:28:37"
+               value="2026-08-16T16:09:59"
                data-component="body">
     <br>
-<p>Must be a valid date. Example: <code>2026-07-21T02:28:37</code></p>
+<p>Must be a valid date. Example: <code>2026-08-16T16:09:59</code></p>
         </div>
                 <div style=" padding-left: 28px;  clear: unset;">
             <b style="line-height: 2;"><code>description</code></b>&nbsp;&nbsp;
@@ -4955,7 +5476,7 @@ You can check the Dev Tools console for debugging information.</code></pre>
     --header "Accept: application/json" \
     --data "{
     \"payment_method_id\": \"consequatur\",
-    \"date\": \"2026-07-21T02:28:37\"
+    \"date\": \"2026-08-16T16:09:59\"
 }"
 </code></pre></div>
 
@@ -4972,7 +5493,7 @@ const headers = {
 
 let body = {
     "payment_method_id": "consequatur",
-    "date": "2026-07-21T02:28:37"
+    "date": "2026-08-16T16:09:59"
 };
 
 fetch(url, {
@@ -5076,10 +5597,10 @@ You can check the Dev Tools console for debugging information.</code></pre>
  &nbsp;
                 <input type="text" style="display: none"
                               name="date"                data-endpoint="DELETEapi-soa-daily-record"
-               value="2026-07-21T02:28:37"
+               value="2026-08-16T16:09:59"
                data-component="body">
     <br>
-<p>Must be a valid date. Example: <code>2026-07-21T02:28:37</code></p>
+<p>Must be a valid date. Example: <code>2026-08-16T16:09:59</code></p>
         </div>
         </form>
 
@@ -5130,7 +5651,7 @@ fetch(url, {
             <pre><code class="language-http">cache-control: no-cache, private
 location: http://localhost/login
 content-type: text/html; charset=utf-8
-set-cookie: XSRF-TOKEN=eyJpdiI6Im9zdDU2bWpNd0hTY1F2OG9ra1hnaHc9PSIsInZhbHVlIjoiNjBlSW1pZUNOZS93VkZFcWtRNjNxUnprZEVqVjdUQ2FER3FkK2xnY3hZT0J4TE8vZnZuTnhZYlY1aDV4c0hoMW5ZNURFb2FxcWc5OVNxa0c5c0VBTkFoWVltaHNDaVp3bnZTcWF1WlFJTEFYdWV2MWRDQjNBVWx1Y3RRb0d5emIiLCJtYWMiOiI5NzcyYzM2NGZhNjllMmExNTM2YjczMWY3ZmIxYTdiYmVhMzBjYjNkNTBlZmYzYmE1NzY5ZmJlYjc1NWM1YzczIiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6InJVR01jTU1wMk9VRXNvMGt0dGlpNWc9PSIsInZhbHVlIjoiMWZWQ3JTa0pKK1l3QzFCZ3k5cU1nVnlDUWNORVAwem4vM052ZzltQVNWdExSS2tkbmJpUWh3Z1hxQk8wWEFLN08rUGhSSFlaMitqRWdybHRaQUxhRElOcXBudW9odXR3SDN5MTloZHBsSDlwbkRYcWJlcWF6TTU0VURtU05NNjgiLCJtYWMiOiI4OTJjM2ZjNTllMjM2N2UzNGJmOTlmNWIwN2M5ZTIyY2M4OGFhNmZhZTUzNjc5N2I1NDZhNGI0MzhmMTIyZjI1IiwidGFnIjoiIn0%3D; expires=Tue, 21 Jul 2026 04:28:37 GMT; Max-Age=7200; path=/; httponly; samesite=lax
+set-cookie: XSRF-TOKEN=eyJpdiI6IkRhVU9MSHVGVnM2aSt6eFFlckc0SVE9PSIsInZhbHVlIjoielpNRTZIQXRBTkFMTWdHdHZUK0dlUnlRODk4TTl0UUNBR2M3dU1TSEtnbzhoemVFR2FoSWxDQlVZN0E1V1k4OTRDUjRjMGppRHpqOWtGTHZrNU56VkJmRCsyWU5DeHdxSXloU1phMGxZNjBQNDRqTWVwNXBJQUYxdUJramp0Q0wiLCJtYWMiOiI3YmYzMTIzNmIyOGZlZDhkM2U3OGY0ODdiNjA5ODUyZDljMmE4NjAxM2EzNGZjMDhlYzI1YjQxNjVmNWEyZTZmIiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:59 GMT; Max-Age=7200; path=/; samesite=lax; car_empire_management_system_session=eyJpdiI6InJlNm16QXNqYmlhSVRod25xNFFnclE9PSIsInZhbHVlIjoic05Jem9QSE5hUWNBQVdIQVdJcGt2dmdTbWhEYmlnRGFXQ0g5NGthcE5uektxem1rWjlGdDhhVnBxRStkcU9xbGJBOVZaWUFhTVFTdVNMQ1hBYXFsc3Y3VENvbU1VdmZtSXBWWDQzSUJWVzEzVjdhS3FTd1dDc3FIUE53aXlUaDkiLCJtYWMiOiIxMzdjYTE1ODdlNDMyOTA3NWRmNDg2NWM2MjExYTI0MjZlZTZlOWY1ODA4NDRhODM3YjdjZjNkOWYwNjRmNDBjIiwidGFnIjoiIn0%3D; expires=Sun, 16 Aug 2026 18:09:59 GMT; Max-Age=7200; path=/; httponly; samesite=lax
  </code></pre></details>         <pre>
 
 <code class="language-json" style="max-height: 300px;">&lt;!DOCTYPE html&gt;

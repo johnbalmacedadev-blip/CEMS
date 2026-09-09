@@ -61,7 +61,6 @@ return [
             'icon_class' => 'text-info',
             'icon' => 'fa-video',
             'items' => [
-                ['label' => 'CAR VIDEO BOOST REPORT', 'route' => 'car-video-boost-report.index', 'icon' => 'fa-video'],
                 ['label' => 'VIDEO AND POSTING TRACKER', 'route' => 'video-posting-tracker.index', 'icon' => 'fa-photo-video'],
             ],
         ],
@@ -75,6 +74,7 @@ return [
             'items' => [
                 ['label' => 'FOLLOW UP DOCUMENTS', 'route' => 'follow-up-documents.index', 'icon' => 'fa-file-alt'],
                 ['label' => 'TRANSFER ORCR', 'route' => 'transfer-orcr.index', 'icon' => 'fa-right-left'],
+                ['label' => 'PENDING TRANSFER', 'route' => 'pending-transfer.index', 'icon' => 'fa-hourglass-half'],
                 ['label' => 'VEHICLE REGISTRATION', 'route' => 'vehicle-registration.index', 'icon' => 'fa-id-card'],
             ],
         ],
@@ -96,7 +96,7 @@ return [
         [
             'id' => 'equipment-lists',
             'title' => 'EQUIPMENT LISTS',
-            'description' => 'Mechanic tools and expenses',
+            'description' => 'Mechanic tools, expenses, and chemical inventory',
             'border' => '',
             'border_style' => 'border-color: #fd7e14;',
             'icon_class' => '',
@@ -104,6 +104,7 @@ return [
             'icon' => 'fa-tools',
             'items' => [
                 ['label' => 'MECHANIC TOOLS/EXPENSES', 'route' => 'mechanic-tools-expenses', 'icon' => 'fa-toolbox'],
+                ['label' => 'CHEMICAL INVENTORY', 'route' => 'chemical-inventory.index', 'icon' => 'fa-flask'],
             ],
         ],
         [
@@ -136,8 +137,9 @@ return [
             'icon' => 'fa-chart-pie',
             'items' => [
                 ['label' => 'FINANCIAL REPORT', 'route' => 'analytics-report.financial', 'page' => 'analytics', 'icon' => 'fa-chart-line'],
-                ['label' => 'SALES REPORT', 'route' => 'analytics-report.sales', 'page' => 'analytics', 'icon' => 'fa-chart-bar'],
+                ['label' => 'CAR SALES REPORT', 'route' => 'analytics-report.sales', 'page' => 'analytics', 'icon' => 'fa-chart-bar'],
                 ['label' => 'SALES EXECUTIVE REPORT', 'route' => 'analytics-report.sales-executive', 'page' => 'analytics', 'icon' => 'fa-user-tie'],
+                ['label' => 'SUPPLIERS REPORT', 'route' => 'analytics-report.suppliers', 'page' => 'analytics', 'icon' => 'fa-truck'],
             ],
         ],
         [
@@ -165,6 +167,20 @@ return [
             'icon' => 'fa-balance-scale',
             'items' => [
                 ['label' => 'COMPARE CARS', 'route' => 'compare.index', 'icon' => 'fa-balance-scale'],
+            ],
+        ],
+        [
+            'id' => 'integration',
+            'title' => 'INTEGRATION',
+            'description' => 'Connect external stores and sync products',
+            'border' => '',
+            'border_style' => 'border-color: #96588a;',
+            'icon_class' => '',
+            'icon_style' => 'color: #96588a; border-color: #96588a;',
+            'icon' => 'fa-plug',
+            'items' => [
+                ['label' => 'WOOCOMMERCE CONNECTION', 'route' => 'integration.woocommerce.settings', 'icon' => 'fa-link'],
+                ['label' => 'WOOCOMMERCE PRODUCTS', 'route' => 'integration.woocommerce.products.index', 'icon' => 'fa-box-open'],
             ],
         ],
     ],

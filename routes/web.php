@@ -119,24 +119,7 @@ Route::get('/api/models/search', function(\Illuminate\Http\Request $request) {
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login']);
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
-Route::get('/logout', function(\Illuminate\Http\Request $request) {
-    $user = \Illuminate\Support\Facades\Auth::user();
-    if ($user) {
-        \App\Models\ActivityLog::create([
-            'user_id' => $user->id,
-            'action' => 'logout',
-            'model_type' => 'Auth',
-            'model_id' => null,
-            'description' => 'Logged out',
-            'ip_address' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-        ]);
-    }
-    \Illuminate\Support\Facades\Auth::logout();
-    $request->session()->invalidate();
-    $request->session()->regenerateToken();
-    return redirect('/login')->with('success', 'You have been logged out successfully.');
-})->middleware('auth');
+Route::get('/logout', [LoginController::class, 'logout']);
 
 // Live team chat (all authenticated users)
 Route::middleware('auth')->prefix('api/chat')->group(function () {
@@ -163,6 +146,17 @@ Route::middleware(['auth', 'page.permission', 'log.activity'])->group(function (
     Route::get('/home', [HomeController::class, 'index'])->name('home');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/compare', [CompareController::class, 'index'])->name('compare.index');
+
+    // WooCommerce Integration
+    Route::get('/integration/woocommerce', [App\Http\Controllers\Integration\WooCommerceSettingsController::class, 'edit'])->name('integration.woocommerce.settings');
+    Route::put('/integration/woocommerce', [App\Http\Controllers\Integration\WooCommerceSettingsController::class, 'update'])->name('integration.woocommerce.settings.update');
+    Route::post('/integration/woocommerce/test', [App\Http\Controllers\Integration\WooCommerceSettingsController::class, 'test'])->name('integration.woocommerce.settings.test');
+    Route::get('/integration/woocommerce/products', [App\Http\Controllers\Integration\WooCommerceProductController::class, 'index'])->name('integration.woocommerce.products.index');
+    Route::get('/integration/woocommerce/products/create', [App\Http\Controllers\Integration\WooCommerceProductController::class, 'create'])->name('integration.woocommerce.products.create');
+    Route::post('/integration/woocommerce/products', [App\Http\Controllers\Integration\WooCommerceProductController::class, 'store'])->name('integration.woocommerce.products.store');
+    Route::get('/integration/woocommerce/products/{product}/edit', [App\Http\Controllers\Integration\WooCommerceProductController::class, 'edit'])->name('integration.woocommerce.products.edit');
+    Route::put('/integration/woocommerce/products/{product}', [App\Http\Controllers\Integration\WooCommerceProductController::class, 'update'])->name('integration.woocommerce.products.update');
+    Route::delete('/integration/woocommerce/products/{product}', [App\Http\Controllers\Integration\WooCommerceProductController::class, 'destroy'])->name('integration.woocommerce.products.destroy');
     // Placeholder section routes (to be implemented)
     Route::view('/cars-boost-videos', 'placeholders.cars-boost-videos')->name('cars-boost-videos');
     Route::get('/analytics', [App\Http\Controllers\AnalyticsController::class, 'index'])->name('analytics');
@@ -171,7 +165,12 @@ Route::middleware(['auth', 'page.permission', 'log.activity'])->group(function (
     Route::get('/analytics-report/sales', [App\Http\Controllers\AnalyticsReportController::class, 'sales'])->name('analytics-report.sales');
     Route::get('/analytics-report/sales/export', [App\Http\Controllers\AnalyticsReportController::class, 'exportSales'])->name('analytics-report.sales.export');
     Route::get('/analytics-report/sales-executive', [App\Http\Controllers\AnalyticsReportController::class, 'salesExecutive'])->name('analytics-report.sales-executive');
+    Route::get('/analytics-report/suppliers', [App\Http\Controllers\AnalyticsReportController::class, 'suppliers'])->name('analytics-report.suppliers');
     Route::get('/settings', function() { return view('settings.index'); })->name('settings');
+    Route::get('/settings/import-data', [App\Http\Controllers\SettingsDataImportController::class, 'index'])->name('settings.import-data');
+    Route::post('/settings/import-data/upload', [App\Http\Controllers\SettingsDataImportController::class, 'upload'])->name('settings.import-data.upload');
+    Route::post('/settings/import-data/analyze', [App\Http\Controllers\SettingsDataImportController::class, 'analyze'])->name('settings.import-data.analyze');
+    Route::post('/settings/import-data/confirm', [App\Http\Controllers\SettingsDataImportController::class, 'confirm'])->name('settings.import-data.confirm');
     Route::get('/settings/financing', [App\Http\Controllers\CarFinancingSettingController::class, 'index'])->name('settings.financing.index');
     Route::post('/settings/financing', [App\Http\Controllers\CarFinancingSettingController::class, 'store'])->name('settings.financing.store');
     Route::put('/settings/financing/{car_financing_setting}', [App\Http\Controllers\CarFinancingSettingController::class, 'update'])->name('settings.financing.update');
@@ -199,6 +198,7 @@ Route::middleware(['auth', 'page.permission', 'log.activity'])->group(function (
     Route::resource('contracts', App\Http\Controllers\ContractController::class)->names('contracts');
     Route::get('/transfer-orcr/export/pdf', [App\Http\Controllers\TransferOrcrController::class, 'exportPdf'])->name('transfer-orcr.export-pdf');
     Route::get('/transfer-orcr/summary-report', [App\Http\Controllers\TransferOrcrController::class, 'summaryReport'])->name('transfer-orcr.summary-report');
+    Route::get('/pending-transfer', [App\Http\Controllers\TransferOrcrController::class, 'pendingTransfer'])->name('pending-transfer.index');
     Route::resource('transfer-orcr', App\Http\Controllers\TransferOrcrController::class)->names('transfer-orcr');
     Route::resource('vehicle-registration', App\Http\Controllers\VehicleRegistrationController::class)->names('vehicle-registration');
     Route::resource('sales-agent-commissions', App\Http\Controllers\SalesAgentCommissionController::class)->names('sales-agent-commissions');
@@ -229,6 +229,11 @@ Route::middleware(['auth', 'page.permission', 'log.activity'])->group(function (
     Route::get('/api/tools/{tool}', [App\Http\Controllers\ToolsController::class, 'show'])->name('tools.show');
     Route::put('/api/tools/{tool}', [App\Http\Controllers\ToolsController::class, 'update'])->name('tools.update');
     Route::delete('/api/tools/{tool}', [App\Http\Controllers\ToolsController::class, 'destroy'])->name('tools.destroy');
+
+    Route::post('/api/mechanic-expense-records', [App\Http\Controllers\MechanicExpenseRecordController::class, 'store'])->name('mechanic-expense-records.store');
+    Route::get('/api/mechanic-expense-records/{mechanicExpenseRecord}', [App\Http\Controllers\MechanicExpenseRecordController::class, 'show'])->name('mechanic-expense-records.show');
+    Route::put('/api/mechanic-expense-records/{mechanicExpenseRecord}', [App\Http\Controllers\MechanicExpenseRecordController::class, 'update'])->name('mechanic-expense-records.update');
+    Route::delete('/api/mechanic-expense-records/{mechanicExpenseRecord}', [App\Http\Controllers\MechanicExpenseRecordController::class, 'destroy'])->name('mechanic-expense-records.destroy');
     
     // Redirect old operations-tracker to expenses-inventory
     Route::get('/operations-tracker', function() {
@@ -239,6 +244,16 @@ Route::middleware(['auth', 'page.permission', 'log.activity'])->group(function (
     Route::get('/mechanic-tools-expenses', function() {
         return redirect()->route('expenses-inventory', ['section' => 'tools-purchase']);
     })->name('mechanic-tools-expenses');
+
+    // Chemical Inventory (Equipment Lists)
+    Route::get('/chemical-inventory', [App\Http\Controllers\ChemicalInventoryController::class, 'index'])->name('chemical-inventory.index');
+    Route::post('/chemical-inventory/stocks', [App\Http\Controllers\ChemicalInventoryController::class, 'storeStock'])->name('chemical-inventory.stocks.store');
+    Route::put('/chemical-inventory/stocks/{chemicalStock}', [App\Http\Controllers\ChemicalInventoryController::class, 'updateStock'])->name('chemical-inventory.stocks.update');
+    Route::delete('/chemical-inventory/stocks/{chemicalStock}', [App\Http\Controllers\ChemicalInventoryController::class, 'destroyStock'])->name('chemical-inventory.stocks.destroy');
+    Route::post('/chemical-inventory/movements', [App\Http\Controllers\ChemicalInventoryController::class, 'storeMovement'])->name('chemical-inventory.movements.store');
+    Route::put('/chemical-inventory/movements/{chemicalMovement}', [App\Http\Controllers\ChemicalInventoryController::class, 'updateMovement'])->name('chemical-inventory.movements.update');
+    Route::delete('/chemical-inventory/movements/{chemicalMovement}', [App\Http\Controllers\ChemicalInventoryController::class, 'destroyMovement'])->name('chemical-inventory.movements.destroy');
+
     Route::get('/admin-docs', [App\Http\Controllers\ActivityLogController::class, 'index'])->name('admin-docs');
     
     // Car Photos Folder (Car Reports)
@@ -270,6 +285,12 @@ Route::middleware(['auth', 'page.permission', 'log.activity'])->group(function (
     // Vehicle routes (export-list must be registered before vehicles/{vehicle})
     Route::get('vehicles/export-list', [VehicleController::class, 'exportIndex'])->name('vehicles.export-list');
     Route::get('vehicles/search-archiveable', [VehicleController::class, 'searchArchiveable'])->name('vehicles.search-archiveable');
+    Route::post('vehicles/import/upload', [App\Http\Controllers\VehicleExcelImportController::class, 'upload'])->name('vehicles.import.upload');
+    Route::post('vehicles/import/analyze', [App\Http\Controllers\VehicleExcelImportController::class, 'analyze'])->name('vehicles.import.analyze');
+    Route::post('vehicles/import/confirm', [App\Http\Controllers\VehicleExcelImportController::class, 'confirm'])->name('vehicles.import.confirm');
+    Route::post('vehicles/miscellaneous', [App\Http\Controllers\MiscellaneousTransactionController::class, 'store'])->name('vehicles.miscellaneous.store');
+    Route::delete('vehicles/miscellaneous/{miscellaneousTransaction}', [App\Http\Controllers\MiscellaneousTransactionController::class, 'destroy'])->name('vehicles.miscellaneous.destroy');
+    Route::get('vehicles/{vehicle}/quick-view', [VehicleController::class, 'quickView'])->name('vehicles.quick-view');
     Route::resource('vehicles', VehicleController::class);
     Route::post('vehicles/{vehicle}/archive', [VehicleController::class, 'archive'])->name('vehicles.archive');
     Route::get('vehicles/{vehicle}/export', [VehicleController::class, 'export'])->name('vehicles.export');

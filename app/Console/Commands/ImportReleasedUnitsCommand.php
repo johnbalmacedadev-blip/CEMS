@@ -34,6 +34,12 @@ class ImportReleasedUnitsCommand extends Command
             return self::FAILURE;
         }
 
+        $beforeDedupe = count($rows);
+        $rows = $this->dedupeByNewestRelease($rows);
+        if (count($rows) < $beforeDedupe) {
+            $this->info('Duplicate plates collapsed to newest release date: '.($beforeDedupe - count($rows)));
+        }
+
         $branchId = null;
         $branchName = trim((string) $this->option('branch'));
         if ($branchName !== '') {
@@ -228,6 +234,52 @@ class ImportReleasedUnitsCommand extends Command
         );
 
         return $errors > 0 ? self::FAILURE : self::SUCCESS;
+    }
+
+    /**
+     * One DB vehicle per plate: keep the Excel row with the newest release date.
+     *
+     * @param  array<int, array<string, mixed>>  $rows
+     * @return array<int, array<string, mixed>>
+     */
+    private function dedupeByNewestRelease(array $rows): array
+    {
+        $best = [];
+        foreach ($rows as $row) {
+            $plate = $this->normalizePlate($row['plate_number'] ?? '');
+            if ($plate === '') {
+                continue;
+            }
+            if (! isset($best[$plate])) {
+                $best[$plate] = $row;
+                continue;
+            }
+            $best[$plate] = $this->preferReleasedRow($best[$plate], $row);
+        }
+
+        return array_values($best);
+    }
+
+    /**
+     * @param  array<string, mixed>  $current
+     * @param  array<string, mixed>  $candidate
+     * @return array<string, mixed>
+     */
+    private function preferReleasedRow(array $current, array $candidate): array
+    {
+        $currentDate = $current['release_date'] ?? null;
+        $candidateDate = $candidate['release_date'] ?? null;
+        if ($candidateDate && ! $currentDate) {
+            return $candidate;
+        }
+        if ($currentDate && ! $candidateDate) {
+            return $current;
+        }
+        if ($currentDate && $candidateDate) {
+            return $candidateDate >= $currentDate ? $candidate : $current;
+        }
+
+        return $candidate;
     }
 
     private function normalizePlate(?string $plate): string

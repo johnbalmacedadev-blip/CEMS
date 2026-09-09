@@ -101,7 +101,15 @@ class User extends Authenticatable
     }
 
     /**
-     * Get permission for a page (for editing in UI). Returns array with can_view, can_create, can_update, can_delete.
+     * Purchase Price on Unit Report is visible to Super Admin only.
+     */
+    public function canViewPurchasePrice(): bool
+    {
+        return $this->isAdmin();
+    }
+
+    /**
+     * Get permission for a page (for editing in UI).
      */
     public function getPagePermission(string $pageSlug): array
     {
@@ -110,6 +118,7 @@ class User extends Authenticatable
             'can_create' => $this->canAccessPage($pageSlug, 'create'),
             'can_update' => $this->canAccessPage($pageSlug, 'update'),
             'can_delete' => $this->canAccessPage($pageSlug, 'delete'),
+            'can_view_purchase_price' => $pageSlug === 'vehicles' && $this->isAdmin(),
         ];
     }
 }

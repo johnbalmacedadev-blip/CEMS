@@ -23,9 +23,20 @@ class AppServiceProvider extends ServiceProvider
         // Use Bootstrap 4 pagination
         \Illuminate\Pagination\Paginator::useBootstrapFour();
 
+        // Behind cPanel / Cloudflare, force HTTPS URLs when APP_URL is https
+        $appUrl = (string) config('app.url');
+        if (str_starts_with($appUrl, 'https://')) {
+            \Illuminate\Support\Facades\URL::forceScheme('https');
+        }
+
         // Hide edit/update/delete buttons when user lacks page permission
         Blade::if('canPage', function (string $page, string $action = 'view') {
             return auth()->check() && auth()->user()->canAccessPage($page, $action);
+        });
+
+        // Unit Report Purchase Price: Super Admin, or granted via user permissions
+        Blade::if('canViewPurchasePrice', function () {
+            return auth()->check() && auth()->user()->canViewPurchasePrice();
         });
 
         // Register activity observers for automatic logging

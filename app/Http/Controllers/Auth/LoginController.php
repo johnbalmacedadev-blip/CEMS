@@ -17,8 +17,6 @@ class LoginController extends Controller
      */
     public function showLoginForm()
     {
-        // Regenerate session token to prevent expiration issues
-        request()->session()->regenerateToken();
         return view('auth.login');
     }
 
@@ -42,15 +40,19 @@ class LoginController extends Controller
             Auth::login($user, $remember);
             $request->session()->regenerate();
 
-            ActivityLog::create([
-                'user_id' => $user->id,
-                'action' => 'login',
-                'model_type' => 'Auth',
-                'model_id' => null,
-                'description' => 'Logged in',
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-            ]);
+            try {
+                ActivityLog::create([
+                    'user_id' => $user->id,
+                    'action' => 'login',
+                    'model_type' => 'Auth',
+                    'model_id' => null,
+                    'description' => 'Logged in',
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ]);
+            } catch (\Throwable $e) {
+                report($e);
+            }
 
             return redirect()->intended('/home');
         }
@@ -67,15 +69,19 @@ class LoginController extends Controller
     {
         $user = Auth::user();
         if ($user) {
-            ActivityLog::create([
-                'user_id' => $user->id,
-                'action' => 'logout',
-                'model_type' => 'Auth',
-                'model_id' => null,
-                'description' => 'Logged out',
-                'ip_address' => $request->ip(),
-                'user_agent' => $request->userAgent(),
-            ]);
+            try {
+                ActivityLog::create([
+                    'user_id' => $user->id,
+                    'action' => 'logout',
+                    'model_type' => 'Auth',
+                    'model_id' => null,
+                    'description' => 'Logged out',
+                    'ip_address' => $request->ip(),
+                    'user_agent' => $request->userAgent(),
+                ]);
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
         Auth::logout();

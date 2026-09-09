@@ -36,7 +36,7 @@
 
     <div class="card">
         <div class="card-body">
-            <form action="{{ route('settings.users.store') }}" method="POST" id="createUserForm">
+            <form action="{{ route('settings.users.store') }}" method="POST" id="createUserForm" data-no-preloader>
                 @csrf
                 <div class="row">
                     <div class="col-md-6 mb-3">

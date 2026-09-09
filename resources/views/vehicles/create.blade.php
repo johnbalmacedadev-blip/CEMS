@@ -23,7 +23,7 @@
                             <h5 class="card-title mb-0">Vehicle Information</h5>
                         </div>
                         <div class="card-body">
-                            <form method="POST" action="{{ route('vehicles.store') }}">
+                            <form method="POST" action="{{ route('vehicles.store') }}" data-no-preloader id="createVehicleForm">
                                 @csrf
                                 
                                 <div class="row">
@@ -779,6 +779,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
     form.addEventListener('submit', function(e) {
         e.preventDefault(); // Always prevent default first
+        if (window.CarEmpirePreloader) {
+            window.CarEmpirePreloader.hide();
+        }
         
         // Update hidden field with unformatted value before submission
         if (purchasePriceInput && purchasePriceHidden) {
@@ -834,8 +837,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
                 
-                // Submit the form
-                form.submit();
+                // Native submit bypasses this listener (no infinite loop)
+                HTMLFormElement.prototype.submit.call(form);
             }
         });
     });

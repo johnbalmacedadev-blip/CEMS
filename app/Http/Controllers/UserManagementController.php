@@ -9,7 +9,6 @@ use App\Support\RoleTemplates;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 class UserManagementController extends Controller
 {
@@ -34,7 +33,7 @@ class UserManagementController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'confirmed', Password::defaults()],
+            'password' => ['required', 'confirmed', 'min:8'],
             'role' => ['required', 'in:admin,user'],
             'permission_template' => ['required', 'in:'.$templateKeys],
         ]);
@@ -50,10 +49,14 @@ class UserManagementController extends Controller
         $data['password'] = Hash::make($data['password']);
         $user = User::create($data);
 
-        if ($templateKey === 'super_admin' || $user->isAdmin()) {
-            $user->pagePermissions()->delete();
-        } else {
-            RoleTemplates::applyToUser($user, $templateKey ?: 'spectator');
+        try {
+            if ($templateKey === 'super_admin' || $user->isAdmin()) {
+                $user->pagePermissions()->delete();
+            } else {
+                RoleTemplates::applyToUser($user, $templateKey ?: 'spectator');
+            }
+        } catch (\Throwable $e) {
+            report($e);
         }
 
         return redirect()
@@ -80,7 +83,7 @@ class UserManagementController extends Controller
             'permission_template' => ['nullable', 'in:'.$templateKeys],
         ];
         if ($request->filled('password')) {
-            $rules['password'] = ['confirmed', Password::defaults()];
+            $rules['password'] = ['confirmed', 'min:8'];
         }
         $data = $request->validate($rules);
 

@@ -113,6 +113,11 @@
         animation: ce-label-pulse 1.2s ease-in-out infinite;
     }
 
+    /* Keep SweetAlert / Bootstrap modals usable above the preloader */
+    .swal2-container {
+        z-index: 10060 !important;
+    }
+
     @keyframes ce-car-bounce {
         from { transform: translate(-50%, -50%) scale(1); }
         to { transform: translate(-50%, calc(-50% - 4px)) scale(1.04); }
@@ -141,27 +146,32 @@
 
     let hideTimer = null;
     let shownAt = 0;
+    let navigationPending = false;
 
     function showPreloader() {
         clearTimeout(hideTimer);
         shownAt = Date.now();
+        navigationPending = true;
         preloader.classList.add('active');
         preloader.setAttribute('aria-hidden', 'false');
         preloader.setAttribute('aria-busy', 'true');
-        hideTimer = setTimeout(hidePreloader, 45000);
+        // Safety net — never leave the overlay up forever
+        hideTimer = setTimeout(hidePreloader, 20000);
     }
 
     function hidePreloader() {
+        navigationPending = false;
         const elapsed = Date.now() - shownAt;
         const finish = function () {
             preloader.classList.remove('active');
             preloader.setAttribute('aria-hidden', 'true');
             preloader.setAttribute('aria-busy', 'false');
             clearTimeout(hideTimer);
+            hideTimer = null;
         };
 
-        if (shownAt && elapsed < 250) {
-            setTimeout(finish, 250 - elapsed);
+        if (shownAt && elapsed < 200) {
+            setTimeout(finish, 200 - elapsed);
             return;
         }
 
@@ -199,6 +209,8 @@
         return true;
     }
 
+    // Links only — do NOT show on submit-button click.
+    // Browser HTML5 validation cancels submit without firing "submit", which left the overlay stuck.
     document.addEventListener('click', function (event) {
         if (event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) {
             return;
@@ -207,38 +219,43 @@
         const link = event.target.closest('a[href]');
         if (link && shouldShowForLink(link)) {
             showPreloader();
-            return;
-        }
-
-        const button = event.target.closest('button[type="submit"], input[type="submit"]');
-        if (button) {
-            const form = button.closest('form');
-            if (form && shouldShowForForm(form)) {
-                showPreloader();
-            }
         }
     }, true);
 
     document.addEventListener('submit', function (event) {
         if (!shouldShowForForm(event.target)) return;
-        showPreloader();
+
+        // Let other handlers run first (e.g. create vehicle preventDefault + SweetAlert).
         setTimeout(function () {
             if (event.defaultPrevented) {
                 hidePreloader();
+                return;
             }
+            showPreloader();
         }, 0);
     }, false);
 
-    window.addEventListener('beforeunload', function () {
-        showPreloader();
-    });
+    // Do not show on beforeunload — it traps the overlay when navigation is cancelled
+    // or when a Swal-confirmed form.submit() is waiting on a slow response.
 
-    window.addEventListener('pageshow', function () {
-        hidePreloader();
+    window.addEventListener('pageshow', hidePreloader);
+    window.addEventListener('pagehide', function () {
+        // If the browser aborts navigation, clear on return to this page via pageshow.
     });
-
     window.addEventListener('load', hidePreloader);
     document.addEventListener('DOMContentLoaded', hidePreloader);
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible' && !navigationPending) {
+            hidePreloader();
+        }
+    });
+
+    // Escape hatch: Esc closes a stuck overlay
+    document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && preloader.classList.contains('active')) {
+            hidePreloader();
+        }
+    });
 
     window.CarEmpirePreloader = {
         show: showPreloader,

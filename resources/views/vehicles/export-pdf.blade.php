@@ -31,7 +31,11 @@
             <tr><th>Status</th><td>{{ $vehicle->status ?? '—' }}</td><th>Purchased From</th><td>{{ $vehicle->purchased_from ?? '—' }}</td></tr>
             <tr><th>With Tools</th><td>{{ $vehicle->with_tools ? 'Yes' : 'No' }}</td><th>With Matting</th><td>{{ $vehicle->with_matting ? 'Yes' : 'No' }}</td></tr>
             <tr><th>With Spare Tire</th><td>{{ $vehicle->with_spare_tire ? 'Yes' : 'No' }}</td><th>Spare Key</th><td>{{ $vehicle->spare_key ? 'Yes' : 'No' }}</td></tr>
+            @canViewPurchasePrice
             <tr><th>Purchase Price</th><td>{{ $vehicle->purchase_price !== null ? '₱' . number_format($vehicle->purchase_price, 2) : '—' }}</td><th>Purchase Date</th><td>{{ $vehicle->purchase_date ? $vehicle->purchase_date->format('M j, Y') : '—' }}</td></tr>
+            @else
+            <tr><th>Purchase Date</th><td colspan="3">{{ $vehicle->purchase_date ? $vehicle->purchase_date->format('M j, Y') : '—' }}</td></tr>
+            @endcanViewPurchasePrice
             <tr><th>Posted Price</th><td>{{ $vehicle->posted_price !== null ? '₱' . number_format($vehicle->posted_price, 2) : '—' }}</td><th>Sold Price</th><td>{{ $vehicle->sold_price !== null ? '₱' . number_format($vehicle->sold_price, 2) : '—' }}</td></tr>
             @if($vehicle->gasExpenses && $vehicle->gasExpenses->count() > 0)
             <tr><th>Total Gas Expenses</th><td colspan="3">₱{{ number_format($vehicle->gasExpenses->sum('gas_amount'), 2) }} ({{ $vehicle->gasExpenses->count() }} transaction(s))</td></tr>

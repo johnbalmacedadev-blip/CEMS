@@ -1,17 +1,32 @@
 @extends('layouts.app')
 
-@section('title', 'Transfer OR/CR - Car Empire Management System')
+@section('title', ($pendingOnlyPage ?? false) ? 'Pending Transfer - Car Empire Management System' : 'Transfer OR/CR - Car Empire Management System')
 
 @section('content')
+@php
+    $pendingOnlyPage = (bool) ($pendingOnlyPage ?? false);
+    $indexRoute = $indexRoute ?? route('transfer-orcr.index');
+    $exportParams = request()->only(['branch_location_id', 'date_from', 'date_to', 'search']);
+    if ($pendingOnlyPage) {
+        $exportParams['pending_only'] = 1;
+    } else {
+        $exportParams = array_merge($exportParams, request()->only(['status']));
+    }
+@endphp
 <div class="container-fluid">
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
         <h1 class="h2">
-            <i class="fas fa-file-invoice me-2"></i>Transfer OR/CR
+            <i class="fas {{ $pendingOnlyPage ? 'fa-hourglass-half' : 'fa-file-invoice' }} me-2"></i>{{ $pendingOnlyPage ? 'Pending Transfer' : 'Transfer OR/CR' }}
         </h1>
         <div class="btn-toolbar mb-2 mb-md-0">
             <a href="{{ route('home') }}" class="btn btn-outline-secondary me-2">
                 <i class="fas fa-home me-1"></i>Back to Main Menu
             </a>
+            @if($pendingOnlyPage)
+            <a href="{{ route('transfer-orcr.index') }}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-right-left me-1"></i>All Transfer OR/CR
+            </a>
+            @endif
             @canPage('transfer-orcr', 'create')
             <a href="{{ route('transfer-orcr.create') }}" class="btn btn-primary">
                 <i class="fas fa-plus me-1"></i>Add Record
@@ -21,7 +36,14 @@
     </div>
 
 
-    <p class="text-muted mb-3">Track OR/CR transfer transactions: LTO file, transfer SOP/OR, PNP clearance, RD, and status. <span class="text-muted small"><i class="fas fa-arrows-alt-h me-1"></i>Click and drag the table left or right to scroll.</span></p>
+    <p class="text-muted mb-3">
+        @if($pendingOnlyPage)
+            Open transfer OR/CR records with status <strong>Pending</strong> or <strong>In Progress</strong>.
+        @else
+            Track OR/CR transfer transactions: LTO file, transfer SOP/OR, PNP clearance, RD, and status.
+        @endif
+        <span class="text-muted small"><i class="fas fa-arrows-alt-h me-1"></i>Click and drag the table left or right to scroll.</span>
+    </p>
 
     <div class="row g-2 mb-3">
         @foreach(($branchSummaries ?? []) as $loc)
@@ -37,7 +59,7 @@
                     $locKey === 'flagship' => 'bg-info text-white',
                     default => 'bg-secondary text-white',
                 };
-                $filterUrl = route('transfer-orcr.index', array_merge(
+                $filterUrl = route($pendingOnlyPage ? 'pending-transfer.index' : 'transfer-orcr.index', array_merge(
                     request()->except('page', 'branch_location_id'),
                     ['branch_location_id' => $loc['id']]
                 ));
@@ -69,7 +91,7 @@
 
     <div class="card mb-3">
         <div class="card-body py-2">
-            <form method="GET" action="{{ route('transfer-orcr.index') }}" class="row g-2 align-items-end">
+            <form method="GET" action="{{ $indexRoute }}" class="row g-2 align-items-end">
                 <div class="col-auto">
                     <label class="form-label small mb-0">Showroom</label>
                     <select class="form-select form-select-sm" name="branch_location_id" style="width: auto; min-width: 160px;">
@@ -81,6 +103,7 @@
                         @endforeach
                     </select>
                 </div>
+                @unless($pendingOnlyPage)
                 <div class="col-auto">
                     <label class="form-label small mb-0">Status</label>
                     <select class="form-select form-select-sm" name="status" style="width: auto;">
@@ -90,6 +113,7 @@
                         @endforeach
                     </select>
                 </div>
+                @endunless
                 <div class="col-auto">
                     <label class="form-label small mb-0">Date From</label>
                     <input type="date" class="form-control form-control-sm" name="date_from" value="{{ request('date_from') }}" style="width: auto;">
@@ -104,15 +128,17 @@
                 </div>
                 <div class="col-auto">
                     <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search me-1"></i>Filter</button>
-                    <a href="{{ route('transfer-orcr.index') }}" class="btn btn-outline-secondary btn-sm">Clear</a>
-                    <a href="{{ route('transfer-orcr.export-pdf', request()->only(['branch_location_id', 'status', 'date_from', 'date_to', 'search'])) }}"
+                    <a href="{{ $indexRoute }}" class="btn btn-outline-secondary btn-sm">Clear</a>
+                    <a href="{{ route('transfer-orcr.export-pdf', $exportParams) }}"
                         class="btn btn-outline-danger btn-sm" target="_blank" rel="noopener">
                         <i class="fas fa-file-pdf me-1"></i>Export PDF
                     </a>
+                    @unless($pendingOnlyPage)
                     <a href="{{ route('transfer-orcr.summary-report', request()->only(['branch_location_id'])) }}"
                         class="btn btn-outline-info btn-sm">
                         <i class="fas fa-chart-bar me-1"></i>View Summary Report
                     </a>
+                    @endunless
                 </div>
             </form>
         </div>
@@ -154,15 +180,19 @@
                             @foreach($records as $r)
                                 @php
                                     $v = $r->vehicle;
-                                    $makeName = $v->make && is_object($v->make) ? $v->make->name : ($v->make ?? '');
-                                    $seriesName = $v->vehicleModel && is_object($v->vehicleModel) ? $v->vehicleModel->name : ($v->model ?? '');
+                                    $makeName = '';
+                                    $seriesName = '';
+                                    if ($v) {
+                                        $makeName = $v->make && is_object($v->make) ? $v->make->name : ($v->make ?? '');
+                                        $seriesName = $v->vehicleModel && is_object($v->vehicleModel) ? $v->vehicleModel->name : ($v->model ?? '');
+                                    }
                                 @endphp
                                 <tr>
                                     <td>
                                         @include('partials.showroom-badge', ['name' => $r->branchLocation?->name])
                                     </td>
                                     <td>{{ $r->date->format('j M Y') }}</td>
-                                    <td>{{ $v->year ?? '—' }}</td>
+                                    <td>{{ $v?->year ?? '—' }}</td>
                                     <td>{{ $makeName ?: '—' }}</td>
                                     <td>{{ $seriesName ?: '—' }}</td>
                                     <td>
@@ -218,9 +248,15 @@
                 </div>
             @else
                 <div class="text-center py-5">
-                    <i class="fas fa-file-invoice fa-3x text-muted mb-3"></i>
-                    <h5 class="text-muted">No transfer OR/CR records yet</h5>
-                    <p class="text-muted mb-3">Add records to track OR/CR transfers by vehicle.</p>
+                    <i class="fas {{ $pendingOnlyPage ? 'fa-hourglass-half' : 'fa-file-invoice' }} fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">{{ $pendingOnlyPage ? 'No pending transfer records' : 'No transfer OR/CR records yet' }}</h5>
+                    <p class="text-muted mb-3">
+                        @if($pendingOnlyPage)
+                            All transfer OR/CR records are completed, or none match your filters.
+                        @else
+                            Add records to track OR/CR transfers by vehicle.
+                        @endif
+                    </p>
                     @canPage('transfer-orcr', 'create')
                     <a href="{{ route('transfer-orcr.create') }}" class="btn btn-primary"><i class="fas fa-plus me-1"></i>Add Record</a>
                     @endcanPage

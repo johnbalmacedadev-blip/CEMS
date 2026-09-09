@@ -114,6 +114,24 @@
                 </div>
             </div>
         </div>
+
+        <!-- Import Data -->
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100" style="border-color: #20c997;">
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <span class="icon-circle" style="color: #20c997; border-color: #20c997;">
+                            <i class="fas fa-file-import"></i>
+                        </span>
+                    </div>
+                    <h5 class="card-title mb-3">Import Data</h5>
+                    <p class="text-muted mb-4">Upload Excel trackers, choose tabs, review affected tables and pages, then import to sync the system.</p>
+                    <a href="{{ route('settings.import-data') }}" class="btn btn-settings-teal">
+                        <i class="fas fa-upload me-2"></i>Open Import Data
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 @endsection
@@ -149,6 +167,16 @@
     background-color: #fd7e14;
     color: #fff;
     border-color: #fd7e14;
+}
+.btn-settings-teal {
+    color: #20c997;
+    background-color: transparent;
+    border-color: #20c997;
+}
+.btn-settings-teal:hover {
+    background-color: #20c997;
+    color: #fff;
+    border-color: #20c997;
 }
 </style>
 @endsection

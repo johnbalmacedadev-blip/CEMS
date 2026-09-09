@@ -32,7 +32,7 @@ class VerifyCsrfToken extends Middleware
             if ($request->is('login') && $request->isMethod('post')) {
                 $request->session()->regenerateToken();
                 return redirect()->route('login')
-                    ->withErrors(['email' => 'Your session has expired. Please try logging in again.']);
+                    ->withErrors(['login' => 'Your session has expired. Please try logging in again.']);
             }
             
             // For other pages, throw the exception normally

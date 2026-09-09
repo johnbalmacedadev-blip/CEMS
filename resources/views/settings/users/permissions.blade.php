@@ -136,6 +136,15 @@
                 </div>
                 <div class="col-md-6 col-lg-3">
                     <div class="d-flex align-items-start">
+                        <span class="badge bg-warning text-dark me-2 mt-1">₱</span>
+                        <div>
+                            <strong>Purchase Price</strong>
+                            <p class="text-muted small mb-0">Unit Report only. Locked to Super Admin — cannot be granted to other roles.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 col-lg-3">
+                    <div class="d-flex align-items-start">
                         <span class="perm-legend-icon perm-legend-icon--page-yes me-2"><i class="fas fa-check-circle"></i></span>
                         <div>
                             <strong>Page accessible</strong>
@@ -177,12 +186,13 @@
                                 <th class="text-center" style="width: 110px;">Create / Save</th>
                                 <th class="text-center" style="width: 110px;">Edit / Update</th>
                                 <th class="text-center" style="width: 90px;">Delete</th>
+                                <th class="text-center" style="width: 120px;" title="Unit Report Purchase Price column">Purchase Price</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach($permissionGroups as $group)
                                 <tr class="perm-group-header">
-                                    <td colspan="6">
+                                    <td colspan="7">
                                         <div class="d-flex align-items-center gap-2">
                                             <span class="perm-group-icon"><i class="fas {{ $group['icon'] }}"></i></span>
                                             <div>
@@ -196,13 +206,22 @@
                                 </tr>
                                 @foreach($group['pages'] as $slug => $label)
                                     @php
-                                        $p = $permissions[$slug] ?? ['can_view' => false, 'can_create' => false, 'can_update' => false, 'can_delete' => false];
+                                        $p = $permissions[$slug] ?? [
+                                            'can_view' => false,
+                                            'can_create' => false,
+                                            'can_update' => false,
+                                            'can_delete' => false,
+                                            'can_view_purchase_price' => false,
+                                        ];
                                         $hasAccess = $p['can_view'];
                                         $rowClass = $hasAccess ? 'perm-row--granted' : 'perm-row--denied';
                                     @endphp
                                     <tr class="{{ $rowClass }} perm-group-row" data-page-row="{{ $slug }}">
                                         <td class="ps-4">
                                             <span class="fw-semibold">{{ $label }}</span>
+                                            @if($slug === 'vehicles')
+                                                <div class="small text-muted mt-1">Purchase Price is Super Admin only and stays hidden for this role.</div>
+                                            @endif
                                         </td>
                                         <td class="text-center">
                                             <span class="perm-page-status perm-page-status--{{ $hasAccess ? 'yes' : 'no' }}" data-page-status="{{ $slug }}" title="{{ $hasAccess ? 'Accessible' : 'Not accessible' }}">
@@ -244,6 +263,18 @@
                                                 'checked' => $p['can_delete'],
                                                 'disabled' => $user->isAdmin(),
                                             ])
+                                        </td>
+                                        <td class="text-center">
+                                            @if($slug === 'vehicles')
+                                                @include('settings.users._permission-checkbox', [
+                                                    'slug' => $slug,
+                                                    'field' => 'can_view_purchase_price',
+                                                    'checked' => $user->isAdmin(),
+                                                    'disabled' => true,
+                                                ])
+                                            @else
+                                                <span class="text-muted">—</span>
+                                            @endif
                                         </td>
                                     </tr>
                                 @endforeach

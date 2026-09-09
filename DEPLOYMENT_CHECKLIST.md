@@ -26,7 +26,7 @@ This script:
 4. Re-installs Composer **without dev** packages (production)
 5. Removes `config/scribe.php` (avoids missing-class errors; `/docs` uses pre-built views)
 6. Clears local caches
-7. Creates **`deploy/CEMS-deploy-YYYY-MM-DD.tar.gz`**
+7. Creates **`../deploy/CEMS-deploy-YYYY-MM-DD.tar.gz`** (sibling of this project folder)
 8. Restores your local dev environment (Scribe + full Composer)
 
 ### Do NOT upload
@@ -234,7 +234,7 @@ php artisan view:cache
 # On PC
 .\scripts\deploy-prepare.ps1
 
-# Upload deploy/CEMS-deploy-*.tar.gz → extract on server
+# Upload ../deploy/CEMS-deploy-*.tar.gz → extract on server
 
 # On server
 cp .env.production.example .env

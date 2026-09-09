@@ -11,9 +11,14 @@ from pathlib import Path
 
 import openpyxl
 
-DEFAULT_SRC = Path(
-    r"c:\xampp\htdocs\CarEmpire\NEW CAR EMPIRE FOLDER-20260727T012011Z-1-001\NEW CAR EMPIRE FOLDER\(PRIVATE) AVAILABLE-RESERVED-RELEASED UNITS.xlsx"
-)
+_CANDIDATES = [
+    Path(r"c:\xampp\htdocs\CarEmpire\(PRIVATE) AVAILABLE-RESERVED-RELEASED UNITS (1).xlsx"),
+    Path(r"c:\xampp\htdocs\CarEmpire\(PRIVATE) AVAILABLE-RESERVED-RELEASED UNITS.xlsx"),
+    Path(
+        r"c:\xampp\htdocs\CarEmpire\NEW CAR EMPIRE FOLDER-20260727T012011Z-1-001\NEW CAR EMPIRE FOLDER\(PRIVATE) AVAILABLE-RESERVED-RELEASED UNITS.xlsx"
+    ),
+]
+DEFAULT_SRC = next((p for p in _CANDIDATES if p.exists()), _CANDIDATES[0])
 OUT = Path(
     r"c:\xampp\htdocs\CarEmpire\System V.1 - June 1 Updated\storage\app\excel_units_snapshot.json"
 )
@@ -52,6 +57,12 @@ TAB_MAP = {
         "label": "Annex Reserved",
     },
     "ANNEX RELEASED": {
+        "key": "annex_released",
+        "status": "Released",
+        "branch": "Annex",
+        "label": "Annex Released",
+    },
+    "ANNEX - RELEASED": {
         "key": "annex_released",
         "status": "Released",
         "branch": "Annex",
@@ -148,11 +159,57 @@ def find_cols(ws, header_row: int = 1):
     plate = find("PLATE NUMBER", "PLATE")
     release = find("FORMATTED RELEASE DATE", "RELEASE DATE")
     sale = find("FORMATTED SALE DATE", "SALE DATE")
-    return plate, release, sale, headers
+    sales_price = find("SALES PRICE", "SALE PRICE")
+    total_revenue = find("TOTAL REVENUE")
+    total_costs = find("TOTAL COSTS", "TOTAL COST")
+    total_profit = find("TOTAL PROFIT")
+    return plate, release, sale, sales_price, total_revenue, total_costs, total_profit, headers
+
+
+def to_number(v) -> float | None:
+    if v is None or v == "":
+        return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    s = str(v).upper().replace(",", "").replace("₱", "").replace("PHP", "").replace(" ", "")
+    try:
+        return float(s)
+    except ValueError:
+        return None
+
+
+def looks_like_vehicle_data_row(ws, r: int, meta: dict) -> bool:
+    """True when year+make look like a real unit row (even if plate is blank)."""
+    if meta.get("status") == "Forfeited":
+        year_cell = ws.cell(r, 3).value
+        make = ws.cell(r, 4).value
+    else:
+        year_cell = ws.cell(r, 2).value
+        make = ws.cell(r, 3).value
+    if parse_year(year_cell) is None:
+        return False
+    if make is None or not str(make).strip():
+        return False
+    # Reject section headings mistakenly placed in make
+    make_u = str(make).strip().upper()
+    if "RELEASED" in make_u and "UNIT" in make_u:
+        return False
+    return True
+
+
+def looks_like_section_heading(val) -> bool:
+    if not isinstance(val, str):
+        return False
+    u = val.strip().upper()
+    if len(u) < 8:
+        return False
+    if "PLATE NUMBER" in u and "RELEASED" not in u:
+        return False
+    return "RELEASED" in u and "UNIT" in u
 
 
 def extract_sheet(ws, meta: dict) -> dict:
-    plate_col, release_col, sale_col, headers = find_cols(ws, 1)
+    plate_col, release_col, sale_col, sales_price_col, revenue_col, costs_col, profit_col, headers = find_cols(ws, 1)
 
     # Forfeit sheet has different layout: plate often col 6
     if meta["status"] == "Forfeited" and not plate_col:
@@ -166,40 +223,84 @@ def extract_sheet(ws, meta: dict) -> dict:
         # fallback common positions
         plate_col = 9 if meta["status"] != "Forfeited" else 6
 
+    colour_col = None
+    purchase_col = None
+    for h, c in headers.items():
+        if colour_col is None and ("COLOUR" in h or "COLOR" in h):
+            colour_col = c
+        if purchase_col is None and "PURCHASE PRICE" in h:
+            purchase_col = c
+    variant_col = 5 if meta["status"] != "Forfeited" else None
+    transmission_col = 6 if meta["status"] != "Forfeited" else None
+    fuel_col = 7 if meta["status"] != "Forfeited" else None
+
     rows = []
     section = None
     max_r = ws.max_row or 0
     for r in range(2, max_r + 1):
         plate_raw = ws.cell(r, plate_col).value
-        # section heading often in year/make columns
+        # Section headings: Flagship usually column B; Annex from Nov 2025 onward uses column A.
+        a = ws.cell(r, 1).value
         b = ws.cell(r, 2).value
-        if not looks_like_plate(plate_raw):
-            if isinstance(b, str) and len(b.strip()) > 8:
-                section = b.strip()
-            elif isinstance(plate_raw, str) and len(plate_raw.strip()) > 8 and not looks_like_plate(plate_raw):
-                section = plate_raw.strip()
-            continue
+        has_plate = looks_like_plate(plate_raw)
+        if not has_plate:
+            # Keep blank-plate unit rows that still have year/make + release date (Excel counts them).
+            release_probe = to_date(ws.cell(r, release_col).value) if release_col else None
+            if (
+                meta["status"] == "Released"
+                and release_probe
+                and looks_like_vehicle_data_row(ws, r, meta)
+            ):
+                plate = f"NOPLATE_R{r}"
+                plate_display = ""
+                missing_plate = True
+            else:
+                for val in (a, b, plate_raw):
+                    if looks_like_section_heading(val):
+                        section = str(val).strip()
+                        break
+                    if isinstance(val, str) and len(val.strip()) > 8 and "RELEASED" in val.upper():
+                        section = val.strip()
+                        break
+                continue
+        else:
+            plate = norm_plate(plate_raw)
+            plate_display = str(plate_raw).strip()
+            missing_plate = False
 
-        plate = norm_plate(plate_raw)
         release_date = to_date(ws.cell(r, release_col).value) if release_col else None
         sale_date = to_date(ws.cell(r, sale_col).value) if sale_col else None
         year_cell = ws.cell(r, 2).value if meta["status"] != "Forfeited" else ws.cell(r, 3).value
         year = parse_year(year_cell)
         make = ws.cell(r, 3).value if meta["status"] != "Forfeited" else ws.cell(r, 4).value
         model = ws.cell(r, 4).value if meta["status"] != "Forfeited" else ws.cell(r, 5).value
+        colour = ws.cell(r, colour_col).value if colour_col else None
+        variant = ws.cell(r, variant_col).value if variant_col else None
+        transmission = ws.cell(r, transmission_col).value if transmission_col else None
+        fuel_type = ws.cell(r, fuel_col).value if fuel_col else None
 
         rows.append(
             {
                 "excel_row": r,
                 "plate": plate,
-                "plate_raw": str(plate_raw).strip(),
+                "plate_raw": plate_display,
+                "missing_plate": missing_plate,
                 "release_date": release_date,
                 "sale_date": sale_date,
                 "year": year,
                 "year_raw": None if isinstance(year_cell, (int, float)) or year_cell is None else str(year_cell),
                 "make": str(make).strip() if make else None,
                 "model": str(model).strip() if model else None,
+                "variant": str(variant).strip() if variant else None,
+                "colour": str(colour).strip() if colour else None,
+                "transmission": str(transmission).strip() if transmission else None,
+                "fuel_type": str(fuel_type).strip() if fuel_type else None,
                 "section": section,
+                "purchase_price": to_number(ws.cell(r, purchase_col).value) if purchase_col else None,
+                "sales_price": to_number(ws.cell(r, sales_price_col).value) if sales_price_col else None,
+                "total_revenue": to_number(ws.cell(r, revenue_col).value) if revenue_col else None,
+                "total_costs": to_number(ws.cell(r, costs_col).value) if costs_col else None,
+                "total_profit": to_number(ws.cell(r, profit_col).value) if profit_col else None,
             }
         )
 
@@ -241,19 +342,38 @@ def extract_sheet(ws, meta: dict) -> dict:
     }
 
 
+def compact_sheet_name(name: str) -> str:
+    return re.sub(r"[\s\-]+", " ", str(name)).strip().upper()
+
+
+def find_workbook_sheet(wb, mapped_name: str):
+    if mapped_name in wb.sheetnames:
+        return mapped_name
+    want = compact_sheet_name(mapped_name)
+    for actual in wb.sheetnames:
+        if compact_sheet_name(actual) == want:
+            return actual
+    return None
+
+
 def main():
     if not SRC.exists():
         raise SystemExit(f"Excel not found: {SRC}")
 
     wb = openpyxl.load_workbook(SRC, data_only=True)
     designations = []
+    seen_tabs = set()
     for sheet_name, meta in TAB_MAP.items():
-        if sheet_name not in wb.sheetnames:
+        actual = find_workbook_sheet(wb, sheet_name)
+        if not actual:
             print(f"SKIP missing sheet: {sheet_name}")
             continue
-        print(f"Reading {sheet_name}...")
-        data = extract_sheet(wb[sheet_name], dict(meta))
-        data["tab"] = sheet_name
+        if actual in seen_tabs:
+            continue
+        seen_tabs.add(actual)
+        print(f"Reading {actual}...")
+        data = extract_sheet(wb[actual], dict(meta))
+        data["tab"] = actual
         designations.append(data)
         print(
             f"  rows={data['excel_row_count']} unique={data['excel_unique_plates']} dups={data['duplicate_plate_count']}"

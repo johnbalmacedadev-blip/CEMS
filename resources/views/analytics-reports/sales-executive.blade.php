@@ -8,7 +8,7 @@
         <h1 class="h3 mb-0"><i class="fas fa-user-tie me-2 text-warning"></i>Sales Executive Report</h1>
         <div class="d-flex gap-2">
             <a href="{{ route('analytics-report.sales') }}" class="btn btn-outline-primary">
-                <i class="fas fa-chart-bar me-1"></i>Sales Report
+                <i class="fas fa-chart-bar me-1"></i>Car Sales Report
             </a>
             <a href="{{ route('home') }}" class="btn btn-outline-secondary">
                 <i class="fas fa-home me-1"></i>Back to Home
@@ -22,12 +22,12 @@
                 <div class="col-md-4 col-lg-3">
                     <label for="view" class="form-label">Show ranking for</label>
                     <select name="view" id="view" class="form-select">
-                        <option value="team" {{ $viewMode === 'team' ? 'selected' : '' }}>Sales Team (all credited names)</option>
-                        <option value="agents" {{ $viewMode === 'agents' ? 'selected' : '' }}>Sales Agents</option>
                         <option value="executives" {{ $viewMode === 'executives' ? 'selected' : '' }}>Sales Executives</option>
+                        <option value="agents" {{ $viewMode === 'agents' ? 'selected' : '' }}>Sales Agents</option>
+                        <option value="team" {{ $viewMode === 'team' ? 'selected' : '' }}>Sales Team (all credited names)</option>
                     </select>
                 </div>
-                <div class="col-md-4 col-lg-3">
+                <div class="col-md-4 col-lg-2">
                     <label for="period" class="form-label">Filter period</label>
                     <select name="period" id="period" class="form-select">
                         @foreach($periodOptions as $key => $label)
@@ -35,13 +35,32 @@
                         @endforeach
                     </select>
                 </div>
+                @php
+                    $showYearMonth = in_array($selectedPeriod, ['monthly', 'quarterly', 'annually'], true);
+                @endphp
+                <div class="col-md-3 col-lg-2 year-filter-field" style="{{ $showYearMonth ? '' : 'display:none;' }}">
+                    <label for="year" class="form-label">Year</label>
+                    <select name="year" id="year" class="form-select" {{ $showYearMonth ? '' : 'disabled' }}>
+                        @foreach(($yearOptions ?? []) as $value => $label)
+                            <option value="{{ $value }}" {{ (int) ($selectedYear ?? date('Y')) === (int) $value ? 'selected' : '' }}>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="col-md-3 col-lg-2 month-filter-field" style="{{ $selectedPeriod === 'monthly' ? '' : 'display:none;' }}">
+                    <label for="month" class="form-label">Month</label>
+                    <select name="month" id="month" class="form-select" {{ $selectedPeriod === 'monthly' ? '' : 'disabled' }}>
+                        @foreach(($monthOptions ?? ['' => 'All months in year']) as $value => $label)
+                            <option value="{{ $value }}" {{ (string) ($selectedMonth ?? '') === (string) $value ? 'selected' : '' }}>{{ $label }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="col-md-3 col-lg-2 custom-range-only-field" style="{{ $selectedPeriod === 'range' ? '' : 'display:none;' }}">
                     <label for="date_from" class="form-label">Date from</label>
-                    <input type="date" name="date_from" id="date_from" class="form-control" value="{{ $dateFrom }}">
+                    <input type="date" name="date_from" id="date_from" class="form-control" value="{{ $selectedPeriod === 'range' ? $dateFrom : '' }}" {{ $selectedPeriod === 'range' ? '' : 'disabled' }}>
                 </div>
                 <div class="col-md-3 col-lg-2 custom-range-only-field" style="{{ $selectedPeriod === 'range' ? '' : 'display:none;' }}">
                     <label for="date_to" class="form-label">Date to</label>
-                    <input type="date" name="date_to" id="date_to" class="form-control" value="{{ $dateTo }}">
+                    <input type="date" name="date_to" id="date_to" class="form-control" value="{{ $selectedPeriod === 'range' ? $dateTo : '' }}" {{ $selectedPeriod === 'range' ? '' : 'disabled' }}>
                 </div>
                 <div class="col-md-4 col-lg-2">
                     <button type="submit" class="btn btn-warning w-100">
@@ -50,17 +69,42 @@
                 </div>
             </form>
             <p class="small text-muted mt-2 mb-0">
-                Performance is based on <strong>Released</strong> units. Credit uses sales person (reserved), then release person, then sales agent name.
+                Rankings follow <strong>Sales Agent Commission release dates</strong> (same as
+                <a href="{{ route('sales-agent-commissions.index') }}">Sales Agent Commissions</a>),
+                plus any Released units in the range that have no commission row yet.
+                Credit uses the commission agent / linked executive when available.
                 Active date filter: <strong>{{ $activeRangeLabel }}</strong>.
             </p>
         </div>
     </div>
 
+    @php $metricReports = $metricReports ?? []; @endphp
+
+    <ul class="nav nav-tabs mb-3" id="salesExecTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overviewPane" type="button" role="tab">Overview</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="sales-reservation-tab" data-bs-toggle="tab" data-bs-target="#salesReservationPane" type="button" role="tab">Sales &amp; Reservation</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="cash-summary-tab" data-bs-toggle="tab" data-bs-target="#cashSummaryPane" type="button" role="tab">Cash Only</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="financing-summary-tab" data-bs-toggle="tab" data-bs-target="#financingSummaryPane" type="button" role="tab">Financing Only</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="gross-net-tab" data-bs-toggle="tab" data-bs-target="#grossNetPane" type="button" role="tab">Gross &amp; Net</button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="salesExecTabContent">
+        <div class="tab-pane fade show active" id="overviewPane" role="tabpanel">
     @if(!$hasData)
         <div class="alert alert-info mb-0">
             <i class="fas fa-info-circle me-2"></i>
             No performance data found for <strong>{{ $viewLabel }}</strong> in this date range.
-            Try <em>Sales Team</em> view or widen the period.
+            Try another month (commissions currently peak earlier in the year), switch view, or choose <em>All months in year</em>.
         </div>
     @else
         <div class="row g-3 mb-3">
@@ -282,6 +326,68 @@
             </div>
         </div>
     @endif
+        </div>{{-- overview pane --}}
+
+        @php
+            $salesReservation = $metricReports['sales_reservation'] ?? null;
+            $cashSummary = $metricReports['cash_summary'] ?? null;
+            $financingSummary = $metricReports['financing_summary'] ?? null;
+            $grossNet = $metricReports['gross_net'] ?? null;
+        @endphp
+
+        <div class="tab-pane fade" id="salesReservationPane" role="tabpanel">
+            @include('analytics-reports.partials.sales-exec-metric-table', [
+                'report' => $salesReservation,
+                'columns' => [
+                    ['key' => 'sales_count', 'label' => 'Total Sales', 'format' => 'int'],
+                    ['key' => 'sales_pct', 'label' => '% of Total Sales', 'format' => 'pct'],
+                    ['key' => 'release_count', 'label' => 'Total Releases', 'format' => 'int'],
+                    ['key' => 'release_pct', 'label' => '% of Total Releases', 'format' => 'pct'],
+                    ['key' => 'avg_reservation', 'label' => 'Avg Reservation (excl. spot cash)', 'format' => 'money'],
+                ],
+                'totalKeys' => ['sales_count', 'release_count', 'avg_reservation'],
+            ])
+        </div>
+
+        <div class="tab-pane fade" id="cashSummaryPane" role="tabpanel">
+            @include('analytics-reports.partials.sales-exec-metric-table', [
+                'report' => $cashSummary,
+                'columns' => [
+                    ['key' => 'cash_releases', 'label' => '# of Cash Releases', 'format' => 'int'],
+                    ['key' => 'cash_pct', 'label' => '% of Cash Releases', 'format' => 'pct'],
+                    ['key' => 'discount_total', 'label' => 'Total Discount Given (₱)', 'format' => 'money'],
+                    ['key' => 'discount_avg', 'label' => 'Average Discount Given (₱)', 'format' => 'money'],
+                ],
+                'totalKeys' => ['cash_releases', 'discount_total', 'discount_avg'],
+            ])
+        </div>
+
+        <div class="tab-pane fade" id="financingSummaryPane" role="tabpanel">
+            @include('analytics-reports.partials.sales-exec-metric-table', [
+                'report' => $financingSummary,
+                'columns' => [
+                    ['key' => 'financing_releases', 'label' => '# of Financing Releases', 'format' => 'int'],
+                    ['key' => 'financing_pct', 'label' => '% of Financing Releases', 'format' => 'pct'],
+                    ['key' => 'financed_total', 'label' => 'Total Amount Financed (₱)', 'format' => 'money'],
+                    ['key' => 'financed_avg', 'label' => 'Average Amount Financed (₱)', 'format' => 'money'],
+                ],
+                'totalKeys' => ['financing_releases', 'financed_total', 'financed_avg'],
+            ])
+        </div>
+
+        <div class="tab-pane fade" id="grossNetPane" role="tabpanel">
+            @include('analytics-reports.partials.sales-exec-metric-table', [
+                'report' => $grossNet,
+                'columns' => [
+                    ['key' => 'gross_total', 'label' => 'Total Gross Sales (₱)', 'format' => 'money'],
+                    ['key' => 'gross_avg', 'label' => 'Average Gross Per Sale (₱)', 'format' => 'money'],
+                    ['key' => 'net_total', 'label' => 'Total Net Profit (₱)', 'format' => 'money'],
+                    ['key' => 'net_avg', 'label' => 'Average Net Profit Per Sale (₱)', 'format' => 'money'],
+                ],
+                'totalKeys' => ['gross_total', 'gross_avg', 'net_total', 'net_avg'],
+            ])
+        </div>
+    </div>
 </div>
 @endsection
 
@@ -303,10 +409,30 @@
 document.addEventListener('DOMContentLoaded', function () {
     const period = document.getElementById('period');
     const customRangeOnlyFields = document.querySelectorAll('.custom-range-only-field');
+    const yearFilterFields = document.querySelectorAll('.year-filter-field');
+    const monthFilterFields = document.querySelectorAll('.month-filter-field');
 
     function toggleRangeFields() {
-        const isCustomRange = period && period.value === 'range';
-        customRangeOnlyFields.forEach(el => { el.style.display = isCustomRange ? '' : 'none'; });
+        const periodVal = period ? period.value : 'monthly';
+        const isCustomRange = periodVal === 'range';
+        const showYear = ['monthly', 'quarterly', 'annually'].indexOf(periodVal) !== -1;
+        const showMonth = periodVal === 'monthly';
+
+        customRangeOnlyFields.forEach(el => {
+            el.style.display = isCustomRange ? '' : 'none';
+            el.querySelectorAll('input').forEach(input => {
+                input.disabled = !isCustomRange;
+                if (!isCustomRange) input.value = '';
+            });
+        });
+        yearFilterFields.forEach(el => {
+            el.style.display = showYear ? '' : 'none';
+            el.querySelectorAll('select').forEach(select => { select.disabled = !showYear; });
+        });
+        monthFilterFields.forEach(el => {
+            el.style.display = showMonth ? '' : 'none';
+            el.querySelectorAll('select').forEach(select => { select.disabled = !showMonth; });
+        });
     }
 
     if (period) period.addEventListener('change', toggleRangeFields);

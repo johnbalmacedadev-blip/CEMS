@@ -420,35 +420,143 @@ class ExpenseController extends Controller
             ->orderBy('transaction_date', 'desc')
             ->get();
         
-        // Get tools data for tools sections
-        $tools = \App\Models\Tool::orderBy('date_acquired', 'desc')
-            ->orderBy('created_at', 'desc')
+        $toolsPaginator = null;
+        $toolsListTotalAmount = 0;
+        $toolsListTotalQty = 0;
+        $toolsListCount = 0;
+        $toolsInventoryAsOf = null;
+        $toolsInventoryItems = collect();
+        $toolsMovements = collect();
+        $toolsPurchaseTotal = 0;
+        $mechanicTab = 'tools';
+        $mechanicParts = null;
+        $mechanicExternals = null;
+        $mechanicPartsTotal = 0;
+        $mechanicExternalsTotal = 0;
+
+        if ($section === 'tools-purchase') {
+            $mechanicTab = in_array($request->get('tab'), ['tools', 'parts', 'external'], true)
+                ? $request->get('tab')
+                : 'tools';
+
+            $search = $request->filled('q') ? trim((string) $request->get('q')) : null;
+            $dateFrom = $request->get('date_from');
+            $dateTo = $request->get('date_to');
+
+            if ($mechanicTab === 'tools') {
+                $inventory = \App\Support\ToolInventoryPresenter::currentInventory($search);
+                $toolsInventoryAsOf = $inventory['as_of'];
+                $toolsInventoryItems = $inventory['items'];
+                $toolsListTotalQty = $toolsInventoryItems->sum('quantity');
+                $toolsListCount = $toolsInventoryItems->count();
+
+                $toolsMovements = \App\Support\ToolInventoryPresenter::movements($search, $dateFrom, $dateTo);
+                $toolsPurchaseTotal = (float) \App\Models\Tool::query()
+                    ->where('entry_type', 'purchase')
+                    ->when($search, fn ($q) => $q->where('name', 'like', '%'.$search.'%'))
+                    ->when($dateFrom, fn ($q) => $q->whereDate('date_acquired', '>=', $dateFrom))
+                    ->when($dateTo, fn ($q) => $q->whereDate('date_acquired', '<=', $dateTo))
+                    ->sum('amount');
+                $toolsListTotalAmount = $toolsPurchaseTotal;
+            } elseif ($mechanicTab === 'parts') {
+                $partsQuery = \App\Models\MechanicExpenseRecord::parts()
+                    ->when($search, fn ($q) => $q->where('description', 'like', '%'.$search.'%'))
+                    ->when($dateFrom, fn ($q) => $q->whereDate('expense_date', '>=', $dateFrom))
+                    ->when($dateTo, fn ($q) => $q->whereDate('expense_date', '<=', $dateTo))
+                    ->orderBy('expense_date', 'desc')
+                    ->orderBy('id', 'desc');
+                $mechanicPartsTotal = (float) (clone $partsQuery)->sum('amount');
+                $mechanicParts = $partsQuery->paginate(50)->withQueryString();
+            } else {
+                $extQuery = \App\Models\MechanicExpenseRecord::external()
+                    ->when($search, function ($q) use ($search) {
+                        $q->where(function ($inner) use ($search) {
+                            $inner->where('description', 'like', '%'.$search.'%')
+                                ->orWhere('repaired_by', 'like', '%'.$search.'%')
+                                ->orWhere('unit_label', 'like', '%'.$search.'%');
+                        });
+                    })
+                    ->when($dateFrom, fn ($q) => $q->whereDate('expense_date', '>=', $dateFrom))
+                    ->when($dateTo, fn ($q) => $q->whereDate('expense_date', '<=', $dateTo))
+                    ->orderBy('expense_date', 'desc')
+                    ->orderBy('id', 'desc');
+                $mechanicExternalsTotal = (float) (clone $extQuery)->sum('amount');
+                $mechanicExternals = $extQuery->paginate(50)->withQueryString();
+            }
+
+            $tools = \App\Models\Tool::query()
+                ->where('entry_type', 'purchase')
+                ->orderBy('date_acquired', 'desc')
+                ->get();
+        } else {
+            $tools = \App\Models\Tool::query()
+                ->where('entry_type', 'purchase')
+                ->orderBy('date_acquired', 'desc')
+                ->orderBy('created_at', 'desc')
+                ->get();
+        }
+
+        // Current inventory page: latest snapshot (fallback to purchase sums)
+        $allTools = \App\Models\Tool::query()
+            ->where('entry_type', 'inventory')
+            ->orderBy('date_acquired', 'desc')
             ->get();
-        
-        // Group tools by date_acquired for purchase inventory
-        $groupedTools = $tools->groupBy(function($tool) {
+        if ($allTools->isEmpty()) {
+            $allTools = \App\Models\Tool::query()->where('entry_type', 'purchase')->get();
+        }
+
+        $groupedTools = $tools->groupBy(function ($tool) {
             return $tool->date_acquired->format('Y-m-d');
         });
-        
-        // Calculate totals for each date
+
         $dateTotals = [];
         foreach ($groupedTools as $date => $dateTools) {
             $dateTotals[$date] = $dateTools->sum('amount');
         }
-        
-        // Calculate current inventory (aggregate by tool name)
-        $currentInventory = $tools->groupBy('name')->map(function($group) {
-            return [
-                'name' => $group->first()->name,
-                'total_quantity' => $group->sum('quantity'),
-                'total_amount' => $group->sum('amount'),
-                'entries' => $group->count(),
-                'first_acquired' => $group->min('date_acquired'),
-                'last_acquired' => $group->max('date_acquired'),
-            ];
-        })->sortBy('name')->values();
-        
-        return view('expenses.index', compact('transactions', 'expenseItems', 'paymentMethods', 'externalExpenseItems', 'groupedTools', 'dateTotals', 'currentInventory', 'section', 'expenseBudgetSummary'));
+
+        if ($section === 'tools-current') {
+            $inv = \App\Support\ToolInventoryPresenter::currentInventory(
+                $request->filled('q') ? trim((string) $request->get('q')) : null
+            );
+            $currentInventory = $inv['items']->map(function ($item) {
+                return [
+                    'name' => $item['name'],
+                    'total_quantity' => $item['quantity'],
+                    'total_amount' => 0,
+                    'entries' => 1,
+                    'first_acquired' => $item['date'],
+                    'last_acquired' => $item['date'],
+                ];
+            });
+            $toolsInventoryAsOf = $inv['as_of'];
+        } else {
+            $currentInventory = collect();
+        }
+
+        return view('expenses.index', compact(
+            'transactions',
+            'expenseItems',
+            'paymentMethods',
+            'externalExpenseItems',
+            'groupedTools',
+            'dateTotals',
+            'currentInventory',
+            'section',
+            'expenseBudgetSummary',
+            'toolsPaginator',
+            'toolsListTotalAmount',
+            'toolsListTotalQty',
+            'toolsListCount',
+            'toolsInventoryAsOf',
+            'toolsInventoryItems',
+            'toolsMovements',
+            'toolsPurchaseTotal',
+            'mechanicTab',
+            'mechanicParts',
+            'mechanicExternals',
+            'mechanicPartsTotal',
+            'mechanicExternalsTotal'
+        ));
     }
 
     /**

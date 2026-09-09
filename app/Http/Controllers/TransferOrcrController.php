@@ -17,7 +17,17 @@ class TransferOrcrController extends Controller
     use LogsActivity;
     public function index(Request $request)
     {
-        $records = $this->filteredQuery($request)
+        return $this->renderIndex($request);
+    }
+
+    public function pendingTransfer(Request $request)
+    {
+        return $this->renderIndex($request, pendingOnly: true);
+    }
+
+    protected function renderIndex(Request $request, bool $pendingOnly = false)
+    {
+        $records = $this->filteredQuery($request, pendingOnly: $pendingOnly)
             ->with('otherTransactions')
             ->orderBy('date', 'desc')
             ->orderBy('created_at', 'desc')
@@ -27,7 +37,7 @@ class TransferOrcrController extends Controller
         $branches = BranchLocation::ordered()->get();
 
         // Branch totals respect current filters, but ignore branch filter so all locations show
-        $locationSummaryBase = $this->filteredQuery($request, ignoreBranch: true);
+        $locationSummaryBase = $this->filteredQuery($request, ignoreBranch: true, pendingOnly: $pendingOnly);
         $branchSummaries = $branches->map(function (BranchLocation $branch) use ($locationSummaryBase) {
             $branchQuery = (clone $locationSummaryBase)->where('branch_location_id', $branch->id);
 
@@ -48,12 +58,15 @@ class TransferOrcrController extends Controller
             'branchSummaries',
             'grandCount',
             'grandFeeTotal'
-        ));
+        ) + [
+            'pendingOnlyPage' => $pendingOnly,
+            'indexRoute' => $pendingOnly ? route('pending-transfer.index') : route('transfer-orcr.index'),
+        ]);
     }
 
     public function exportPdf(Request $request)
     {
-        $records = $this->filteredQuery($request)
+        $records = $this->filteredQuery($request, pendingOnly: $request->boolean('pending_only'))
             ->orderBy('date', 'desc')
             ->orderBy('created_at', 'desc')
             ->get();
@@ -394,14 +407,16 @@ class TransferOrcrController extends Controller
         return $base + $other;
     }
 
-    private function filteredQuery(Request $request, bool $ignoreBranch = false)
+    private function filteredQuery(Request $request, bool $ignoreBranch = false, bool $pendingOnly = false)
     {
         $query = TransferOrcr::with('vehicle.make', 'vehicle.vehicleModel', 'branchLocation');
 
         if (! $ignoreBranch && $request->filled('branch_location_id')) {
             $query->where('branch_location_id', $request->branch_location_id);
         }
-        if ($request->filled('status')) {
+        if ($pendingOnly) {
+            $query->whereIn('status', [TransferOrcr::STATUS_PENDING, TransferOrcr::STATUS_IN_PROGRESS]);
+        } elseif ($request->filled('status')) {
             $query->where('status', $request->status);
         }
         if ($request->filled('date_from')) {
@@ -433,6 +448,8 @@ class TransferOrcrController extends Controller
         }
         if ($request->filled('status')) {
             $labels[] = 'Status: ' . $request->status;
+        } elseif ($request->boolean('pending_only')) {
+            $labels[] = 'Status: Pending / In Progress';
         }
         if ($request->filled('date_from')) {
             $labels[] = 'Date from: ' . $request->date_from;

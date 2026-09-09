@@ -391,110 +391,304 @@
                 @endif
 
             @elseif($section == 'tools-purchase')
-                <!-- Purchase Inventory Section (Mechanic Tools / Expenses) -->
+                <!-- Mechanic Tools: TOOLS / PARTS / EXTERNAL EXPENSES tabs -->
                 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                     <h1 class="h2">
-                        <i class="fas fa-tools me-2"></i>Mechanic Tools / Purchase Inventory
+                        <i class="fas fa-tools me-2"></i>Mechanic Tools / Expenses
                     </h1>
                     <div class="btn-toolbar mb-2 mb-md-0 flex-wrap">
-                        <button type="button" class="btn btn-primary mb-2 mb-md-0" onclick="openAddToolModal()">
-                            <i class="fas fa-plus me-1"></i>Add Inventory
-                        </button>
-                        <a href="{{ route('expenses-inventory', ['section' => 'tools-current']) }}" class="btn btn-outline-primary ms-md-2 mb-2 mb-md-0">
-                            <i class="fas fa-boxes me-1"></i>Current Inventory
-                        </a>
+                        @if(($mechanicTab ?? 'tools') === 'tools')
+                            <button type="button" class="btn btn-primary mb-2 mb-md-0" onclick="openAddToolModal()">
+                                <i class="fas fa-plus me-1"></i>Add Purchase
+                            </button>
+                        @elseif(($mechanicTab ?? '') === 'parts')
+                            <button type="button" class="btn btn-primary mb-2 mb-md-0" onclick="openMechanicRecordModal('parts')">
+                                <i class="fas fa-plus me-1"></i>Add Part
+                            </button>
+                        @else
+                            <button type="button" class="btn btn-primary mb-2 mb-md-0" onclick="openMechanicRecordModal('external')">
+                                <i class="fas fa-plus me-1"></i>Add External Expense
+                            </button>
+                        @endif
                         <a href="{{ route('home') }}" class="btn btn-outline-secondary ms-md-2 mb-2 mb-md-0">
                             <i class="fas fa-home me-1"></i>Back to Main Menu
                         </a>
                     </div>
                 </div>
 
-                @if(!$groupedTools->isEmpty())
-                    @php
-                        $grandTotal = $groupedTools->sum(fn($tools) => $tools->sum('amount'));
-                        $totalEntries = $groupedTools->sum(fn($tools) => $tools->count());
-                    @endphp
+                <ul class="nav nav-tabs mb-3">
+                    <li class="nav-item">
+                        <a class="nav-link {{ ($mechanicTab ?? 'tools') === 'tools' ? 'active' : '' }}"
+                           href="{{ route('expenses-inventory', ['section' => 'tools-purchase', 'tab' => 'tools']) }}">
+                            <i class="fas fa-wrench me-1"></i>TOOLS
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ ($mechanicTab ?? '') === 'parts' ? 'active' : '' }}"
+                           href="{{ route('expenses-inventory', ['section' => 'tools-purchase', 'tab' => 'parts']) }}">
+                            <i class="fas fa-cogs me-1"></i>PARTS
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {{ ($mechanicTab ?? '') === 'external' ? 'active' : '' }}"
+                           href="{{ route('expenses-inventory', ['section' => 'tools-purchase', 'tab' => 'external']) }}">
+                            <i class="fas fa-store me-1"></i>EXTERNAL EXPENSES
+                        </a>
+                    </li>
+                </ul>
+
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <form method="GET" action="{{ route('expenses-inventory') }}" class="row g-2 align-items-end">
+                            <input type="hidden" name="section" value="tools-purchase">
+                            <input type="hidden" name="tab" value="{{ $mechanicTab ?? 'tools' }}">
+                            <div class="col-md-4">
+                                <label class="form-label small mb-1" for="tools_search_q">Search</label>
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                    <input type="text" class="form-control" id="tools_search_q" name="q" value="{{ request('q') }}" placeholder="{{ ($mechanicTab ?? 'tools') === 'external' ? 'Expense, repaired by, unit…' : (($mechanicTab ?? '') === 'parts' ? 'Part description…' : 'Tool name…') }}">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1" for="tools_date_from">Date from</label>
+                                <input type="date" class="form-control" id="tools_date_from" name="date_from" value="{{ request('date_from') }}">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label small mb-1" for="tools_date_to">Date to</label>
+                                <input type="date" class="form-control" id="tools_date_to" name="date_to" value="{{ request('date_to') }}">
+                            </div>
+                            <div class="col-md-4 d-flex flex-wrap gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-filter me-1"></i>Filter
+                                </button>
+                                <a href="{{ route('expenses-inventory', ['section' => 'tools-purchase', 'tab' => $mechanicTab ?? 'tools']) }}" class="btn btn-outline-secondary">Clear</a>
+                            </div>
+                        </form>
+                        @if(($mechanicTab ?? 'tools') === 'tools')
+                            <div class="mt-2 d-flex flex-wrap gap-2 small">
+                                <span class="text-muted">Quick movement dates:</span>
+                                <a class="badge text-bg-light border" href="{{ route('expenses-inventory', ['section' => 'tools-purchase', 'tab' => 'tools', 'date_from' => '2025-08-01', 'date_to' => '2025-08-31', 'q' => request('q')]) }}">Aug 2025</a>
+                                <a class="badge text-bg-light border" href="{{ route('expenses-inventory', ['section' => 'tools-purchase', 'tab' => 'tools', 'date_from' => '2025-09-01', 'date_to' => '2025-09-30', 'q' => request('q')]) }}">Sep 2025</a>
+                                <a class="badge text-bg-light border" href="{{ route('expenses-inventory', ['section' => 'tools-purchase', 'tab' => 'tools', 'date_from' => '2025-10-01', 'date_to' => '2025-10-31', 'q' => request('q')]) }}">Oct 2025</a>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                @if(($mechanicTab ?? 'tools') === 'tools')
                     <div class="row g-3 mb-4">
                         <div class="col-md-4">
                             <div class="card h-100">
                                 <div class="card-body">
-                                    <div class="text-muted small text-uppercase fw-semibold">Purchase dates</div>
-                                    <div class="fs-4 fw-bold">{{ $groupedTools->count() }}</div>
+                                    <div class="text-muted small text-uppercase fw-semibold">Inventory items</div>
+                                    <div class="fs-4 fw-bold">{{ number_format($toolsListCount) }}</div>
+                                    @if($toolsInventoryAsOf)
+                                        <div class="small text-muted">As of {{ \Carbon\Carbon::parse($toolsInventoryAsOf)->format('M d, Y') }}</div>
+                                    @endif
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="card h-100">
                                 <div class="card-body">
-                                    <div class="text-muted small text-uppercase fw-semibold">Total items</div>
-                                    <div class="fs-4 fw-bold">{{ $totalEntries }}</div>
+                                    <div class="text-muted small text-uppercase fw-semibold">Remaining qty (total)</div>
+                                    <div class="fs-4 fw-bold">{{ number_format($toolsListTotalQty) }}</div>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-4">
                             <div class="card h-100 border-primary">
                                 <div class="card-body">
-                                    <div class="text-muted small text-uppercase fw-semibold">Total amount</div>
-                                    <div class="fs-4 fw-bold text-primary">₱{{ number_format($grandTotal, 2) }}</div>
+                                    <div class="text-muted small text-uppercase fw-semibold">Purchase total (filtered)</div>
+                                    <div class="fs-4 fw-bold text-primary">₱{{ number_format($toolsPurchaseTotal, 2) }}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                @endif
 
-                @if($groupedTools->isEmpty())
-                    <div class="card">
-                        <div class="card-body text-center py-5">
-                            <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
-                            <h4 class="text-muted">No purchases yet</h4>
-                            <p class="text-muted mb-4">Start recording mechanic tool purchases by date. Each entry can include tool name, quantity, and amount.</p>
-                            <button type="button" class="btn btn-primary" onclick="openAddToolModal()">
-                                <i class="fas fa-plus me-1"></i>Add First Purchase
-                            </button>
+                    <div class="card mb-4">
+                        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <h5 class="card-title mb-0"><i class="fas fa-boxes me-2"></i>Inventory list</h5>
+                            <span class="text-muted small">
+                                Remaining quantities
+                                @if($toolsInventoryAsOf)
+                                    · snapshot {{ \Carbon\Carbon::parse($toolsInventoryAsOf)->format('M d, Y') }}
+                                @endif
+                            </span>
                         </div>
-                    </div>
-                @else
-                    @foreach($groupedTools->sortKeysDesc() as $date => $tools)
-                        @php
-                            $totalForDate = $dateTotals[$date] ?? $tools->sum('amount');
-                            $dayName = \Carbon\Carbon::parse($date)->format('l');
-                        @endphp
-                        <div class="card mb-4">
-                            <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-                                <div>
-                                    <h5 class="card-title mb-0">
-                                        <i class="fas fa-calendar-day me-2"></i>{{ \Carbon\Carbon::parse($date)->format('F j, Y') }}
-                                    </h5>
-                                    <small class="text-muted">{{ $dayName }} · {{ $tools->count() }} item(s)</small>
-                                </div>
-                                <span class="badge bg-primary fs-6">
-                                    Day total: ₱{{ number_format($totalForDate, 2) }}
-                                </span>
-                            </div>
-                            <div class="card-body">
+                        <div class="card-body p-0">
+                            @if($toolsInventoryItems->isEmpty())
+                                <div class="text-center text-muted py-5">No inventory snapshot found.</div>
+                            @else
                                 <div class="table-responsive">
-                                    <table class="table table-striped table-hover mb-0">
+                                    <table class="table table-striped table-hover align-middle mb-0">
                                         <thead class="table-light">
                                             <tr>
                                                 <th style="width: 4rem;">#</th>
                                                 <th>Tool name</th>
-                                                <th style="width: 6rem;">Qty</th>
-                                                <th style="width: 10rem;">Amount</th>
-                                                <th class="text-end" style="width: 8rem;">Actions</th>
+                                                <th style="width: 8rem;">Remaining qty</th>
+                                                <th style="width: 10rem;">As of</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            @foreach($tools as $index => $tool)
-                                                <tr data-tool-id="{{ $tool->id }}">
+                                            @foreach($toolsInventoryItems as $index => $item)
+                                                <tr>
                                                     <td>{{ $index + 1 }}</td>
-                                                    <td><strong>{{ $tool->name }}</strong></td>
-                                                    <td>{{ $tool->quantity }}</td>
-                                                    <td><strong>₱{{ number_format($tool->amount, 2) }}</strong></td>
+                                                    <td><strong>{{ $item['name'] }}</strong></td>
+                                                    <td><span class="badge bg-primary">{{ $item['quantity'] }}</span></td>
+                                                    <td>{{ \Carbon\Carbon::parse($item['date'])->format('M d, Y') }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+                            <h5 class="card-title mb-0"><i class="fas fa-exchange-alt me-2"></i>Inventory movements</h5>
+                            <span class="text-muted small">Purchases and quantity changes between snapshot dates</span>
+                        </div>
+                        <div class="card-body p-0">
+                            @if($toolsMovements->isEmpty())
+                                <div class="text-center text-muted py-5">
+                                    No movements for the selected filters.
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-sm btn-primary" onclick="openAddToolModal()">Add Purchase</button>
+                                    </div>
+                                </div>
+                            @else
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover align-middle mb-0" id="tools_purchase_table">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width: 4rem;">#</th>
+                                                <th style="width: 9rem;">Date</th>
+                                                <th style="width: 11rem;">Type</th>
+                                                <th>Tool name</th>
+                                                <th style="width: 7rem;">Qty</th>
+                                                <th style="width: 9rem;">Amount</th>
+                                                <th>Notes</th>
+                                                <th class="text-end" style="width: 7rem;">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($toolsMovements as $index => $m)
+                                                <tr @if(!empty($m['tool_id'])) data-tool-id="{{ $m['tool_id'] }}" @endif>
+                                                    <td>{{ $index + 1 }}</td>
+                                                    <td>{{ \Carbon\Carbon::parse($m['date'])->format('M d, Y') }}</td>
+                                                    <td>
+                                                        @php
+                                                            $badge = match ($m['type']) {
+                                                                'Purchase' => 'bg-success',
+                                                                'Added to inventory' => 'bg-info text-dark',
+                                                                'Quantity increased' => 'bg-primary',
+                                                                'Quantity decreased', 'Removed from inventory' => 'bg-warning text-dark',
+                                                                default => 'bg-secondary',
+                                                            };
+                                                        @endphp
+                                                        <span class="badge {{ $badge }}">{{ $m['type'] }}</span>
+                                                    </td>
+                                                    <td><strong>{{ $m['name'] }}</strong></td>
+                                                    <td>
+                                                        @if($m['quantity'] > 0)
+                                                            <span class="text-success fw-semibold">+{{ $m['quantity'] }}</span>
+                                                        @elseif($m['quantity'] < 0)
+                                                            <span class="text-danger fw-semibold">{{ $m['quantity'] }}</span>
+                                                        @else
+                                                            {{ $m['quantity'] }}
+                                                        @endif
+                                                    </td>
+                                                    <td>
+                                                        @if($m['amount'] !== null && (float) $m['amount'] > 0)
+                                                            <strong>₱{{ number_format($m['amount'], 2) }}</strong>
+                                                        @else
+                                                            <span class="text-muted">—</span>
+                                                        @endif
+                                                    </td>
+                                                    <td class="small text-muted">{{ $m['notes'] }}</td>
                                                     <td class="text-end">
-                                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="openEditToolModal({{ $tool->id }})" title="Edit">
+                                                        @if(!empty($m['tool_id']))
+                                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="openEditToolModal({{ $m['tool_id'] }})" title="Edit purchase">
+                                                                <i class="fas fa-pen"></i>
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteTool({{ $m['tool_id'] }})" title="Delete purchase">
+                                                                <i class="fas fa-trash-alt"></i>
+                                                            </button>
+                                                        @else
+                                                            <span class="text-muted">—</span>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+
+                @elseif(($mechanicTab ?? '') === 'parts')
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="text-muted small text-uppercase fw-semibold">Parts records</div>
+                                    <div class="fs-4 fw-bold">{{ $mechanicParts ? number_format($mechanicParts->total()) : 0 }}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card h-100 border-primary">
+                                <div class="card-body">
+                                    <div class="text-muted small text-uppercase fw-semibold">Total amount</div>
+                                    <div class="fs-4 fw-bold text-primary">₱{{ number_format($mechanicPartsTotal ?? 0, 2) }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0"><i class="fas fa-cogs me-2"></i>Parts list</h5>
+                            @if($mechanicParts)
+                                <span class="badge bg-primary">{{ $mechanicParts->total() }} item(s)</span>
+                            @endif
+                        </div>
+                        <div class="card-body p-0">
+                            @if(!$mechanicParts || $mechanicParts->total() === 0)
+                                <div class="text-center text-muted py-5">
+                                    No parts records found.
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-sm btn-primary" onclick="openMechanicRecordModal('parts')">Add Part</button>
+                                    </div>
+                                </div>
+                            @else
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover align-middle mb-0">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th style="width: 4rem;">#</th>
+                                                <th>Parts</th>
+                                                <th style="width: 10rem;">Amount</th>
+                                                <th style="width: 10rem;">Date</th>
+                                                <th class="text-end" style="width: 7rem;">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($mechanicParts as $index => $row)
+                                                <tr>
+                                                    <td>{{ $mechanicParts->firstItem() + $index }}</td>
+                                                    <td>{{ $row->description }}</td>
+                                                    <td><strong class="text-danger">₱{{ number_format($row->amount, 2) }}</strong></td>
+                                                    <td>{{ $row->expense_date ? $row->expense_date->format('j-M-y') : '—' }}</td>
+                                                    <td class="text-end">
+                                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="openMechanicRecordModal('parts', {{ $row->id }})" title="Edit">
                                                             <i class="fas fa-pen"></i>
                                                         </button>
-                                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteTool({{ $tool->id }})" title="Delete">
+                                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteMechanicRecord({{ $row->id }}, 'parts')" title="Delete">
                                                             <i class="fas fa-trash-alt"></i>
                                                         </button>
                                                     </td>
@@ -503,9 +697,89 @@
                                         </tbody>
                                     </table>
                                 </div>
+                                @if($mechanicParts->hasPages())
+                                    <div class="p-3">{{ $mechanicParts->links() }}</div>
+                                @endif
+                            @endif
+                        </div>
+                    </div>
+
+                @else
+                    {{-- EXTERNAL EXPENSES tab — same columns as Excel EXTERNAL EXPENSES sheet --}}
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-6">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <div class="text-muted small text-uppercase fw-semibold">External expense records</div>
+                                    <div class="fs-4 fw-bold">{{ $mechanicExternals ? number_format($mechanicExternals->total()) : 0 }}</div>
+                                </div>
                             </div>
                         </div>
-                    @endforeach
+                        <div class="col-md-6">
+                            <div class="card h-100 border-primary">
+                                <div class="card-body">
+                                    <div class="text-muted small text-uppercase fw-semibold">Total amount</div>
+                                    <div class="fs-4 fw-bold text-primary">₱{{ number_format($mechanicExternalsTotal ?? 0, 2) }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h5 class="card-title mb-0"><i class="fas fa-store me-1"></i>Expenses repaired by external shops</h5>
+                            @if($mechanicExternals)
+                                <span class="badge bg-primary">{{ $mechanicExternals->total() }} item(s)</span>
+                            @endif
+                        </div>
+                        <div class="card-body p-0">
+                            @if(!$mechanicExternals || $mechanicExternals->total() === 0)
+                                <div class="text-center text-muted py-5">
+                                    No external expense records found.
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-sm btn-primary" onclick="openMechanicRecordModal('external')">Add External Expense</button>
+                                    </div>
+                                </div>
+                            @else
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover align-middle mb-0">
+                                        <thead class="table-dark">
+                                            <tr>
+                                                <th>Expenses</th>
+                                                <th>Amount</th>
+                                                <th>Repaired By</th>
+                                                <th>Unit</th>
+                                                <th>Date</th>
+                                                <th class="text-end" style="width: 7rem;">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($mechanicExternals as $item)
+                                                <tr>
+                                                    <td>{{ $item->description }}</td>
+                                                    <td><strong class="text-danger">₱{{ number_format($item->amount, 2) }}</strong></td>
+                                                    <td>{{ $item->repaired_by ?: '—' }}</td>
+                                                    <td>{{ $item->unit_label ?: '—' }}</td>
+                                                    <td>{{ $item->expense_date ? $item->expense_date->format('j-M-y') : '—' }}</td>
+                                                    <td class="text-end">
+                                                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="openMechanicRecordModal('external', {{ $item->id }})" title="Edit">
+                                                            <i class="fas fa-pen"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteMechanicRecord({{ $item->id }}, 'external')" title="Delete">
+                                                            <i class="fas fa-trash-alt"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                                @if($mechanicExternals->hasPages())
+                                    <div class="p-3">{{ $mechanicExternals->links() }}</div>
+                                @endif
+                            @endif
+                        </div>
+                    </div>
                 @endif
 
             @elseif($section == 'tools-current')
@@ -529,6 +803,9 @@
                         <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
                             <h5 class="card-title mb-0">
                                 <i class="fas fa-boxes me-2"></i>Current Stock Summary
+                                @if(!empty($toolsInventoryAsOf))
+                                    <small class="ms-2 opacity-75">(as of {{ \Carbon\Carbon::parse($toolsInventoryAsOf)->format('M d, Y') }})</small>
+                                @endif
                             </h5>
                             <span class="badge bg-light text-dark">
                                 <span id="current_inventory_count">{{ $currentInventory->count() }}</span> Item(s)
@@ -726,6 +1003,60 @@
                 </button>
                 <button type="button" class="btn btn-primary" onclick="saveTool()">
                     <i class="fas fa-save me-1"></i>Save Tool
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Parts / External Expense Modal -->
+<div class="modal fade" id="mechanicRecordModal" tabindex="-1" aria-labelledby="mechanicRecordModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="mechanicRecordModalLabel">
+                    <i class="fas fa-plus me-2"></i>Add Record
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="mechanicRecordForm">
+                    @csrf
+                    <input type="hidden" id="mechanic_record_id" value="">
+                    <input type="hidden" id="mechanic_record_type" value="parts">
+                    <div class="mb-3">
+                        <label for="mechanic_description" class="form-label" id="mechanic_description_label">Description <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="mechanic_description" required maxlength="500">
+                    </div>
+                    <div class="mb-3">
+                        <label for="mechanic_amount" class="form-label">Amount <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">₱</span>
+                            <input type="number" class="form-control" id="mechanic_amount" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                    <div class="mb-3 d-none" id="mechanic_external_fields">
+                        <div class="mb-3">
+                            <label for="mechanic_repaired_by" class="form-label">Repaired By</label>
+                            <input type="text" class="form-control" id="mechanic_repaired_by" maxlength="255">
+                        </div>
+                        <div class="mb-3">
+                            <label for="mechanic_unit_label" class="form-label">Unit</label>
+                            <input type="text" class="form-control" id="mechanic_unit_label" maxlength="255">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="mechanic_expense_date" class="form-label">Date <span class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="mechanic_expense_date" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-primary" onclick="saveMechanicRecord()">
+                    <i class="fas fa-save me-1"></i>Save
                 </button>
             </div>
         </div>
@@ -2109,35 +2440,22 @@ function openEditToolModal(toolId) {
     isEditMode = true;
     document.getElementById('toolModalLabel').innerHTML = '<i class="fas fa-edit me-2"></i>Edit Tool';
     
-    const row = document.querySelector(`tr[data-tool-id="${toolId}"]`);
-    if (!row) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Tool not found',
-            confirmButtonColor: '#dc3545'
-        });
-        return;
-    }
-    
-    const cells = row.querySelectorAll('td');
-    if (cells.length < 4) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Could not extract tool data',
-            confirmButtonColor: '#dc3545'
-        });
-        return;
-    }
-    
     document.getElementById('tool_id').value = toolId;
-    document.getElementById('tool_name').value = cells[1].textContent.trim();
-    document.getElementById('tool_quantity').value = parseInt(cells[2].textContent.trim());
-    
-    const amountText = cells[3].textContent.trim().replace('₱', '').replace(/,/g, '');
-    document.getElementById('tool_amount').value = parseFloat(amountText).toFixed(2);
-    
+
+    const row = document.querySelector(`tr[data-tool-id="${toolId}"]`);
+    if (row) {
+        const cells = row.querySelectorAll('td');
+        // Movements table: # | Date | Type | Tool name | Qty | Amount | Notes | Actions
+        if (cells.length >= 6) {
+            document.getElementById('tool_name').value = cells[3].textContent.trim();
+            const qtyText = cells[4].textContent.trim().replace('+', '');
+            document.getElementById('tool_quantity').value = Math.abs(parseInt(qtyText, 10) || 1);
+            const amountText = cells[5].textContent.trim().replace('₱', '').replace(/,/g, '').replace('—', '0');
+            const amountVal = parseFloat(amountText);
+            document.getElementById('tool_amount').value = Number.isFinite(amountVal) ? amountVal.toFixed(2) : '0.00';
+        }
+    }
+
     const modal = new bootstrap.Modal(document.getElementById('toolModal'));
     modal.show();
     
@@ -2145,6 +2463,9 @@ function openEditToolModal(toolId) {
         .then(response => response.json())
         .then(data => {
             if (data.success && data.tool) {
+                document.getElementById('tool_name').value = data.tool.name || '';
+                document.getElementById('tool_quantity').value = data.tool.quantity;
+                document.getElementById('tool_amount').value = parseFloat(data.tool.amount).toFixed(2);
                 document.getElementById('tool_date_acquired').value = data.tool.date_acquired;
             }
         })
@@ -2301,6 +2622,187 @@ function deleteTool(toolId) {
                 });
             });
         }
+    });
+}
+
+function openMechanicRecordModal(type, id = null) {
+    const isExternal = type === 'external';
+    const label = isExternal ? 'External Expense' : 'Part';
+    document.getElementById('mechanicRecordModalLabel').innerHTML =
+        `<i class="fas fa-${id ? 'edit' : 'plus'} me-2"></i>${id ? 'Edit' : 'Add'} ${label}`;
+    document.getElementById('mechanic_record_id').value = id || '';
+    document.getElementById('mechanic_record_type').value = type;
+    document.getElementById('mechanic_description').value = '';
+    document.getElementById('mechanic_amount').value = '';
+    document.getElementById('mechanic_repaired_by').value = '';
+    document.getElementById('mechanic_unit_label').value = '';
+    document.getElementById('mechanic_expense_date').value = new Date().toISOString().split('T')[0];
+    document.getElementById('mechanic_description_label').innerHTML =
+        (isExternal ? 'Expenses' : 'Parts') + ' <span class="text-danger">*</span>';
+    document.getElementById('mechanic_external_fields').classList.toggle('d-none', !isExternal);
+
+    const modal = new bootstrap.Modal(document.getElementById('mechanicRecordModal'));
+    modal.show();
+
+    if (id) {
+        fetch(`/api/mechanic-expense-records/${id}`, {
+            headers: { 'Accept': 'application/json' }
+        })
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success || !data.record) return;
+            const rec = data.record;
+            document.getElementById('mechanic_description').value = rec.description || '';
+            document.getElementById('mechanic_amount').value = Number(rec.amount || 0).toFixed(2);
+            document.getElementById('mechanic_repaired_by').value = rec.repaired_by || '';
+            document.getElementById('mechanic_unit_label').value = rec.unit_label || '';
+            document.getElementById('mechanic_expense_date').value = rec.expense_date || '';
+            document.getElementById('mechanic_record_type').value = rec.record_type || type;
+        })
+        .catch(err => console.error('Error loading record:', err));
+    }
+}
+
+function saveMechanicRecord() {
+    const form = document.getElementById('mechanicRecordForm');
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    const id = document.getElementById('mechanic_record_id').value;
+    const type = document.getElementById('mechanic_record_type').value;
+    const formData = {
+        record_type: type,
+        description: document.getElementById('mechanic_description').value.trim(),
+        amount: parseFloat(document.getElementById('mechanic_amount').value),
+        expense_date: document.getElementById('mechanic_expense_date').value,
+        repaired_by: document.getElementById('mechanic_repaired_by').value.trim() || null,
+        unit_label: document.getElementById('mechanic_unit_label').value.trim() || null,
+    };
+
+    const url = id ? `/api/mechanic-expense-records/${id}` : '/api/mechanic-expense-records';
+    const method = id ? 'PUT' : 'POST';
+    const label = type === 'external' ? 'external expense' : 'part';
+
+    Swal.fire({
+        title: id ? `Update ${label}?` : `Add ${label}?`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: id ? 'Yes, Update!' : 'Yes, Add!',
+        cancelButtonText: 'Cancel',
+        reverseButtons: true
+    }).then((result) => {
+        if (!result.isConfirmed) return;
+
+        Swal.fire({
+            title: 'Saving...',
+            text: 'Please wait...',
+            icon: 'info',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            willOpen: () => Swal.showLoading()
+        });
+
+        fetch(url, {
+            method,
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.message || 'Failed to save record');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (!data.success) throw new Error(data.message || 'Failed to save record');
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: data.message,
+                confirmButtonColor: '#28a745',
+                timer: 2000,
+                timerProgressBar: true
+            }).then(() => location.reload());
+        })
+        .catch(error => {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: error.message || 'Failed to save record',
+                confirmButtonColor: '#dc3545'
+            });
+        });
+    });
+}
+
+function deleteMechanicRecord(id, type) {
+    const label = type === 'external' ? 'external expense' : 'part';
+    Swal.fire({
+        title: `Delete ${label}?`,
+        text: 'This action cannot be undone.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Yes, Delete!',
+        cancelButtonText: 'Cancel',
+        reverseButtons: true
+    }).then((result) => {
+        if (!result.isConfirmed) return;
+
+        Swal.fire({
+            title: 'Deleting...',
+            text: 'Please wait...',
+            icon: 'info',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            willOpen: () => Swal.showLoading()
+        });
+
+        fetch(`/api/mechanic-expense-records/${id}`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                'Accept': 'application/json'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(data => {
+                    throw new Error(data.message || 'Failed to delete record');
+                });
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (!data.success) throw new Error(data.message || 'Failed to delete record');
+            Swal.fire({
+                icon: 'success',
+                title: 'Deleted!',
+                text: data.message,
+                confirmButtonColor: '#28a745',
+                timer: 2000,
+                timerProgressBar: true
+            }).then(() => location.reload());
+        })
+        .catch(error => {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error!',
+                text: error.message || 'Failed to delete record',
+                confirmButtonColor: '#dc3545'
+            });
+        });
     });
 }
 </script>

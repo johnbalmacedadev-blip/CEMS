@@ -5,6 +5,7 @@
 
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+DEPLOY_DIR="$(cd "$ROOT/.." && pwd)/deploy"
 cd "$ROOT"
 
 SCRIBE_CONFIG="$ROOT/config/scribe.php"
@@ -22,12 +23,21 @@ echo "[2/7] Generate API docs (Scribe)..."
 php artisan scribe:generate --force || echo "Warning: Scribe failed"
 
 echo "[3/7] Build feature docs into public/documentation..."
-if [ ! -d documentation/node_modules ]; then
-  (cd documentation && npm ci)
+if [ ! -d documentation ]; then
+  if [ -f public/documentation/index.html ]; then
+    echo "  documentation/ source missing; using existing public/documentation build."
+  else
+    echo "Missing documentation/ source and public/documentation/index.html." >&2
+    exit 1
+  fi
+else
+  if [ ! -d documentation/node_modules ]; then
+    (cd documentation && npm ci)
+  fi
+  export DOCUSAURUS_BASE_URL="/documentation/"
+  export DOCUSAURUS_URL="https://your-domain.com"
+  (cd documentation && npm run build:laravel)
 fi
-export DOCUSAURUS_BASE_URL="/documentation/"
-export DOCUSAURUS_URL="https://your-domain.com"
-(cd documentation && npm run build:laravel)
 
 echo "[4/7] Backup Scribe config, then composer install --no-dev..."
 if [ -f "$SCRIBE_CONFIG" ]; then
@@ -52,8 +62,8 @@ done
 
 if [ "${SKIP_ARCHIVE:-}" != "1" ]; then
   STAMP=$(date +%Y-%m-%d)
-  ZIP="deploy/CEMS-deploy-${STAMP}.tar.gz"
-  mkdir -p deploy
+  ZIP="$DEPLOY_DIR/CEMS-deploy-${STAMP}.tar.gz"
+  mkdir -p "$DEPLOY_DIR"
   tar --exclude='node_modules' --exclude='.git' --exclude='documentation/node_modules' \
       --exclude='documentation/build' --exclude='documentation/export' --exclude='deploy' \
       --exclude='.env' --exclude='.env.backup' --exclude='config/scribe.php' \

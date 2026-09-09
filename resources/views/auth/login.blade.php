@@ -115,6 +115,10 @@
             padding: 0.75rem 1rem;
             transition: all 0.3s ease;
         }
+
+        #password.form-control {
+            padding-right: 2.75rem;
+        }
         
         .form-floating > .form-control:focus {
             background-color: rgba(45, 45, 45, 1);
@@ -134,13 +138,27 @@
             color: #dc3545;
         }
         
-        /* Password toggle button */
+        /* Password toggle button — centered in the field, not on the border */
         #togglePassword {
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 2.75rem;
+            height: auto;
+            margin: 0;
+            padding: 0;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             color: #b0b0b0 !important;
             text-decoration: none;
-            padding: 0;
-            margin: 0;
+            border: none;
+            background: transparent;
+            box-shadow: none;
             cursor: pointer;
+            transform: none !important;
             transition: color 0.3s ease;
         }
         
@@ -151,12 +169,6 @@
         #togglePassword:focus {
             outline: none;
             box-shadow: none;
-        }
-        
-        .form-floating > .form-control:not(:placeholder-shown) ~ #togglePassword {
-            top: 50%;
-            transform: translateY(-50%);
-            margin-top: 0;
         }
         
         .btn-login {
@@ -346,8 +358,7 @@
                 <input type="password" class="form-control @error('password') is-invalid @enderror" 
                        id="password" name="password" placeholder="Password" 
                        required autocomplete="current-password">
-                <button type="button" class="btn btn-link text-white position-absolute end-0 top-0 h-100 d-flex align-items-center pe-3" 
-                        id="togglePassword" style="z-index: 10; border: none; background: transparent; outline: none;">
+                <button type="button" class="btn btn-link" id="togglePassword" aria-label="Show password">
                     <i class="fas fa-eye" id="eyeIcon"></i>
                 </button>
                 <label for="password">

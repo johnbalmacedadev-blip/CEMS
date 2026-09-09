@@ -398,16 +398,29 @@
     let pollTimer = null;
     let renderedIds = new Set();
     let unreadCount = 0;
-    let initialized = false;
 
-    const storageKey = 'liveChatLastReadId';
+    const storageKey = 'liveChatLastReadId:' + currentUserId;
 
     function getLastReadId() {
-        return parseInt(localStorage.getItem(storageKey) || '0', 10);
+        const scoped = parseInt(localStorage.getItem(storageKey) || '0', 10);
+        if (scoped > 0) {
+            return scoped;
+        }
+        return parseInt(localStorage.getItem('liveChatLastReadId') || '0', 10);
     }
 
     function setLastReadId(id) {
-        localStorage.setItem(storageKey, String(id));
+        if (id > 0) {
+            localStorage.setItem(storageKey, String(id));
+        }
+    }
+
+    function markAllRead() {
+        unreadCount = 0;
+        if (lastMessageId > 0) {
+            setLastReadId(lastMessageId);
+        }
+        showUnreadBadge();
     }
 
     function escHtml(str) {
@@ -419,12 +432,7 @@
     function openChat() {
         isOpen = true;
         widget.classList.remove('is-minimized');
-        unreadCount = 0;
-        badge.hidden = true;
-        badge.textContent = '0';
-        if (lastMessageId > 0) {
-            setLastReadId(lastMessageId);
-        }
+        markAllRead();
         inputEl.focus();
         scrollToBottom();
     }
@@ -432,9 +440,7 @@
     function closeChat() {
         isOpen = false;
         widget.classList.add('is-minimized');
-        if (lastMessageId > 0) {
-            setLastReadId(lastMessageId);
-        }
+        markAllRead();
     }
 
     function scrollToBottom() {
@@ -494,14 +500,11 @@
     function showUnreadBadge() {
         if (unreadCount <= 0) {
             badge.hidden = true;
+            badge.textContent = '0';
             return;
         }
         badge.hidden = false;
         badge.textContent = unreadCount > 99 ? '99+' : String(unreadCount);
-    }
-
-    function updateUnread() {
-        showUnreadBadge();
     }
 
     async function syncChat(initial) {
@@ -520,16 +523,25 @@
             if (initial) {
                 messagesEl.querySelectorAll('.live-chat-msg').forEach(el => el.remove());
                 renderedIds.clear();
+                unreadCount = 0;
                 if (emptyEl) emptyEl.style.display = '';
             }
 
+            const storedReadId = getLastReadId();
+            const firstVisit = storedReadId <= 0;
             let hadNew = false;
             (data.messages || []).forEach(msg => {
                 if (msg.id > lastMessageId) lastMessageId = msg.id;
                 const isNew = !renderedIds.has(msg.id);
                 renderMessage(msg);
                 if (isNew) hadNew = true;
-                if (isNew && !isOpen && msg.user_id !== currentUserId) {
+                if (
+                    isNew
+                    && !isOpen
+                    && !firstVisit
+                    && msg.user_id !== currentUserId
+                    && msg.id > storedReadId
+                ) {
                     unreadCount++;
                 }
             });
@@ -540,18 +552,14 @@
 
             renderOnline(data.online_users || []);
 
-            if (!initialized) {
-                initialized = true;
-                if (!isOpen && lastMessageId > 0) {
-                    setLastReadId(lastMessageId);
-                }
+            if (isOpen || firstVisit) {
+                markAllRead();
+            } else {
+                showUnreadBadge();
             }
 
             if (hadNew && isOpen) {
-                setLastReadId(lastMessageId);
                 scrollToBottom();
-            } else if (hadNew && !isOpen) {
-                updateUnread();
             }
         } catch (e) {
             /* ignore network errors during poll */

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Sales Report Export</title>
+    <title>Car Sales Report Export</title>
     <style>
         body { font-family: DejaVu Sans, sans-serif; font-size: 9px; margin: 12px; color: #222; }
         h1 { font-size: 14px; margin: 0 0 8px 0; border-bottom: 2px solid #333; padding-bottom: 5px; }
@@ -17,10 +17,11 @@
     </style>
 </head>
 <body>
-    <h1>Sales Report — Released Units</h1>
+    <h1>Car Sales Report — Released Units</h1>
     <p class="meta">
         <strong>Period:</strong> {{ $periodOptions[$selectedPeriod] ?? $selectedPeriod }}<br>
         <strong>Date Filter:</strong> {{ $activeRangeLabel ?? '' }}<br>
+        <strong>Location:</strong> {{ ($selectedLocation ?? '') !== '' ? $selectedLocation : 'All Locations' }}<br>
         <strong>Generated:</strong> {{ date('F j, Y g:i A') }}
     </p>
 
@@ -33,12 +34,29 @@
                         @foreach($pair as $s)
                             <td>
                                 <strong>{{ $s['label'] ?? '' }}</strong><br>
-                                @if(!empty($s['is_currency']))
+                                @if(!empty($s['is_composite']) && !empty($s['items']))
+                                    @foreach($s['items'] as $item)
+                                        {{ $item['label'] ?? '' }}:
+                                        @if(!empty($item['is_currency']))
+                                            ₱{{ number_format((float) ($item['value'] ?? 0), 2) }}
+                                        @else
+                                            {{ number_format((float) ($item['value'] ?? 0), 0) }}
+                                        @endif
+                                        @if(!$loop->last)<br>@endif
+                                    @endforeach
+                                @elseif(!empty($s['is_currency']))
                                     ₱{{ number_format((float) ($s['value'] ?? 0), 2) }}
                                 @elseif(!empty($s['suffix']))
                                     {{ number_format((float) ($s['value'] ?? 0), 1) }}{{ $s['suffix'] }}
                                 @else
                                     {{ number_format((float) ($s['value'] ?? 0), 0) }}
+                                @endif
+                                @if(!empty($s['location_breakdown']) && is_array($s['location_breakdown']))
+                                    <div style="font-size: 10px; color: #555; margin-top: 4px;">
+                                        @foreach($s['location_breakdown'] as $loc)
+                                            {{ $loc['label'] ?? '' }}: {{ number_format((int) ($loc['count'] ?? 0)) }}@if(!$loop->last)<br>@endif
+                                        @endforeach
+                                    </div>
                                 @endif
                             </td>
                         @endforeach
@@ -51,6 +69,34 @@
         </table>
     @endif
 
+    @if(!empty($tables['miscellaneous']))
+        <h2>Miscellaneous</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Transaction Date</th>
+                    <th>Location</th>
+                    <th>Description</th>
+                    <th class="text-right">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($tables['miscellaneous'] as $row)
+                    <tr>
+                        <td>{{ $row['transaction_date_label'] ?? $row['transaction_date'] ?? '' }}</td>
+                        <td>{{ $row['location'] ?? '—' }}</td>
+                        <td>{{ $row['description'] ?? '' }}</td>
+                        <td class="text-right">₱{{ number_format((float) ($row['amount'] ?? 0), 2) }}</td>
+                    </tr>
+                @endforeach
+                <tr>
+                    <td colspan="3"><strong>Total</strong></td>
+                    <td class="text-right"><strong>₱{{ number_format((float) ($tables['miscellaneous_total'] ?? 0), 2) }}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+    @endif
+
     @if(!empty($charts) && is_array($charts))
         <h2>Charts</h2>
         @foreach($charts as $chartConfig)
@@ -59,14 +105,14 @@
     @endif
 
     @if(!empty($tables['top_makes']))
-        <h2>Top Makes</h2>
+        <h2>All Makes</h2>
         <table>
             <thead>
                 <tr>
                     <th>#</th>
                     <th>Make</th>
                     <th class="text-right">Units</th>
-                    <th class="text-right">Sales</th>
+                    <th class="text-right">Gross Revenue</th>
                 </tr>
             </thead>
             <tbody>
@@ -79,18 +125,25 @@
                     </tr>
                 @endforeach
             </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2"><strong>Total</strong></td>
+                    <td class="text-right"><strong>{{ number_format((float) collect($tables['top_makes'])->sum('count'), 0) }}</strong></td>
+                    <td class="text-right"><strong>₱{{ number_format((float) collect($tables['top_makes'])->sum('sales'), 2) }}</strong></td>
+                </tr>
+            </tfoot>
         </table>
     @endif
 
     @if(!empty($tables['top_models']))
-        <h2>Top Models</h2>
+        <h2>All Models</h2>
         <table>
             <thead>
                 <tr>
                     <th>#</th>
                     <th>Model</th>
                     <th class="text-right">Units</th>
-                    <th class="text-right">Sales</th>
+                    <th class="text-right">Gross Revenue</th>
                 </tr>
             </thead>
             <tbody>
@@ -103,6 +156,13 @@
                     </tr>
                 @endforeach
             </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2"><strong>Total</strong></td>
+                    <td class="text-right"><strong>{{ number_format((float) collect($tables['top_models'])->sum('count'), 0) }}</strong></td>
+                    <td class="text-right"><strong>₱{{ number_format((float) collect($tables['top_models'])->sum('sales'), 2) }}</strong></td>
+                </tr>
+            </tfoot>
         </table>
     @endif
 
@@ -126,30 +186,6 @@
                         <td class="text-right">{{ number_format((float) ($row['avg_days'] ?? 0), 1) }}</td>
                         <td class="text-right">{{ number_format((float) ($row['count'] ?? 0), 0) }}</td>
                         <td class="text-right">₱{{ number_format((float) ($row['sales'] ?? 0), 2) }}</td>
-                    </tr>
-                @endforeach
-            </tbody>
-        </table>
-    @endif
-
-    @if(!empty($tables['monthly']))
-        <h2>Monthly Breakdown</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Month</th>
-                    <th class="text-right">Units Released</th>
-                    <th class="text-right">Sales Amount</th>
-                    <th class="text-right">Avg Days to Sell</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($tables['monthly'] as $row)
-                    <tr>
-                        <td>{{ $row['label'] ?? '' }}</td>
-                        <td class="text-right">{{ number_format((float) ($row['count'] ?? 0), 0) }}</td>
-                        <td class="text-right">₱{{ number_format((float) ($row['sales'] ?? 0), 2) }}</td>
-                        <td class="text-right">{{ number_format((float) ($row['avg_days'] ?? 0), 1) }}</td>
                     </tr>
                 @endforeach
             </tbody>

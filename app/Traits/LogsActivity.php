@@ -31,20 +31,24 @@ trait LogsActivity
         // Get current page/route name
         $page = $this->getCurrentPage();
 
-        ActivityLog::create([
-            'user_id' => $user->id,
-            'action' => $action,
-            'model_type' => $modelType,
-            'model_id' => $modelId,
-            'description' => $description,
-            'page' => $page,
-            'section' => $section,
-            'changes' => $changes,
-            'ip_address' => Request::ip(),
-            'user_agent' => Request::userAgent(),
-        ]);
+        try {
+            ActivityLog::create([
+                'user_id' => $user->id,
+                'action' => $action,
+                'model_type' => $modelType,
+                'model_id' => $modelId,
+                'description' => $description,
+                'page' => $page,
+                'section' => $section,
+                'changes' => $changes,
+                'ip_address' => Request::ip(),
+                'user_agent' => Request::userAgent(),
+            ]);
 
-        ActivityLogger::markLogged(request());
+            ActivityLogger::markLogged(request());
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     /**

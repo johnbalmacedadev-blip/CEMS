@@ -40,7 +40,7 @@
 
     <div class="card">
         <div class="card-body">
-            <form action="{{ route('settings.users.update', $user) }}" method="POST">
+            <form action="{{ route('settings.users.update', $user) }}" method="POST" data-no-preloader>
                 @csrf
                 @method('PUT')
                 <div class="row">

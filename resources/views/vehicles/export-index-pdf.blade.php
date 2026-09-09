@@ -26,11 +26,14 @@
                 <th>Model</th>
                 <th>Variant</th>
                 <th>Plate</th>
+                <th>Excel Tab</th>
                 <th>Colour</th>
                 <th>Trans.</th>
                 <th>Fuel</th>
                 <th class="text-right">KM</th>
+                @canViewPurchasePrice
                 <th class="text-right">Purchase</th>
+                @endcanViewPurchasePrice
                 <th>Status</th>
                 <th>Purchased From</th>
             </tr>
@@ -52,16 +55,19 @@
                     <td>{{ $modelLabel }}</td>
                     <td>{{ $v->variant ?: '—' }}</td>
                     <td class="nowrap">{{ $v->plate_number }}</td>
+                    <td>{{ $v->getAttribute('excel_source_tab') ?: '—' }}</td>
                     <td>{{ $v->colour }}</td>
                     <td>{{ $v->transmission }}</td>
                     <td>{{ $v->fuel_type }}</td>
                     <td class="text-right">{{ $v->kilometers !== null ? number_format($v->kilometers) : '—' }}</td>
+                    @canViewPurchasePrice
                     <td class="text-right nowrap">{{ $v->formatted_purchase_price }}</td>
+                    @endcanViewPurchasePrice
                     <td>{{ $displayStatus }}</td>
                     <td>{{ Str::limit($v->purchased_from ?? '', 40) ?: '—' }}</td>
                 </tr>
             @empty
-                <tr><td colspan="12">No vehicles match the current filters.</td></tr>
+                <tr><td colspan="{{ auth()->user()?->canViewPurchasePrice() ? 14 : 13 }}">No vehicles match the current filters.</td></tr>
             @endforelse
         </tbody>
     </table>

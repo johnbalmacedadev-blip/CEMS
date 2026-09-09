@@ -437,7 +437,7 @@
             <button class="btn btn-outline-light me-3" type="button" id="sidebarToggle">
                 <i class="fas fa-bars"></i>
             </button>
-            <a class="navbar-brand" href="{{ route('dashboard') }}">
+            <a class="navbar-brand" href="{{ route('home') }}">
                 <img src="{{ asset('images/CAREMPIRE_LOGO.png') }}" alt="CAR EMPIRE Logo" onerror="this.style.display='none';">
             </a>
             
@@ -925,7 +925,9 @@
     @include('partials.flash-alert')
 
     @auth
-        @include('partials.live-chat')
+        @if(request()->routeIs('home'))
+            @include('partials.live-chat')
+        @endif
     @endauth
 </body>
 </html>

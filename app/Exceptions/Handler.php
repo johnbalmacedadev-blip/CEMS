@@ -36,7 +36,22 @@ class Handler extends ExceptionHandler
      */
     public function render($request, Throwable $e)
     {
-        $shouldSuppressDetails = app()->environment('production') || $e instanceof \Illuminate\Database\QueryException;
+        // Expected auth/validation/HTTP responses must not become a generic 500 page.
+        if ($e instanceof \Illuminate\Validation\ValidationException
+            || $e instanceof \Illuminate\Auth\AuthenticationException
+            || $e instanceof \Illuminate\Session\TokenMismatchException
+            || $e instanceof \Symfony\Component\HttpKernel\Exception\HttpExceptionInterface
+            || $e instanceof \Illuminate\Http\Exceptions\HttpResponseException
+        ) {
+            return parent::render($request, $e);
+        }
+
+        $shouldSuppressDetails = $e instanceof \Illuminate\Database\QueryException;
+        try {
+            $shouldSuppressDetails = $shouldSuppressDetails || app()->environment('production');
+        } catch (Throwable $envCheckFailure) {
+            // Container may be half-booted (e.g. interrupted composer); show the real error locally.
+        }
         if (! $shouldSuppressDetails) {
             return parent::render($request, $e);
         }

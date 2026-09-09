@@ -2,6 +2,7 @@
 /documentation/node_modules
 /documentation/build
 /documentation/export
+# Deploy archives live in ../deploy (outside this project)
 /deploy/*.zip
 /deploy/*.tar.gz
 /.scribe
@@ -38,6 +39,10 @@ yarn-error.log
 /storage/logs/*
 !/storage/logs/.gitignore
 /storage/app/public/*
+/storage/app/imports/*
+!/storage/app/imports/.gitignore
+/storage/app/*_import.json
+/storage/app/excel_units_snapshot.json
 !/storage/app/public/.gitignore
 
 /bootstrap/cache/*

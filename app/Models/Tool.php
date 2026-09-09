@@ -16,6 +16,7 @@ class Tool extends Model
         'quantity',
         'amount',
         'date_acquired',
+        'entry_type',
     ];
 
     protected $casts = [
@@ -23,6 +24,16 @@ class Tool extends Model
         'quantity' => 'integer',
         'amount' => 'decimal:2',
     ];
+
+    public function scopePurchases($query)
+    {
+        return $query->where('entry_type', 'purchase');
+    }
+
+    public function scopeInventory($query)
+    {
+        return $query->where('entry_type', 'inventory');
+    }
 
     /**
      * Get formatted amount

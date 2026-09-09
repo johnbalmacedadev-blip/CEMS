@@ -45,7 +45,9 @@ class ToolsController extends Controller
             'date_acquired' => 'required|date',
         ]);
 
-        $tool = Tool::create($request->all());
+        $tool = Tool::create(array_merge($request->only(['name', 'quantity', 'amount', 'date_acquired']), [
+            'entry_type' => 'purchase',
+        ]));
 
         // Log activity
         $this->logCreate($tool);

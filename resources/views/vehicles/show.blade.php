@@ -391,10 +391,12 @@
                                     <!-- Purchase Information -->
                                     <hr class="my-2">
                                     <div class="row">
+                                        @canViewPurchasePrice
                                         <div class="col-md-3 col-lg-2 mb-2">
                                             <label class="form-label fw-bold mb-0" style="font-size: 0.85rem; margin-bottom: 0.1rem !important;">Purchase Price</label>
                                             <p class="form-control-plaintext mb-0" style="font-size: 0.9rem;">{{ $vehicle->formatted_purchase_price }}</p>
                                         </div>
+                                        @endcanViewPurchasePrice
                                         <div class="col-md-3 col-lg-2 mb-2">
                                             <label class="form-label fw-bold mb-0" style="font-size: 0.85rem; margin-bottom: 0.1rem !important;">Purchase Date</label>
                                             <p class="form-control-plaintext mb-0" style="font-size: 0.9rem;">{{ $vehicle->formatted_purchase_date }}</p>
@@ -1396,7 +1398,7 @@
                         @endphp
                         @if($hasReservationDetails)
                         <!-- Forfeit Details Section -->
-                        <div class="accordion-item">
+                        <div class="accordion-item" id="forfeit-details">
                             <h2 class="accordion-header" id="forfetDetailsHeading">
                                 <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#forfetDetailsCollapse" aria-expanded="false" aria-controls="forfetDetailsCollapse">
                                     <i class="fas fa-gavel me-2"></i>Forfeit Details
