@@ -84,16 +84,26 @@ class Handler extends ExceptionHandler
             $status = (int) $e->getStatusCode();
         }
 
-        // Use generic views only; avoid exposing exception messages.
-        if ($status === 403 && view()->exists('errors.403')) {
-            return response()->view('errors.403', ['error_id' => $errorId], 403);
+        // Use generic views only when the view service is already booted.
+        // Early bootstrap failures have no "view" binding — calling view() causes a blank 500.
+        try {
+            if (app()->bound('view')) {
+                if ($status === 403 && view()->exists('errors.403')) {
+                    return response()->view('errors.403', ['error_id' => $errorId], 403);
+                }
+
+                if (view()->exists('errors.500')) {
+                    return response()->view('errors.500', ['error_id' => $errorId], 500);
+                }
+            }
+        } catch (Throwable $viewFailure) {
+            // fall through to plain text
         }
 
-        if (view()->exists('errors.500')) {
-            return response()->view('errors.500', ['error_id' => $errorId], 500);
-        }
-
-        return response('An unexpected server error occurred.', $status);
+        return response(
+            'An unexpected server error occurred.'.($errorId ? " (error_id: {$errorId})" : ''),
+            $status
+        );
     }
 }
 
