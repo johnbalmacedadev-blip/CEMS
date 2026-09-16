@@ -23,21 +23,22 @@ class AppServiceProvider extends ServiceProvider
         // Use Bootstrap 4 pagination
         \Illuminate\Pagination\Paginator::useBootstrapFour();
 
-        // Behind cPanel / Cloudflare, force HTTPS + correct subdirectory root from APP_URL
+        // Behind cPanel / Cloudflare: HTTPS when needed, and subdirectory root only when APP_URL has a path
+        // (e.g. https://carempireph.com/db-system). Do not forceRootUrl for plain local APP_URL —
+        // that breaks php artisan serve on 127.0.0.1:8000 when APP_URL is http://localhost.
         $appUrl = (string) config('app.url');
         if ($appUrl !== '') {
             if (str_starts_with($appUrl, 'https://')) {
                 \Illuminate\Support\Facades\URL::forceScheme('https');
             }
             $parts = parse_url($appUrl);
-            if (! empty($parts['host'])) {
+            $path = isset($parts['path']) ? rtrim($parts['path'], '/') : '';
+            if (! empty($parts['host']) && $path !== '' && $path !== '/') {
                 $root = ($parts['scheme'] ?? 'https').'://'.$parts['host'];
                 if (! empty($parts['port'])) {
                     $root .= ':'.$parts['port'];
                 }
-                if (! empty($parts['path']) && $parts['path'] !== '/') {
-                    $root .= rtrim($parts['path'], '/');
-                }
+                $root .= $path;
                 \Illuminate\Support\Facades\URL::forceRootUrl($root);
             }
         }
