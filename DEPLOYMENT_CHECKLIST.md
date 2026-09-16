@@ -228,7 +228,47 @@ php artisan view:cache
 
 ---
 
-## Quick deploy from this PC (cPanel)
+## GitHub → cPanel auto-deploy (`http://crmstagingsite.com/repo/`)
+
+Push to GitHub updates the live folder when cPanel Git is linked and auto-deploy is on.
+
+### One-time setup in cPanel
+
+1. **cPanel → Git Version Control → Create**
+   - Clone URL: your GitHub repo (`https://github.com/johnbalmacedadev-blip/CEMS.git`)
+   - Repository Path: e.g. `public_html/repo` (must be the folder served at `/repo/`)
+   - Repository Name: `CEMS`
+2. If the repo is private, add the **cPanel deploy key** (shown in Git Version Control) to GitHub → Settings → Deploy keys.
+3. After clone, open the repo in cPanel → **Pull or Deploy** → check **Deploy HEAD Commit** / automatic deployment.
+4. Confirm `.cpanel.yml` exists in the repo (it runs `scripts/cpanel-post-deploy.sh` after each pull).
+5. **First time only** — if `.env` was not created by the script, in File Manager under `public_html/repo`:
+   - Copy `.env.production.example` → `.env`
+   - Confirm DB values:
+     - `DB_DATABASE=thevclo_car_erp`
+     - `DB_USERNAME=thevclo_car_erp`
+     - `DB_PASSWORD="car_erp!@#$567890"`
+   - Confirm `APP_URL=http://crmstagingsite.com/repo`
+   - Set a strong `DEPLOY_TOKEN=...`
+6. In cPanel MySQL, ensure database `thevclo_car_erp` exists and the user has full privileges.
+7. Optional — for true push-to-live: in Git Version Control copy the **Webhook URL** into GitHub → Settings → Webhooks (payload URL). If your host has no webhook, use **Update from Remote** after each push, or enable automatic deploy if offered.
+
+### What each push does
+
+1. cPanel pulls latest `main`
+2. `.cpanel.yml` runs `scripts/cpanel-post-deploy.sh`
+3. Script installs Composer deps (if available), creates `.env` once, sets `/repo` rewrites, runs `migrate` + cache rebuild
+
+**Never commit `.env`.** The server keeps its own `.env`; deploys do not overwrite it.
+
+### Manual post-deploy (if artisan CLI fails on host)
+
+Open (use your real token):
+
+`http://crmstagingsite.com/repo/deploy/run?token=YOUR_DEPLOY_TOKEN`
+
+---
+
+## Quick deploy from this PC (FTP/SFTP)
 
 1. Copy `.env.deploy.example` → `.env.deploy` and fill FTP/SFTP + MySQL values.
 2. Prefer **SFTP** (main cPanel SSH account). FTP add-on users often cannot use SSH, and FTP PASV ports are frequently blocked.
@@ -238,7 +278,7 @@ php artisan view:cache
 .\scripts\deploy-to-live.ps1
 ```
 
-This prepares the package, uploads into the remote folder (for `https://carempireph.com/db-system/`), and calls `/deploy/run?token=...` to migrate + cache.
+This prepares the package, uploads into the remote folder, and calls `/deploy/run?token=...` to migrate + cache.
 
 ---
 

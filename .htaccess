@@ -1,0 +1,5 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Laravel app lives under /repo — send all traffic into public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

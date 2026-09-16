@@ -1,0 +1,7 @@
+---
+# cPanel Git Version Control — runs after each pull/deploy.
+# Clone this repo into the web folder for http://crmstagingsite.com/repo/
+# (usually ~/public_html/repo) and enable automatic deployment in cPanel.
+deployment:
+  tasks:
+    - /bin/bash scripts/cpanel-post-deploy.sh
