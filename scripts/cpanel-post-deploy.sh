@@ -7,9 +7,37 @@ cd "$ROOT"
 
 echo "[cpanel-deploy] Starting in $ROOT"
 
-# Keep Laravel writable
-mkdir -p storage/framework/{cache,sessions,views} storage/logs bootstrap/cache
-chmod -R ug+rwx storage bootstrap/cache 2>/dev/null || true
+# Required writable dirs (must exist after Git pull)
+mkdir -p \
+  bootstrap/cache \
+  storage/app/public \
+  storage/app/imports \
+  storage/framework/cache/data \
+  storage/framework/sessions \
+  storage/framework/testing \
+  storage/framework/views \
+  storage/logs
+
+# Ensure placeholder ignore files exist (keeps empty dirs in git + on disk)
+for f in \
+  bootstrap/cache/.gitignore \
+  storage/app/.gitignore \
+  storage/app/public/.gitignore \
+  storage/app/imports/.gitignore \
+  storage/framework/cache/.gitignore \
+  storage/framework/cache/data/.gitignore \
+  storage/framework/sessions/.gitignore \
+  storage/framework/testing/.gitignore \
+  storage/framework/views/.gitignore \
+  storage/logs/.gitignore
+do
+  if [ ! -f "$f" ]; then
+    printf '*\n!.gitignore\n' > "$f"
+  fi
+done
+
+# cPanel PHP user must write here
+chmod -R 775 bootstrap/cache storage 2>/dev/null || chmod -R 777 bootstrap/cache storage 2>/dev/null || true
 
 # First deploy only: create .env from production example (never overwrite existing)
 if [ ! -f .env ]; then
@@ -25,7 +53,6 @@ fi
 # Subdirectory rewrite for http://crmstagingsite.com/repo/
 if [ -f public/.htaccess ]; then
   if ! grep -q "RewriteBase /repo/public/" public/.htaccess; then
-    # Insert RewriteBase after RewriteEngine On
     sed -i.bak 's|RewriteEngine On|RewriteEngine On\n    RewriteBase /repo/public/|' public/.htaccess || true
     rm -f public/.htaccess.bak
     echo "[cpanel-deploy] Set RewriteBase /repo/public/"
@@ -43,7 +70,6 @@ EOF
   echo "[cpanel-deploy] Wrote root .htaccess → public/"
 fi
 
-# Composer (cPanel often has php /usr/local/bin/composer or ~/bin/composer)
 COMPOSER_BIN=""
 for c in composer composer.phar /usr/local/bin/composer "$HOME/bin/composer"; do
   if command -v "$c" >/dev/null 2>&1; then
@@ -68,7 +94,6 @@ else
   echo "[cpanel-deploy] WARNING: composer not found — ensure vendor/ exists on server"
 fi
 
-# Generate APP_KEY if missing
 if grep -q '^APP_KEY=$' .env 2>/dev/null || ! grep -q '^APP_KEY=base64:' .env 2>/dev/null; then
   echo "[cpanel-deploy] Generating APP_KEY"
   $PHP_BIN artisan key:generate --force
@@ -81,5 +106,8 @@ $PHP_BIN artisan optimize:clear
 $PHP_BIN artisan config:cache
 $PHP_BIN artisan route:cache
 $PHP_BIN artisan view:cache
+
+# Re-apply writable perms after artisan cache writes
+chmod -R 775 bootstrap/cache storage 2>/dev/null || true
 
 echo "[cpanel-deploy] Done"
