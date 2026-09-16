@@ -23,10 +23,23 @@ class AppServiceProvider extends ServiceProvider
         // Use Bootstrap 4 pagination
         \Illuminate\Pagination\Paginator::useBootstrapFour();
 
-        // Behind cPanel / Cloudflare, force HTTPS URLs when APP_URL is https
+        // Behind cPanel / Cloudflare, force HTTPS + correct subdirectory root from APP_URL
         $appUrl = (string) config('app.url');
-        if (str_starts_with($appUrl, 'https://')) {
-            \Illuminate\Support\Facades\URL::forceScheme('https');
+        if ($appUrl !== '') {
+            if (str_starts_with($appUrl, 'https://')) {
+                \Illuminate\Support\Facades\URL::forceScheme('https');
+            }
+            $parts = parse_url($appUrl);
+            if (! empty($parts['host'])) {
+                $root = ($parts['scheme'] ?? 'https').'://'.$parts['host'];
+                if (! empty($parts['port'])) {
+                    $root .= ':'.$parts['port'];
+                }
+                if (! empty($parts['path']) && $parts['path'] !== '/') {
+                    $root .= rtrim($parts['path'], '/');
+                }
+                \Illuminate\Support\Facades\URL::forceRootUrl($root);
+            }
         }
 
         // Hide edit/update/delete buttons when user lacks page permission

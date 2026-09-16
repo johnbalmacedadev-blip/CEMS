@@ -4,7 +4,9 @@
 # Archives and staging go to ..\deploy (sibling of this project folder).
 
 param(
-    [switch]$SkipZip
+    [switch]$SkipZip,
+    [switch]$KeepStage,
+    [string]$RewriteBase = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -184,14 +186,20 @@ $kernel->terminate($request, $response);
     [System.IO.File]::WriteAllText((Join-Path $stage "index.php"), $rootIndex.TrimStart() + "`n", $utf8NoBom)
 
     # Root .htaccess: rewrite + map /storage/* to public/storage (avoids clash with Laravel storage/)
-    $rootHtaccess = @'
+    $rewriteBaseLine = ""
+    if ($RewriteBase -and $RewriteBase.Trim() -ne "" -and $RewriteBase.Trim() -ne "/") {
+        $rb = $RewriteBase.Trim().TrimEnd("/")
+        if (-not $rb.StartsWith("/")) { $rb = "/" + $rb }
+        $rewriteBaseLine = "    RewriteBase $rb/`r`n"
+    }
+    $rootHtaccess = @"
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
     </IfModule>
 
     RewriteEngine On
-
+$rewriteBaseLine
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
@@ -209,7 +217,7 @@ $kernel->terminate($request, $response);
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]
 </IfModule>
-'@
+"@
     [System.IO.File]::WriteAllText((Join-Path $stage ".htaccess"), $rootHtaccess.TrimStart() + "`n", $utf8NoBom)
 
     # Guard: UTF-8 BOM in index.php prevents Set-Cookie and breaks login sessions
@@ -238,7 +246,14 @@ $kernel->terminate($request, $response);
     } finally {
         Pop-Location
     }
-    Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
+    if (-not $KeepStage) {
+        Remove-Item $stage -Recurse -Force -ErrorAction SilentlyContinue
+    } else {
+        $liveStage = Join-Path $DeployDir "_stage_live"
+        if (Test-Path $liveStage) { Remove-Item $liveStage -Recurse -Force }
+        Rename-Item $stage "_stage_live"
+        Write-Host "  Kept stage at $liveStage for FTP upload." -ForegroundColor DarkGray
+    }
 
     $sizeMb = [math]::Round((Get-Item $archivePath).Length / 1MB, 1)
     Write-Host ("Archive created: {0} ({1} MB)" -f $archivePath, $sizeMb) -ForegroundColor Green

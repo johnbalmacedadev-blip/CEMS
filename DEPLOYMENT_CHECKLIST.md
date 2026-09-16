@@ -228,6 +228,20 @@ php artisan view:cache
 
 ---
 
+## Quick deploy from this PC (cPanel)
+
+1. Copy `.env.deploy.example` → `.env.deploy` and fill FTP/SFTP + MySQL values.
+2. Prefer **SFTP** (main cPanel SSH account). FTP add-on users often cannot use SSH, and FTP PASV ports are frequently blocked.
+3. Run:
+
+```powershell
+.\scripts\deploy-to-live.ps1
+```
+
+This prepares the package, uploads into the remote folder (for `https://carempireph.com/db-system/`), and calls `/deploy/run?token=...` to migrate + cache.
+
+---
+
 ## Quick reference — one-time deploy
 
 ```bash
