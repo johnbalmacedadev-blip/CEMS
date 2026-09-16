@@ -46,9 +46,11 @@ class Handler extends ExceptionHandler
             return parent::render($request, $e);
         }
 
-        $shouldSuppressDetails = $e instanceof \Illuminate\Database\QueryException;
+        // Show real exceptions whenever APP_DEBUG=true (needed for staging).
+        // Only hide details in production with debug off.
+        $shouldSuppressDetails = false;
         try {
-            $shouldSuppressDetails = $shouldSuppressDetails || app()->environment('production');
+            $shouldSuppressDetails = app()->environment('production') && ! config('app.debug');
         } catch (Throwable $envCheckFailure) {
             // Container may be half-booted (e.g. interrupted composer); show the real error locally.
         }
