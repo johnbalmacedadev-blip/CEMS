@@ -50,7 +50,15 @@ if [ ! -f .env ]; then
   fi
 fi
 
-# Subdirectory rewrite for https://carempireph.com/ce-dbase/
+# Scribe is require-dev; remove config on production so artisan never loads missing classes
+if [ -f config/scribe.php ]; then
+  # Keep file if Scribe is installed; otherwise rename aside
+  if [ ! -d vendor/knuckleswtf/scribe ]; then
+    mv config/scribe.php config/scribe.php.dev-only 2>/dev/null || rm -f config/scribe.php
+    echo "[cpanel-deploy] Set aside config/scribe.php (Scribe not installed)"
+  fi
+fi
+
 # Root .htaccess must front-controller via root index.php (not rewrite-all to public/),
 # otherwise Laravel sees the wrong path and returns 404 for / and /login.
 if [ -f .htaccess ]; then

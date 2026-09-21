@@ -7,6 +7,12 @@ use Knuckles\Scribe\Extracting\Strategies;
 use function Knuckles\Scribe\Config\configureStrategy;
 use function Knuckles\Scribe\Config\removeStrategies;
 
+// Scribe is require-dev only. On production (`composer install --no-dev`) skip this config
+// so package:discover / artisan boot do not fatal on missing Scribe classes.
+if (! enum_exists(AuthIn::class)) {
+    return [];
+}
+
 // Only the most common configs are shown. See the https://scribe.knuckles.wtf/laravel/reference/config for all.
 
 return [
