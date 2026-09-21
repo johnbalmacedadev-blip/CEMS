@@ -23,9 +23,9 @@ class AppServiceProvider extends ServiceProvider
         // Use Bootstrap 4 pagination
         \Illuminate\Pagination\Paginator::useBootstrapFour();
 
-        // Behind cPanel / Cloudflare: HTTPS when needed, and subdirectory root only when APP_URL has a path
-        // (e.g. https://carempireph.com/cedbase). Do not forceRootUrl for plain local APP_URL —
-        // that breaks php artisan serve on 127.0.0.1:8000 when APP_URL is http://localhost.
+        // Behind cPanel / Cloudflare: HTTPS when needed, and subdirectory root from APP_URL
+        // (e.g. https://carempireph.com/cedbase). Also detect SCRIPT_NAME (/cedbase/index.php)
+        // so redirects never jump to https://carempireph.com/login outside the app folder.
         $appUrl = (string) config('app.url');
         if ($appUrl !== '') {
             if (str_starts_with($appUrl, 'https://')) {
@@ -40,6 +40,24 @@ class AppServiceProvider extends ServiceProvider
                 }
                 $root .= $path;
                 \Illuminate\Support\Facades\URL::forceRootUrl($root);
+            }
+        }
+
+        if (! $this->app->runningInConsole()) {
+            $script = str_replace('\\', '/', (string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+            if (preg_match('#^(/.+)/index\.php$#', $script, $m) && $m[1] !== '') {
+                $subdir = $m[1];
+                $scheme = (! empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                if (! empty($_SERVER['HTTP_X_FORWARDED_PROTO'])) {
+                    $scheme = strtolower((string) $_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https' ? 'https' : $scheme;
+                }
+                $host = (string) ($_SERVER['HTTP_HOST'] ?? ($_SERVER['SERVER_NAME'] ?? ''));
+                if ($host !== '') {
+                    \Illuminate\Support\Facades\URL::forceRootUrl($scheme.'://'.$host.$subdir);
+                    if ($scheme === 'https') {
+                        \Illuminate\Support\Facades\URL::forceScheme('https');
+                    }
+                }
             }
         }
 
