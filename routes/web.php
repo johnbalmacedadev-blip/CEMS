@@ -21,7 +21,7 @@ use App\Http\Controllers\GasExpenseController;
 */
 
 // Public routes
-Route::redirect('/', '/login');
+Route::redirect('/', '/ce-login');
 
 // Post-deploy helper for cPanel Git (no SSH). Disabled unless DEPLOY_TOKEN is set.
 Route::match(['GET', 'POST'], '/deploy/run', [\App\Http\Controllers\DeployController::class, 'run'])
@@ -116,8 +116,9 @@ Route::get('/api/models/search', function(\Illuminate\Http\Request $request) {
 });
 
 // Authentication routes
-Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [LoginController::class, 'login']);
+Route::get('/ce-login', [LoginController::class, 'showLoginForm'])->name('login');
+Route::post('/ce-login', [LoginController::class, 'login']);
+Route::redirect('/login', '/ce-login'); // old URL
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 Route::get('/logout', [LoginController::class, 'logout']);
 

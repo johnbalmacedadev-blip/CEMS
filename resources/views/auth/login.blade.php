@@ -422,7 +422,7 @@
             
             // Refresh CSRF token every 4 minutes to prevent expiration (before 5 minute default)
             let csrfTokenRefreshInterval = setInterval(function() {
-                fetch('/login', {
+                fetch('{{ route('login') }}', {
                     method: 'GET',
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest'
