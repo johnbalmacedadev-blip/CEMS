@@ -29,7 +29,7 @@ class VerifyCsrfToken extends Middleware
             return parent::handle($request, $next);
         } catch (TokenMismatchException $e) {
             // If CSRF token expired on login page, regenerate and redirect back
-            if ($request->is('login') && $request->isMethod('post')) {
+            if ($request->is('ce-login') && $request->isMethod('post')) {
                 $request->session()->regenerateToken();
                 return redirect()->route('login')
                     ->withErrors(['login' => 'Your session has expired. Please try logging in again.']);
