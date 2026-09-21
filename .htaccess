@@ -4,7 +4,7 @@
     </IfModule>
 
     RewriteEngine On
-    RewriteBase /ce-dbase/
+    RewriteBase /cedbase/
 
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
@@ -15,7 +15,7 @@
     RewriteCond %{REQUEST_URI} (.+)/$
     RewriteRule ^ %1 [L,R=301]
 
-    # Front controller (root index.php) — correct Laravel paths under /ce-dbase
+    # Front controller (root index.php) — correct Laravel paths under /cedbase
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteRule ^ index.php [L]

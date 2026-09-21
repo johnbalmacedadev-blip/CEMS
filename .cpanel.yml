@@ -1,7 +1,7 @@
 ---
 # cPanel Git Version Control — runs after each pull/deploy.
-# Clone this repo into the web folder for https://carempireph.com/ce-dbase/
-# (usually ~/carempireph.com/ce-dbase or ~/public_html/ce-dbase) and enable automatic deployment.
+# Clone this repo into the web folder for https://carempireph.com/cedbase/
+# (usually ~/carempireph.com/cedbase) and enable automatic deployment.
 deployment:
   tasks:
     - /bin/bash scripts/cpanel-post-deploy.sh

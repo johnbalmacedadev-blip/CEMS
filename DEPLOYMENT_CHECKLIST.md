@@ -228,7 +228,7 @@ php artisan view:cache
 
 ---
 
-## GitHub → cPanel auto-deploy (`https://carempireph.com/ce-dbase/`)
+## GitHub → cPanel auto-deploy (`https://carempireph.com/cedbase/`)
 
 Push to GitHub updates the live folder when cPanel Git is linked and auto-deploy is on.
 
@@ -236,19 +236,19 @@ Push to GitHub updates the live folder when cPanel Git is linked and auto-deploy
 
 1. **cPanel → Git Version Control → Create**
    - Clone URL: your GitHub repo (`https://github.com/johnbalmacedadev-blip/CEMS.git`)
-   - Repository Path: e.g. `carempireph.com/ce-dbase` or `public_html/ce-dbase` (must be the folder served at `/ce-dbase/`)
+   - Repository Path: e.g. `carempireph.com/cedbase` or `public_html/cedbase` (must be the folder served at `/cedbase/`)
    - Repository Name: `CEMS`
 2. If the repo is private, add the **cPanel deploy key** (shown in Git Version Control) to GitHub → Settings → Deploy keys.
 3. After clone, open the repo in cPanel → **Pull or Deploy** → check **Deploy HEAD Commit** / automatic deployment.
 4. Confirm `.cpanel.yml` exists in the repo (it runs `scripts/cpanel-post-deploy.sh` after each pull).
-5. **First time only** — if `.env` was not created by the script, in File Manager under `ce-dbase`:
+5. **First time only** — if `.env` was not created by the script, in File Manager under `cedbase`:
    - Copy `.env.production.example` → `.env`
    - Confirm DB values:
      - `DB_DATABASE=careruxg_thevclo_car_erp`
      - `DB_USERNAME=careruxg_thevclo_car_erp`
      - `DB_PASSWORD="u^a0(Wm.nY&gU4Y%"`
-   - Confirm `APP_URL=https://carempireph.com/ce-dbase`
-   - Confirm `ASSET_URL=https://carempireph.com/ce-dbase/public`
+   - Confirm `APP_URL=https://carempireph.com/cedbase`
+   - Confirm `ASSET_URL=https://carempireph.com/cedbase/public`
    - Set a strong `DEPLOY_TOKEN=...`
 6. In cPanel MySQL, ensure database/user `careruxg_thevclo_car_erp` exists with full privileges.
 7. Set `bootstrap/cache` and `storage` to **775** (recurse).
@@ -258,7 +258,7 @@ Push to GitHub updates the live folder when cPanel Git is linked and auto-deploy
 
 1. cPanel pulls latest `main`
 2. `.cpanel.yml` runs `scripts/cpanel-post-deploy.sh`
-3. Script installs Composer deps (if available), creates `.env` once, checks `/ce-dbase` rewrites, runs `migrate` + cache rebuild
+3. Script installs Composer deps (if available), creates `.env` once, checks `/cedbase` rewrites, runs `migrate` + cache rebuild
 
 **Never commit `.env`.** The server keeps its own `.env`; deploys do not overwrite it.
 
@@ -266,7 +266,7 @@ Push to GitHub updates the live folder when cPanel Git is linked and auto-deploy
 
 Open (use your real token):
 
-`https://carempireph.com/ce-dbase/deploy/run?token=YOUR_DEPLOY_TOKEN`
+`https://carempireph.com/cedbase/deploy/run?token=YOUR_DEPLOY_TOKEN`
 
 ---
 

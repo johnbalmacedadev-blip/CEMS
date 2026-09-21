@@ -62,8 +62,8 @@ fi
 # Root .htaccess must front-controller via root index.php (not rewrite-all to public/),
 # otherwise Laravel sees the wrong path and returns 404 for / and /login.
 if [ -f .htaccess ]; then
-  if ! grep -q "RewriteBase /ce-dbase/" .htaccess; then
-    echo "[cpanel-deploy] WARNING: .htaccess missing RewriteBase /ce-dbase/ — pull latest from GitHub"
+  if ! grep -q "RewriteBase /cedbase/" .htaccess; then
+    echo "[cpanel-deploy] WARNING: .htaccess missing RewriteBase /cedbase/ — pull latest from GitHub"
   fi
 fi
 
