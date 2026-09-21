@@ -1,7 +1,7 @@
 ---
 # cPanel Git Version Control — runs after each pull/deploy.
-# Clone this repo into the web folder for http://crmstagingsite.com/repo/
-# (usually ~/public_html/repo) and enable automatic deployment in cPanel.
+# Clone this repo into the web folder for https://carempireph.com/ce-dbase/
+# (usually ~/carempireph.com/ce-dbase or ~/public_html/ce-dbase) and enable automatic deployment.
 deployment:
   tasks:
     - /bin/bash scripts/cpanel-post-deploy.sh

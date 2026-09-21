@@ -50,16 +50,14 @@ if [ ! -f .env ]; then
   fi
 fi
 
-# Subdirectory rewrite for http://crmstagingsite.com/repo/
+# Subdirectory rewrite for https://carempireph.com/ce-dbase/
 # Root .htaccess must front-controller via root index.php (not rewrite-all to public/),
 # otherwise Laravel sees the wrong path and returns 404 for / and /login.
 if [ -f .htaccess ]; then
-  if ! grep -q "RewriteBase /repo/" .htaccess; then
-    echo "[cpanel-deploy] WARNING: .htaccess missing RewriteBase /repo/ — pull latest from GitHub"
+  if ! grep -q "RewriteBase /ce-dbase/" .htaccess; then
+    echo "[cpanel-deploy] WARNING: .htaccess missing RewriteBase /ce-dbase/ — pull latest from GitHub"
   fi
 fi
-
-# Do not force public/.htaccess RewriteBase to /repo/public when using root front controller
 
 COMPOSER_BIN=""
 for c in composer composer.phar /usr/local/bin/composer "$HOME/bin/composer"; do
