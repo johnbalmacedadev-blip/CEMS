@@ -20,9 +20,9 @@ use App\Http\Controllers\GasExpenseController;
 |
 */
 
-// Public routes — use named routes so subdirectory APP_URL (/cedbase) is preserved
+// Public routes — absolute redirect keeps /cedbase (host-root "/login" leaves the app)
 Route::get('/', function () {
-    return redirect()->route('login');
+    return redirect()->to(rtrim((string) config('app.url'), '/').'/ce-login');
 });
 
 // Post-deploy helper for cPanel Git (no SSH). Disabled unless DEPLOY_TOKEN is set.
@@ -121,7 +121,7 @@ Route::get('/api/models/search', function(\Illuminate\Http\Request $request) {
 Route::get('/ce-login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/ce-login', [LoginController::class, 'login']);
 Route::get('/login', function () {
-    return redirect()->route('login');
+    return redirect()->to(rtrim((string) config('app.url'), '/').'/ce-login');
 }); // old URL → stay under /cedbase
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 Route::get('/logout', [LoginController::class, 'logout']);

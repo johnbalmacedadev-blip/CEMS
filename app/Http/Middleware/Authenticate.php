@@ -17,7 +17,7 @@ class Authenticate
     public function handle(Request $request, Closure $next): Response
     {
         if (!Auth::check()) {
-            return redirect()->route('login');
+            return redirect()->to(rtrim((string) config('app.url'), '/').'/ce-login');
         }
 
         return $next($request);
