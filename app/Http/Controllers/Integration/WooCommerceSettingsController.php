@@ -16,8 +16,18 @@ class WooCommerceSettingsController extends Controller
     public function edit()
     {
         $settings = WooCommerceSetting::current();
+        $clearedBadSecrets = $settings->clearUndecryptableCredentials();
 
-        return view('integration.woocommerce.settings', compact('settings'));
+        $response = view('integration.woocommerce.settings', compact('settings'));
+
+        if ($clearedBadSecrets) {
+            session()->flash(
+                'error',
+                'Saved WooCommerce API keys could not be decrypted with this server’s APP_KEY. Re-enter the Consumer Key and Secret, then save.'
+            );
+        }
+
+        return $response;
     }
 
     public function update(Request $request)

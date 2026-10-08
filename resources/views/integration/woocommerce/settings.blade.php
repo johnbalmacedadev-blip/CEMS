@@ -53,7 +53,7 @@
                             <input type="text" name="consumer_key" id="consumer_key"
                                    class="form-control @error('consumer_key') is-invalid @enderror"
                                    value="{{ old('consumer_key') }}"
-                                   placeholder="{{ $settings->consumer_key ? '•••• saved (leave blank to keep)' : 'ck_xxxxxxxx' }}"
+                                   placeholder="{{ $settings->hasStoredConsumerKey() && filled($settings->consumer_key) ? '•••• saved (leave blank to keep)' : 'ck_xxxxxxxx' }}"
                                    autocomplete="off">
                             @error('consumer_key')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
@@ -62,7 +62,7 @@
                             <input type="password" name="consumer_secret" id="consumer_secret"
                                    class="form-control @error('consumer_secret') is-invalid @enderror"
                                    value="{{ old('consumer_secret') }}"
-                                   placeholder="{{ $settings->consumer_secret ? '•••• saved (leave blank to keep)' : 'cs_xxxxxxxx' }}"
+                                   placeholder="{{ $settings->hasStoredConsumerSecret() && filled($settings->consumer_secret) ? '•••• saved (leave blank to keep)' : 'cs_xxxxxxxx' }}"
                                    autocomplete="new-password">
                             @error('consumer_secret')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         </div>
