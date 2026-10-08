@@ -171,6 +171,10 @@ Route::middleware(['auth', 'page.permission', 'log.activity'])->group(function (
     Route::get('/analytics-report/sales/export', [App\Http\Controllers\AnalyticsReportController::class, 'exportSales'])->name('analytics-report.sales.export');
     Route::get('/analytics-report/sales-executive', [App\Http\Controllers\AnalyticsReportController::class, 'salesExecutive'])->name('analytics-report.sales-executive');
     Route::get('/analytics-report/suppliers', [App\Http\Controllers\AnalyticsReportController::class, 'suppliers'])->name('analytics-report.suppliers');
+    Route::get('/analytics-report/financing', [App\Http\Controllers\AnalyticsReportController::class, 'financing'])->name('analytics-report.financing');
+    Route::get('/analytics-report/sales-reports', [App\Http\Controllers\AnalyticsReportController::class, 'salesReports'])->name('analytics-report.sales-reports');
+    Route::get('/analytics-report/current-inventory', [App\Http\Controllers\AnalyticsReportController::class, 'currentInventory'])->name('analytics-report.current-inventory');
+    Route::get('/analytics-report/customers', [App\Http\Controllers\AnalyticsReportController::class, 'customers'])->name('analytics-report.customers');
     Route::get('/settings', function() { return view('settings.index'); })->name('settings');
     Route::get('/settings/import-data', [App\Http\Controllers\SettingsDataImportController::class, 'index'])->name('settings.import-data');
     Route::post('/settings/import-data/upload', [App\Http\Controllers\SettingsDataImportController::class, 'upload'])->name('settings.import-data.upload');

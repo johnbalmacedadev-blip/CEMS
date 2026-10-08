@@ -1,11 +1,11 @@
 @extends('layouts.app')
 
-@section('title', 'Suppliers Report - Car Empire Management System')
+@section('title', 'Supplier Reports - Car Empire Management System')
 
 @section('content')
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 border-bottom pb-2">
-        <h1 class="h3 mb-0"><i class="fas fa-truck me-2 text-success"></i>Suppliers Report</h1>
+        <h1 class="h3 mb-0"><i class="fas fa-truck me-2 text-success"></i>Supplier Reports</h1>
         <div class="d-flex gap-2">
             <a href="{{ route('analytics-report.sales') }}" class="btn btn-outline-primary">
                 <i class="fas fa-chart-bar me-1"></i>Car Sales Report
@@ -69,14 +69,14 @@
                 </div>
             </form>
             <p class="small text-muted mt-2 mb-0">
-                Excel tabular format for supplier sales/releases and release gross/net.
+                Matches Excel <strong>(10-11) SUPPLIER REPORTS</strong>.
                 Active date filter: <strong>{{ $activeRangeLabel }}</strong>
                 @if(($selectedLocation ?? '') !== '')
                     · Location: <strong>{{ $selectedLocation }}</strong>
                 @else
                     · Location: <strong>All Locations</strong>
                 @endif.
-                Trade-in sources are grouped as <strong>TRADE-IN</strong>.
+                Trade-in sources are grouped as <strong>TRADE-IN</strong>. Zero-value suppliers are hidden.
             </p>
         </div>
     </div>
@@ -89,13 +89,13 @@
     @if(!$hasData)
         <div class="alert alert-info mb-0">
             <i class="fas fa-info-circle me-2"></i>
-            No supplier sales or releases found for this date range. Try another month or widen the period.
+            No supplier supplied/sales/release rows found for this date range. Try another month or widen the period.
         </div>
     @else
-        <ul class="nav nav-tabs mb-3" id="supplierTabs" role="tablist">
+        <ul class="nav nav-tabs" id="supplierTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="speed-tab" data-bs-toggle="tab" data-bs-target="#speedPane" type="button" role="tab">
-                    Sales &amp; Releases / Speed
+                    Units Supplied / Sales / Releases / Speed
                 </button>
             </li>
             <li class="nav-item" role="presentation">
@@ -105,118 +105,116 @@
             </li>
         </ul>
 
-        <div class="tab-content" id="supplierTabContent">
+        <div class="tab-content border border-top-0 bg-white" id="supplierTabContent">
             <div class="tab-pane fade show active" id="speedPane" role="tabpanel">
                 @if(empty($speed) || empty($speed['has_data']))
-                    <div class="alert alert-info mb-0">No supplier sales/release rows for this period.</div>
+                    <div class="p-4 text-muted mb-0">No supplier sales/release rows for this period.</div>
                 @else
-                    <div class="card">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <div>
-                                <strong>{{ $speed['title'] }}</strong>
-                                <div class="small text-muted">{{ $activeRangeLabel }}</div>
-                            </div>
-                            <span class="badge text-bg-light border">{{ number_format(count($speed['rows'])) }} suppliers</span>
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-3 pt-3">
+                        <div>
+                            <strong>{{ $speed['title'] }}</strong>
+                            <div class="small text-muted">{{ $activeRangeLabel }}</div>
                         </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-sm table-striped table-hover mb-0 align-middle">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th style="width:3rem;">Rank</th>
-                                            <th>Supplier</th>
-                                            <th class="text-end">Total Sales</th>
-                                            <th class="text-end">% of Total Sales</th>
-                                            <th class="text-end">Total Releases</th>
-                                            <th class="text-end">% of Total Releases</th>
-                                            <th class="text-end">Average Days to Sell</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($speed['rows'] as $i => $row)
-                                            <tr>
-                                                <td>{{ $i + 1 }}</td>
-                                                <td class="fw-semibold">{{ $row['supplier'] }}</td>
-                                                <td class="text-end">{{ number_format((int) $row['sales_count']) }}</td>
-                                                <td class="text-end">{{ number_format((float) $row['sales_pct'], 1) }}%</td>
-                                                <td class="text-end">{{ number_format((int) $row['release_count']) }}</td>
-                                                <td class="text-end">{{ number_format((float) $row['release_pct'], 1) }}%</td>
-                                                <td class="text-end">{{ number_format((float) $row['avg_days_to_sell'], 1) }}</td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                    <tfoot class="table-light">
-                                        <tr>
-                                            <th>—</th>
-                                            <th>TOTAL</th>
-                                            <th class="text-end">{{ number_format((int) ($speed['totals']['sales_count'] ?? 0)) }}</th>
-                                            <th class="text-end">—</th>
-                                            <th class="text-end">{{ number_format((int) ($speed['totals']['release_count'] ?? 0)) }}</th>
-                                            <th class="text-end">—</th>
-                                            <th class="text-end">{{ number_format((float) ($speed['totals']['avg_days_to_sell'] ?? 0), 1) }}</th>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-                        </div>
+                        <span class="badge text-bg-light border">{{ number_format(count($speed['rows'])) }} suppliers</span>
+                    </div>
+                    <div class="table-responsive mt-2">
+                        <table class="table table-sm table-striped table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:3rem;">Rank</th>
+                                    <th>Supplier</th>
+                                    <th class="text-end">Units Supplied</th>
+                                    <th class="text-end">% of Total Units Supplied</th>
+                                    <th class="text-end">Total Sales</th>
+                                    <th class="text-end">% of Total Sales</th>
+                                    <th class="text-end">Total Releases</th>
+                                    <th class="text-end">% of Total Releases</th>
+                                    <th class="text-end">Average Days to Sell</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($speed['rows'] as $i => $row)
+                                    <tr>
+                                        <td>{{ $i + 1 }}</td>
+                                        <td class="fw-semibold">{{ $row['supplier'] }}</td>
+                                        <td class="text-end">{{ number_format((int) ($row['supplied_count'] ?? 0)) }}</td>
+                                        <td class="text-end">{{ number_format((float) ($row['supplied_pct'] ?? 0), 1) }}%</td>
+                                        <td class="text-end">{{ number_format((int) $row['sales_count']) }}</td>
+                                        <td class="text-end">{{ number_format((float) $row['sales_pct'], 1) }}%</td>
+                                        <td class="text-end">{{ number_format((int) $row['release_count']) }}</td>
+                                        <td class="text-end">{{ number_format((float) $row['release_pct'], 1) }}%</td>
+                                        <td class="text-end">{{ number_format((float) $row['avg_days_to_sell'], 1) }}</td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th>—</th>
+                                    <th>TOTAL</th>
+                                    <th class="text-end">{{ number_format((int) ($speed['totals']['supplied_count'] ?? 0)) }}</th>
+                                    <th class="text-end">—</th>
+                                    <th class="text-end">{{ number_format((int) ($speed['totals']['sales_count'] ?? 0)) }}</th>
+                                    <th class="text-end">—</th>
+                                    <th class="text-end">{{ number_format((int) ($speed['totals']['release_count'] ?? 0)) }}</th>
+                                    <th class="text-end">—</th>
+                                    <th class="text-end">{{ number_format((float) ($speed['totals']['avg_days_to_sell'] ?? 0), 1) }}</th>
+                                </tr>
+                            </tfoot>
+                        </table>
                     </div>
                 @endif
             </div>
 
             <div class="tab-pane fade" id="grossNetPane" role="tabpanel">
                 @if(empty($grossNet) || empty($grossNet['has_data']))
-                    <div class="alert alert-info mb-0">No supplier release gross/net rows for this period.</div>
+                    <div class="p-4 text-muted mb-0">No supplier release gross/net rows for this period.</div>
                 @else
-                    <div class="card">
-                        <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-                            <div>
-                                <strong>{{ $grossNet['title'] }}</strong>
-                                <div class="small text-muted">{{ $activeRangeLabel }}</div>
-                            </div>
-                            <span class="badge text-bg-light border">{{ number_format(count($grossNet['rows'])) }} suppliers</span>
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-3 pt-3">
+                        <div>
+                            <strong>{{ $grossNet['title'] }}</strong>
+                            <div class="small text-muted">{{ $activeRangeLabel }}</div>
                         </div>
-                        <div class="card-body p-0">
-                            <div class="table-responsive">
-                                <table class="table table-sm table-striped table-hover mb-0 align-middle">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th style="width:3rem;">Rank</th>
-                                            <th>Supplier</th>
-                                            <th class="text-end">Total Gross Sales Release (PHP)</th>
-                                            <th class="text-end">Average Gross Per Release (PHP)</th>
-                                            <th class="text-end">Total Net Profit Releases (PHP)</th>
-                                            <th class="text-end">Average Net Profit Per Release (PHP)</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach($grossNet['rows'] as $i => $row)
-                                            <tr>
-                                                <td>{{ $i + 1 }}</td>
-                                                <td class="fw-semibold">{{ $row['supplier'] }}</td>
-                                                <td class="text-end">₱{{ number_format((float) $row['total_gross'], 2) }}</td>
-                                                <td class="text-end">₱{{ number_format((float) $row['avg_gross'], 2) }}</td>
-                                                <td class="text-end {{ (float) $row['total_net'] >= 0 ? 'text-success' : 'text-danger' }}">
-                                                    ₱{{ number_format((float) $row['total_net'], 2) }}
-                                                </td>
-                                                <td class="text-end {{ (float) $row['avg_net'] >= 0 ? 'text-success' : 'text-danger' }}">
-                                                    ₱{{ number_format((float) $row['avg_net'], 2) }}
-                                                </td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                    <tfoot class="table-light">
-                                        <tr>
-                                            <th>—</th>
-                                            <th>TOTAL</th>
-                                            <th class="text-end">₱{{ number_format((float) ($grossNet['totals']['total_gross'] ?? 0), 2) }}</th>
-                                            <th class="text-end">₱{{ number_format((float) ($grossNet['totals']['avg_gross'] ?? 0), 2) }}</th>
-                                            <th class="text-end">₱{{ number_format((float) ($grossNet['totals']['total_net'] ?? 0), 2) }}</th>
-                                            <th class="text-end">₱{{ number_format((float) ($grossNet['totals']['avg_net'] ?? 0), 2) }}</th>
-                                        </tr>
-                                    </tfoot>
-                                </table>
-                            </div>
-                        </div>
+                        <span class="badge text-bg-light border">{{ number_format(count($grossNet['rows'])) }} suppliers</span>
+                    </div>
+                    <div class="table-responsive mt-2">
+                        <table class="table table-sm table-striped table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:3rem;">Rank</th>
+                                    <th>Supplier</th>
+                                    <th class="text-end">Total Gross Sales Release (PHP)</th>
+                                    <th class="text-end">Average Gross Per Release (PHP)</th>
+                                    <th class="text-end">Total Net Profit Releases (PHP)</th>
+                                    <th class="text-end">Average Net Profit Per Release (PHP)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($grossNet['rows'] as $i => $row)
+                                    <tr>
+                                        <td>{{ $i + 1 }}</td>
+                                        <td class="fw-semibold">{{ $row['supplier'] }}</td>
+                                        <td class="text-end">₱{{ number_format((float) $row['total_gross'], 2) }}</td>
+                                        <td class="text-end">₱{{ number_format((float) $row['avg_gross'], 2) }}</td>
+                                        <td class="text-end {{ (float) $row['total_net'] >= 0 ? 'text-success' : 'text-danger' }}">
+                                            ₱{{ number_format((float) $row['total_net'], 2) }}
+                                        </td>
+                                        <td class="text-end {{ (float) $row['avg_net'] >= 0 ? 'text-success' : 'text-danger' }}">
+                                            ₱{{ number_format((float) $row['avg_net'], 2) }}
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th>—</th>
+                                    <th>TOTAL</th>
+                                    <th class="text-end">₱{{ number_format((float) ($grossNet['totals']['total_gross'] ?? 0), 2) }}</th>
+                                    <th class="text-end">₱{{ number_format((float) ($grossNet['totals']['avg_gross'] ?? 0), 2) }}</th>
+                                    <th class="text-end">₱{{ number_format((float) ($grossNet['totals']['total_net'] ?? 0), 2) }}</th>
+                                    <th class="text-end">₱{{ number_format((float) ($grossNet['totals']['avg_net'] ?? 0), 2) }}</th>
+                                </tr>
+                            </tfoot>
+                        </table>
                     </div>
                 @endif
             </div>

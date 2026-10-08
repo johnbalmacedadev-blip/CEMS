@@ -43,28 +43,13 @@ class AnalyticsReportController extends Controller
 
     public function financial(Request $request)
     {
-        $data = $this->buildFinancialPageData($request);
-        $data['result'] = $this->applyFinancialTablePresentation($request, $data['result'], $data['selectedReport']);
-
-        return view('analytics-reports.financial', $data);
+        return view('analytics-reports.financial', $this->buildFinancialMomPageData($request));
     }
 
     public function exportFinancial(Request $request)
     {
-        $format = strtolower((string) $request->get('format', 'csv'));
-        if (! in_array($format, ['csv', 'pdf'], true)) {
-            abort(422, 'Invalid export format.');
-        }
-
-        $data = $this->buildFinancialPageData($request);
-        $baseName = 'financial-report-' . str_replace('_', '-', (string) $data['selectedReport']) . '-' . date('Y-m-d');
-
-        if ($format === 'pdf') {
-            $pdf = Pdf::loadView('analytics-reports.financial-export-pdf', $data)->setPaper('a4', 'landscape');
-            return $pdf->download($baseName . '.pdf');
-        }
-
-        return $this->streamFinancialCsv($data, $baseName);
+        // Legacy export endpoint kept for older bookmarks; Excel MoM page has no separate export yet.
+        return redirect()->route('analytics-report.financial', $request->query());
     }
 
     protected function buildFinancialPageData(Request $request): array
@@ -167,12 +152,22 @@ class AnalyticsReportController extends Controller
             $selectedCarType = 'make';
         }
         $carSearch = trim((string) $request->get('car_search', ''));
+        $activeExcelTab = (string) $request->get('excel_tab', 'by_model');
+        $excelTabKeys = ['by_model', 'by_speed', 'by_make', 'by_body_type', 'by_year_model'];
+        if (! in_array($activeExcelTab, $excelTabKeys, true)) {
+            $activeExcelTab = 'by_model';
+        }
 
         $selectedYear = $this->resolveSelectedYear($request);
         $monthRaw = $request->input('month', null);
         $selectedMonth = is_string($monthRaw) ? trim($monthRaw) : '';
         if ($selectedMonth !== '' && ! preg_match('/^(0?[1-9]|1[0-2])$/', $selectedMonth)) {
             $selectedMonth = '';
+        }
+
+        // Excel CAR SALES REPORTS use calendar month/year. Default car-type mode to monthly.
+        if ($filterMode === 'car_type') {
+            $period = 'monthly';
         }
 
         $window = $this->resolveDateWindow($request, $period);
@@ -182,6 +177,12 @@ class AnalyticsReportController extends Controller
             $window = [
                 'from' => Carbon::create($selectedYear, $monthNum, 1)->startOfDay(),
                 'to' => Carbon::create($selectedYear, $monthNum, 1)->endOfMonth()->endOfDay(),
+            ];
+        } elseif ($filterMode === 'car_type' && $period === 'monthly' && $selectedMonth === '') {
+            // Whole selected year when month is "All months"
+            $window = [
+                'from' => Carbon::create($selectedYear, 1, 1)->startOfDay(),
+                'to' => Carbon::create($selectedYear, 12, 31)->endOfDay(),
             ];
         }
 
@@ -193,16 +194,14 @@ class AnalyticsReportController extends Controller
             'excel_aligned' => false,
         ];
         $carTypeReport = null;
+        $excelTabs = null;
 
         if ($showResults && $filterMode === 'period') {
             $analytics = $this->buildSalesAnalytics($window, $selectedLocation);
         } elseif ($showResults && $filterMode === 'car_type') {
-            $carTypeReport = $this->buildCarTypeSalesReport(
-                $window,
-                $selectedCarType,
-                $carSearch,
-                $selectedLocation
-            );
+            $excelTabs = $this->buildExcelCarSalesTabs($window, $selectedLocation, $carSearch);
+            // Keep single-table helper available for exports / legacy deep-links.
+            $carTypeReport = $excelTabs['by_model'] ?? null;
         }
 
         return [
@@ -234,6 +233,8 @@ class AnalyticsReportController extends Controller
             'selectedCarType' => $selectedCarType,
             'carSearch' => $carSearch,
             'carTypeReport' => $carTypeReport,
+            'excelTabs' => $excelTabs,
+            'activeExcelTab' => $activeExcelTab,
             'dateFrom' => $window['from'] ? $window['from']->format('Y-m-d') : '',
             'dateTo' => $window['to'] ? $window['to']->format('Y-m-d') : '',
             'activeRangeLabel' => $this->rangeLabel($window),
@@ -340,6 +341,7 @@ class AnalyticsReportController extends Controller
                     'release_pct' => $pctReleaseBase > 0 ? round(($releaseCount / $pctReleaseBase) * 100, 1) : 0.0,
                 ];
             })
+            ->filter(fn (array $row) => ((int) $row['sales_count'] + (int) $row['release_count']) > 0)
             ->sortByDesc('release_count')
             ->values();
 
@@ -355,7 +357,384 @@ class AnalyticsReportController extends Controller
                 'release_count' => $search !== '' ? $visibleReleases : $totalReleases,
             ],
             'has_data' => $rows->isNotEmpty(),
+            'columns' => 'sales_releases',
         ];
+    }
+
+    /**
+     * Excel "(5-9) CAR SALES REPORTS" — all five tables for the selected month/year window.
+     * Labels come from live Make / Model / body_type / year data in the database.
+     *
+     * @return array<string, array<string, mixed>>
+     */
+    protected function buildExcelCarSalesTabs(array $window, string $locationFilter = '', string $search = ''): array
+    {
+        $releaseVehicles = $this->soldVehiclesBase($window)
+            ->filter(fn (Vehicle $v) => $this->vehicleMatchesSalesLocation($v, $locationFilter))
+            ->values();
+
+        $saleVehicles = Vehicle::with(['statusDetail', 'make', 'vehicleModel', 'branchLocation'])
+            ->whereIn('status', ['Reserved', 'Released'])
+            ->whereHas('statusDetail', fn ($q) => $q->whereNotNull('sale_date'))
+            ->get()
+            ->filter(function (Vehicle $v) use ($window, $locationFilter) {
+                if (! $this->inWindow($v->statusDetail?->sale_date, $window)) {
+                    return false;
+                }
+
+                return $this->vehicleMatchesSalesLocation($v, $locationFilter);
+            })
+            ->values();
+
+        $byModel = $this->buildSalesReleaseDimensionTable(
+            'Sales and Releases by Model',
+            'Model',
+            $saleVehicles,
+            $releaseVehicles,
+            'model',
+            $this->catalogModelLabels(),
+            $search
+        );
+
+        $byMake = $this->buildSalesReleaseDimensionTable(
+            'Sales and Releases by Make',
+            'Make',
+            $saleVehicles,
+            $releaseVehicles,
+            'make',
+            $this->catalogMakeLabels(),
+            $search
+        );
+
+        $byBody = $this->buildSalesReleaseDimensionTable(
+            'Sales and Releases by Body Type',
+            'Body Type',
+            $saleVehicles,
+            $releaseVehicles,
+            'body_type',
+            $this->catalogBodyTypeLabels(),
+            $search
+        );
+
+        $byYear = $this->buildSalesReleaseDimensionTable(
+            'Sales and Releases by Year Model',
+            'Year Model',
+            $saleVehicles,
+            $releaseVehicles,
+            'year_model',
+            $this->catalogYearModelLabels(),
+            $search
+        );
+
+        $bySpeed = $this->buildModelsBySpeedToSellTable($saleVehicles, $search);
+
+        $hasData = (bool) (
+            ($byModel['has_data'] ?? false)
+            || ($bySpeed['has_data'] ?? false)
+            || ($byMake['has_data'] ?? false)
+            || ($byBody['has_data'] ?? false)
+            || ($byYear['has_data'] ?? false)
+        );
+
+        return [
+            'by_model' => $byModel,
+            'by_speed' => $bySpeed,
+            'by_make' => $byMake,
+            'by_body_type' => $byBody,
+            'by_year_model' => $byYear,
+            'has_data' => $hasData,
+        ];
+    }
+
+    /**
+     * @param  Collection<int, Vehicle>  $saleVehicles
+     * @param  Collection<int, Vehicle>  $releaseVehicles
+     * @param  array<int, string>  $catalogLabels
+     * @return array{title:string,dimension_label:string,rows:array<int,array<string,mixed>>,totals:array<string,mixed>,has_data:bool,columns:string}
+     */
+    protected function buildSalesReleaseDimensionTable(
+        string $title,
+        string $dimensionLabel,
+        Collection $saleVehicles,
+        Collection $releaseVehicles,
+        string $carType,
+        array $catalogLabels = [],
+        string $search = ''
+    ): array {
+        $salesBuckets = [];
+        foreach ($saleVehicles as $vehicle) {
+            $key = $this->carTypeDimensionKey($vehicle, $carType);
+            if ($key === '') {
+                continue;
+            }
+            $salesBuckets[$key] = ($salesBuckets[$key] ?? 0) + 1;
+        }
+
+        $releaseBuckets = [];
+        foreach ($releaseVehicles as $vehicle) {
+            $key = $this->carTypeDimensionKey($vehicle, $carType);
+            if ($key === '') {
+                continue;
+            }
+            $releaseBuckets[$key] = ($releaseBuckets[$key] ?? 0) + 1;
+        }
+
+        $labels = collect(array_unique(array_merge(
+            array_keys($salesBuckets),
+            array_keys($releaseBuckets),
+            $catalogLabels
+        )))
+            ->map(fn ($label) => trim((string) $label))
+            ->filter(fn ($label) => $label !== '')
+            ->unique(fn ($label) => mb_strtoupper($label))
+            ->values();
+
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $labels = $labels->filter(fn ($label) => str_contains(mb_strtolower($label), $needle))->values();
+        }
+
+        $totalSales = (int) array_sum($salesBuckets);
+        $totalReleases = (int) array_sum($releaseBuckets);
+        $pctSalesBase = max($totalSales, 0);
+        $pctReleaseBase = max($totalReleases, 0);
+
+        $rows = $labels
+            ->map(function ($label) use ($salesBuckets, $releaseBuckets, $pctSalesBase, $pctReleaseBase) {
+                $salesCount = (int) ($this->bucketValueForLabel($salesBuckets, $label));
+                $releaseCount = (int) ($this->bucketValueForLabel($releaseBuckets, $label));
+
+                return [
+                    'label' => $label,
+                    'sales_count' => $salesCount,
+                    'sales_pct' => $pctSalesBase > 0 ? round(($salesCount / $pctSalesBase) * 100, 1) : 0.0,
+                    'release_count' => $releaseCount,
+                    'release_pct' => $pctReleaseBase > 0 ? round(($releaseCount / $pctReleaseBase) * 100, 1) : 0.0,
+                ];
+            })
+            ->filter(fn (array $row) => ((int) $row['sales_count'] + (int) $row['release_count']) > 0)
+            ->sort(function (array $a, array $b) {
+                if ($a['release_count'] !== $b['release_count']) {
+                    return $b['release_count'] <=> $a['release_count'];
+                }
+                if ($a['sales_count'] !== $b['sales_count']) {
+                    return $b['sales_count'] <=> $a['sales_count'];
+                }
+
+                return strcasecmp($a['label'], $b['label']);
+            })
+            ->values();
+
+        $visibleSales = (int) $rows->sum('sales_count');
+        $visibleReleases = (int) $rows->sum('release_count');
+
+        return [
+            'title' => $title,
+            'dimension_label' => $dimensionLabel,
+            'rows' => $rows->all(),
+            'totals' => [
+                'sales_count' => $search !== '' ? $visibleSales : $totalSales,
+                'release_count' => $search !== '' ? $visibleReleases : $totalReleases,
+            ],
+            'has_data' => $rows->isNotEmpty(),
+            'columns' => 'sales_releases',
+        ];
+    }
+
+    /**
+     * Excel "MODELS BY SPEED TO SELL".
+     *
+     * @param  Collection<int, Vehicle>  $saleVehicles
+     * @return array{title:string,dimension_label:string,rows:array<int,array<string,mixed>>,totals:array<string,mixed>,has_data:bool,columns:string}
+     */
+    protected function buildModelsBySpeedToSellTable(Collection $saleVehicles, string $search = ''): array
+    {
+        $salesBuckets = [];
+        $daysBuckets = [];
+
+        foreach ($saleVehicles as $vehicle) {
+            $label = $this->vehicleModelLabel($vehicle);
+            if ($label === '') {
+                continue;
+            }
+            $salesBuckets[$label] = ($salesBuckets[$label] ?? 0) + 1;
+
+            $saleDate = $vehicle->statusDetail?->sale_date
+                ?? $vehicle->statusDetail?->release_date
+                ?? $vehicle->getAttribute('excel_period_release_date');
+            $purchase = $vehicle->purchase_date ?? $vehicle->created_at;
+            if ($saleDate && $purchase) {
+                $daysBuckets[$label][] = (float) Carbon::parse($purchase)->diffInDays(Carbon::parse($saleDate));
+            }
+        }
+
+        $labels = collect(array_keys($salesBuckets))
+            ->merge($this->catalogModelLabels())
+            ->map(fn ($label) => trim((string) $label))
+            ->filter(fn ($label) => $label !== '')
+            ->unique(fn ($label) => mb_strtoupper($label))
+            ->values();
+
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $labels = $labels->filter(fn ($label) => str_contains(mb_strtolower($label), $needle))->values();
+        }
+
+        $allDays = [];
+        $rows = $labels
+            ->map(function ($label) use ($salesBuckets, $daysBuckets, &$allDays) {
+                $salesCount = (int) ($this->bucketValueForLabel($salesBuckets, $label));
+                $days = $this->bucketListForLabel($daysBuckets, $label);
+                foreach ($days as $day) {
+                    $allDays[] = $day;
+                }
+                $avgDays = count($days) > 0 ? round(array_sum($days) / count($days), 1) : 0.0;
+
+                return [
+                    'label' => $label,
+                    'sales_count' => $salesCount,
+                    'avg_days_to_sell' => $avgDays,
+                ];
+            })
+            ->filter(fn ($row) => (int) $row['sales_count'] > 0)
+            ->sort(function (array $a, array $b) {
+                if ($a['sales_count'] !== $b['sales_count']) {
+                    return $b['sales_count'] <=> $a['sales_count'];
+                }
+
+                return $a['avg_days_to_sell'] <=> $b['avg_days_to_sell'];
+            })
+            ->values();
+
+        $totalSales = (int) $rows->sum('sales_count');
+
+        return [
+            'title' => 'Models by Speed to Sell',
+            'dimension_label' => 'Model',
+            'rows' => $rows->all(),
+            'totals' => [
+                'sales_count' => $totalSales,
+                'avg_days_to_sell' => count($allDays) > 0 ? round(array_sum($allDays) / count($allDays), 1) : 0.0,
+            ],
+            'has_data' => $rows->isNotEmpty(),
+            'columns' => 'speed',
+        ];
+    }
+
+    /**
+     * @param  array<string, int|float>  $buckets
+     */
+    protected function bucketValueForLabel(array $buckets, string $label): int|float
+    {
+        if (array_key_exists($label, $buckets)) {
+            return $buckets[$label];
+        }
+        $needle = mb_strtoupper($label);
+        foreach ($buckets as $key => $value) {
+            if (mb_strtoupper((string) $key) === $needle) {
+                return $value;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * @param  array<string, array<int, float>>  $buckets
+     * @return array<int, float>
+     */
+    protected function bucketListForLabel(array $buckets, string $label): array
+    {
+        if (array_key_exists($label, $buckets) && is_array($buckets[$label])) {
+            return $buckets[$label];
+        }
+        $needle = mb_strtoupper($label);
+        foreach ($buckets as $key => $value) {
+            if (mb_strtoupper((string) $key) === $needle && is_array($value)) {
+                return $value;
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function catalogModelLabels(): array
+    {
+        return \App\Models\VehicleModel::query()
+            ->where(function ($q) {
+                $q->where('is_active', true)->orWhereNull('is_active');
+            })
+            ->orderBy('name')
+            ->pluck('name')
+            ->map(fn ($name) => trim((string) $name))
+            ->filter(fn ($name) => $name !== '')
+            ->unique(fn ($name) => mb_strtoupper($name))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function catalogMakeLabels(): array
+    {
+        return \App\Models\Make::query()
+            ->where(function ($q) {
+                $q->where('is_active', true)->orWhereNull('is_active');
+            })
+            ->orderBy('name')
+            ->pluck('name')
+            ->map(fn ($name) => trim((string) $name))
+            ->filter(fn ($name) => $name !== '')
+            ->unique(fn ($name) => mb_strtoupper($name))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function catalogBodyTypeLabels(): array
+    {
+        $fromDb = Vehicle::query()
+            ->whereNotNull('body_type')
+            ->where('body_type', '!=', '')
+            ->distinct()
+            ->orderBy('body_type')
+            ->pluck('body_type')
+            ->map(fn ($name) => trim((string) $name))
+            ->filter(fn ($name) => $name !== '')
+            ->all();
+
+        $defaults = ['SEDAN', 'HATCHBACK', 'VAN', 'PICK UP', 'SUV/CROSSOVER', 'COUPE', 'SPORTS', 'WAGON'];
+
+        return collect(array_merge($defaults, $fromDb))
+            ->map(fn ($name) => trim((string) $name))
+            ->filter(fn ($name) => $name !== '')
+            ->unique(fn ($name) => mb_strtoupper($name))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function catalogYearModelLabels(): array
+    {
+        return Vehicle::query()
+            ->whereNotNull('year')
+            ->where('year', '!=', '')
+            ->distinct()
+            ->orderByDesc('year')
+            ->pluck('year')
+            ->map(fn ($year) => trim((string) $year))
+            ->filter(fn ($year) => $year !== '')
+            ->unique()
+            ->values()
+            ->all();
     }
 
     protected function vehicleMatchesSalesLocation(Vehicle $v, string $locationFilter): bool
@@ -539,6 +918,1715 @@ class AnalyticsReportController extends Controller
         return view('analytics-reports.suppliers', $this->buildSuppliersPageData($request));
     }
 
+    public function financing(Request $request)
+    {
+        return view('analytics-reports.financing', $this->buildFinancingPageData($request));
+    }
+
+    public function salesReports(Request $request)
+    {
+        return view('analytics-reports.sales-reports', $this->buildSalesReportsPageData($request));
+    }
+
+    public function currentInventory(Request $request)
+    {
+        return view('analytics-reports.current-inventory', $this->buildInventoryReportsPageData($request));
+    }
+
+    public function customers(Request $request)
+    {
+        return view('analytics-reports.customers', $this->buildCustomerReportsPageData($request));
+    }
+
+    protected function placeholderReport(string $title, string $icon, string $message)
+    {
+        return view('analytics-reports.placeholder', [
+            'title' => $title,
+            'icon' => $icon,
+            'message' => $message,
+        ]);
+    }
+
+    protected function buildInventoryReportsPageData(Request $request): array
+    {
+        $locationOptions = $this->salesLocationFilterOptions();
+        $selectedLocation = $this->resolveSelectedLocationFilter(
+            trim((string) $request->get('location', '')),
+            $locationOptions
+        );
+
+        $selectedYear = $this->resolveSelectedYear($request);
+        $monthRaw = $request->input('month', null);
+        $selectedMonth = is_string($monthRaw) ? trim($monthRaw) : '';
+        if ($selectedMonth !== '' && ! preg_match('/^(0?[1-9]|1[0-2])$/', $selectedMonth)) {
+            $selectedMonth = '';
+        }
+
+        $showResults = $request->boolean('run')
+            || $request->filled('year')
+            || $request->filled('month')
+            || $request->filled('location');
+
+        if (! $request->filled('year') && ! $request->boolean('run') && $monthRaw === null) {
+            $latest = $this->latestSalesActivityYearMonth();
+            $selectedYear = $latest['year'];
+            $selectedMonth = $latest['month'];
+        }
+
+        $now = Carbon::now()->endOfDay();
+        if ($selectedMonth !== '') {
+            $monthNum = (int) $selectedMonth;
+            $selectedMonth = sprintf('%02d', $monthNum);
+            $asOf = Carbon::create($selectedYear, $monthNum, 1)->endOfMonth()->endOfDay();
+            $activeRangeLabel = Carbon::create($selectedYear, $monthNum, 1)->format('F Y');
+        } else {
+            // Year-only: inventory / sold window as of end of that year (or today if current year).
+            $asOf = Carbon::create($selectedYear, 12, 31)->endOfDay();
+            $activeRangeLabel = (string) $selectedYear;
+        }
+        if ($asOf->gt($now)) {
+            $asOf = $now->copy();
+            if ($selectedMonth === '') {
+                $activeRangeLabel = (string) $selectedYear . ' (as of today)';
+            }
+        }
+
+        $soldWindow = [
+            'from' => $asOf->copy()->subMonthsNoOverflow(3)->startOfDay(),
+            'to' => $asOf->copy(),
+        ];
+
+        $reports = $showResults
+            ? $this->buildInventoryReportsTables($soldWindow, $asOf, $selectedLocation)
+            : [
+                'by_model' => ['title' => 'Inventory by Model', 'dimension_label' => 'Model', 'rows' => [], 'totals' => [], 'has_data' => false],
+                'by_make' => ['title' => 'Inventory by Make', 'dimension_label' => 'Make', 'rows' => [], 'totals' => [], 'has_data' => false],
+                'by_body_type' => ['title' => 'Inventory by Body Type', 'dimension_label' => 'Body Type', 'rows' => [], 'totals' => [], 'has_data' => false],
+                'by_year_model' => ['title' => 'Inventory by Year Model', 'dimension_label' => 'Year Model', 'rows' => [], 'totals' => [], 'has_data' => false],
+                'by_fuel_type' => ['title' => 'Inventory by Fuel Type', 'dimension_label' => 'Fuel Type', 'rows' => [], 'totals' => [], 'has_data' => false],
+                'by_transmission' => ['title' => 'Inventory by Transmission', 'dimension_label' => 'Transmission', 'rows' => [], 'totals' => [], 'has_data' => false],
+                'by_supplier' => ['title' => 'Inventory by Supplier', 'dimension_label' => 'Supplier', 'rows' => [], 'totals' => [], 'has_data' => false],
+                'by_age' => ['title' => 'Inventory by Car Age', 'dimension_label' => 'Car Age', 'rows' => [], 'totals' => [], 'has_data' => false],
+                'has_data' => false,
+            ];
+
+        $activeTab = (string) $request->get('excel_tab', 'by_model');
+        $validTabs = ['by_model', 'by_make', 'by_body_type', 'by_year_model', 'by_fuel_type', 'by_transmission', 'by_supplier', 'by_age'];
+        if (! in_array($activeTab, $validTabs, true)) {
+            $activeTab = 'by_model';
+        }
+
+        return [
+            'yearOptions' => $this->salesYearFilterOptions(),
+            'selectedYear' => $selectedYear,
+            'selectedMonth' => $selectedMonth,
+            'monthOptions' => [
+                '' => 'All months (as of today)',
+                '01' => 'January',
+                '02' => 'February',
+                '03' => 'March',
+                '04' => 'April',
+                '05' => 'May',
+                '06' => 'June',
+                '07' => 'July',
+                '08' => 'August',
+                '09' => 'September',
+                '10' => 'October',
+                '11' => 'November',
+                '12' => 'December',
+            ],
+            'locationOptions' => $locationOptions,
+            'selectedLocation' => $selectedLocation,
+            'showResults' => $showResults,
+            'activeRangeLabel' => $activeRangeLabel,
+            'soldWindowLabel' => $soldWindow['from']->format('M d, Y') . ' – ' . $soldWindow['to']->format('M d, Y'),
+            'activeExcelTab' => $activeTab,
+            'byModelReport' => $reports['by_model'],
+            'byMakeReport' => $reports['by_make'],
+            'byBodyTypeReport' => $reports['by_body_type'],
+            'byYearModelReport' => $reports['by_year_model'],
+            'byFuelTypeReport' => $reports['by_fuel_type'],
+            'byTransmissionReport' => $reports['by_transmission'],
+            'bySupplierReport' => $reports['by_supplier'],
+            'byAgeReport' => $reports['by_age'],
+            'hasData' => (bool) ($reports['has_data'] ?? false),
+        ];
+    }
+
+    /**
+     * Resolve location select to a canonical option key (case-insensitive).
+     *
+     * @param  array<string, string>  $locationOptions
+     */
+    protected function resolveSelectedLocationFilter(string $selectedLocation, array $locationOptions): string
+    {
+        if ($selectedLocation === '') {
+            return '';
+        }
+        if (array_key_exists($selectedLocation, $locationOptions)) {
+            return $selectedLocation;
+        }
+        foreach ($locationOptions as $key => $label) {
+            if ($key === '') {
+                continue;
+            }
+            if (strcasecmp((string) $key, $selectedLocation) === 0
+                || strcasecmp((string) $label, $selectedLocation) === 0) {
+                return (string) $key;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Unit was on-hand inventory at $asOf (purchased on/before, not yet released/sold/forfeited).
+     */
+    protected function vehicleInStockAsOf(Vehicle $v, Carbon $asOf): bool
+    {
+        $acquired = $v->purchase_date ?? $v->created_at;
+        if (! $acquired || Carbon::parse($acquired)->startOfDay()->gt($asOf->copy()->startOfDay())) {
+            return false;
+        }
+
+        if (in_array((string) $v->status, ['Available', 'Reserved'], true)) {
+            return true;
+        }
+
+        $leave = $v->statusDetail?->release_date
+            ?? $v->statusDetail?->sale_date
+            ?? null;
+
+        if (! $leave && $v->relationLoaded('forfeitDetails')) {
+            $leave = $v->forfeitDetails->first()?->forfeit_date;
+        } elseif (! $leave) {
+            $leave = $v->forfeitDetails()->orderByDesc('forfeit_date')->value('forfeit_date');
+        }
+
+        if (! $leave) {
+            return false;
+        }
+
+        // Still in stock at asOf if it left after that date.
+        return Carbon::parse($leave)->startOfDay()->gt($asOf->copy()->startOfDay());
+    }
+
+    /**
+     * Excel "(20-27) INVENTORY REPORTS" — stock as-of selected period + last-3-months sales metrics.
+     *
+     * @return array<string, mixed>
+     */
+    protected function buildInventoryReportsTables(array $soldWindow, Carbon $asOf, string $locationFilter = ''): array
+    {
+        $stockVehicles = Vehicle::with(['statusDetail', 'expense', 'make', 'vehicleModel', 'branchLocation', 'forfeitDetails'])
+            ->where('status', '!=', 'Archived')
+            ->get()
+            ->filter(function (Vehicle $v) use ($asOf, $locationFilter) {
+                if (! $this->vehicleInStockAsOf($v, $asOf)) {
+                    return false;
+                }
+
+                return $this->vehicleMatchesSalesLocation($v, $locationFilter);
+            })
+            ->values();
+
+        $soldVehicles = Vehicle::with(['statusDetail', 'expense', 'make', 'vehicleModel', 'branchLocation'])
+            ->whereIn('status', ['Reserved', 'Released', 'Forfeited'])
+            ->whereHas('statusDetail', fn ($q) => $q->whereNotNull('sale_date'))
+            ->get()
+            ->filter(function (Vehicle $v) use ($soldWindow, $locationFilter) {
+                if (! $this->inWindow($v->statusDetail?->sale_date, $soldWindow)) {
+                    return false;
+                }
+
+                return $this->vehicleMatchesSalesLocation($v, $locationFilter);
+            })
+            ->values();
+
+        $byModel = $this->buildInventoryDimensionTable(
+            'Inventory by Model and Sales',
+            'Model',
+            $stockVehicles,
+            $soldVehicles,
+            'model',
+            $asOf
+        );
+        $byMake = $this->buildInventoryDimensionTable(
+            'Inventory by Make',
+            'Make',
+            $stockVehicles,
+            $soldVehicles,
+            'make',
+            $asOf
+        );
+        $byBody = $this->buildInventoryDimensionTable(
+            'Inventory by Body Type',
+            'Body Type',
+            $stockVehicles,
+            $soldVehicles,
+            'body_type',
+            $asOf
+        );
+        $byYear = $this->buildInventoryDimensionTable(
+            'Inventory by Year Model',
+            'Year Model',
+            $stockVehicles,
+            $soldVehicles,
+            'year_model',
+            $asOf
+        );
+        $byFuel = $this->buildInventoryDimensionTable(
+            'Inventory by Fuel Type',
+            'Fuel Type',
+            $stockVehicles,
+            $soldVehicles,
+            'fuel_type',
+            $asOf
+        );
+        $byTrans = $this->buildInventoryDimensionTable(
+            'Inventory by Transmission Type',
+            'Transmission',
+            $stockVehicles,
+            $soldVehicles,
+            'transmission',
+            $asOf
+        );
+        $bySupplier = $this->buildInventoryDimensionTable(
+            'Inventory by Supplier',
+            'Supplier',
+            $stockVehicles,
+            $soldVehicles,
+            'supplier',
+            $asOf
+        );
+        $byAge = $this->buildInventoryDimensionTable(
+            'Inventory by Car Age',
+            'Car Age',
+            $stockVehicles,
+            $soldVehicles,
+            'inventory_age',
+            $asOf,
+            $this->inventoryAgeBucketLabels()
+        );
+
+        $hasData = (bool) (
+            ($byModel['has_data'] ?? false)
+            || ($byMake['has_data'] ?? false)
+            || ($byBody['has_data'] ?? false)
+            || ($byYear['has_data'] ?? false)
+            || ($byFuel['has_data'] ?? false)
+            || ($byTrans['has_data'] ?? false)
+            || ($bySupplier['has_data'] ?? false)
+            || ($byAge['has_data'] ?? false)
+        );
+
+        return [
+            'by_model' => $byModel,
+            'by_make' => $byMake,
+            'by_body_type' => $byBody,
+            'by_year_model' => $byYear,
+            'by_fuel_type' => $byFuel,
+            'by_transmission' => $byTrans,
+            'by_supplier' => $bySupplier,
+            'by_age' => $byAge,
+            'has_data' => $hasData,
+        ];
+    }
+
+    /**
+     * @param  Collection<int, Vehicle>  $stockVehicles
+     * @param  Collection<int, Vehicle>  $soldVehicles
+     * @param  array<int, string>|null  $fixedLabels
+     * @return array{title:string,dimension_label:string,rows:array<int,array<string,mixed>>,totals:array<string,mixed>,has_data:bool}
+     */
+    protected function buildInventoryDimensionTable(
+        string $title,
+        string $dimensionLabel,
+        Collection $stockVehicles,
+        Collection $soldVehicles,
+        string $dimension,
+        Carbon $asOf,
+        ?array $fixedLabels = null
+    ): array {
+        $stockBuckets = [];
+        $profitBuckets = [];
+        foreach ($stockVehicles as $vehicle) {
+            $key = $this->inventoryDimensionKey($vehicle, $dimension, $asOf, false);
+            if ($key === '') {
+                continue;
+            }
+            $stockBuckets[$key] = ($stockBuckets[$key] ?? 0) + 1;
+            $profitBuckets[$key][] = $this->inventoryPotentialProfit($vehicle);
+        }
+
+        $soldBuckets = [];
+        $speedBuckets = [];
+        foreach ($soldVehicles as $vehicle) {
+            $key = $this->inventoryDimensionKey($vehicle, $dimension, $asOf, true);
+            if ($key === '') {
+                continue;
+            }
+            $soldBuckets[$key] = ($soldBuckets[$key] ?? 0) + 1;
+            $saleDate = $vehicle->statusDetail?->sale_date;
+            $purchase = $vehicle->purchase_date ?? $vehicle->created_at;
+            if ($saleDate && $purchase) {
+                $speedBuckets[$key][] = (float) Carbon::parse($purchase)->diffInDays(Carbon::parse($saleDate));
+            }
+        }
+
+        if ($fixedLabels !== null) {
+            $labels = collect($fixedLabels);
+        } else {
+            $labels = collect(array_unique(array_merge(
+                array_keys($stockBuckets),
+                array_keys($soldBuckets)
+            )))
+                ->map(fn ($label) => trim((string) $label))
+                ->filter(fn ($label) => $label !== '')
+                ->unique(fn ($label) => mb_strtoupper($label))
+                ->values();
+        }
+
+        $totalStock = (int) array_sum($stockBuckets);
+        $allSpeed = [];
+        $allProfit = [];
+
+        $rows = $labels
+            ->map(function ($label) use ($stockBuckets, $soldBuckets, $speedBuckets, $profitBuckets, $totalStock, &$allSpeed, &$allProfit) {
+                $stock = (int) ($this->bucketValueForLabel($stockBuckets, $label));
+                $sold = (int) ($this->bucketValueForLabel($soldBuckets, $label));
+                $speeds = $this->bucketListForLabel($speedBuckets, $label);
+                $profits = $this->bucketListForLabel($profitBuckets, $label);
+                foreach ($speeds as $day) {
+                    $allSpeed[] = $day;
+                }
+                foreach ($profits as $profit) {
+                    $allProfit[] = $profit;
+                }
+
+                return [
+                    'label' => $label,
+                    'stock_count' => $stock,
+                    'stock_pct' => $totalStock > 0 ? round(($stock / $totalStock) * 100, 1) : 0.0,
+                    'sold_last_3_months' => $sold,
+                    'avg_speed_days' => count($speeds) > 0 ? round(array_sum($speeds) / count($speeds), 1) : 0.0,
+                    'avg_potential_profit' => count($profits) > 0 ? array_sum($profits) / count($profits) : 0.0,
+                ];
+            })
+            ->filter(fn (array $row) => ((int) $row['stock_count'] + (int) $row['sold_last_3_months']) > 0);
+
+        if ($fixedLabels === null) {
+            $rows = $rows->sort(function (array $a, array $b) {
+                if ($a['stock_count'] !== $b['stock_count']) {
+                    return $b['stock_count'] <=> $a['stock_count'];
+                }
+                if ($a['sold_last_3_months'] !== $b['sold_last_3_months']) {
+                    return $b['sold_last_3_months'] <=> $a['sold_last_3_months'];
+                }
+
+                return strcasecmp($a['label'], $b['label']);
+            })->values();
+        } else {
+            $rows = $rows->values();
+        }
+
+        $rows = $rows->map(function (array $row, int $index) {
+            $row['rank'] = $index + 1;
+
+            return $row;
+        });
+
+        $visibleStock = (int) $rows->sum('stock_count');
+        $visibleSold = (int) $rows->sum('sold_last_3_months');
+
+        return [
+            'title' => $title,
+            'dimension_label' => $dimensionLabel,
+            'rows' => $rows->all(),
+            'totals' => [
+                'stock_count' => $visibleStock,
+                'stock_pct' => $visibleStock > 0 ? 100.0 : 0.0,
+                'sold_last_3_months' => $visibleSold,
+                'avg_speed_days' => count($allSpeed) > 0 ? round(array_sum($allSpeed) / count($allSpeed), 1) : 0.0,
+                'avg_potential_profit' => count($allProfit) > 0 ? array_sum($allProfit) / count($allProfit) : 0.0,
+            ],
+            'has_data' => $rows->isNotEmpty(),
+        ];
+    }
+
+    protected function inventoryDimensionKey(Vehicle $v, string $dimension, Carbon $asOf, bool $forSold): string
+    {
+        return match ($dimension) {
+            'model' => $this->vehicleModelLabel($v),
+            'make' => $this->vehicleMakeLabel($v),
+            'body_type' => $this->vehicleBodyTypeLabel($v),
+            'year_model' => $this->vehicleYearModelLabel($v),
+            'fuel_type' => $this->vehicleFuelTypeLabel($v),
+            'transmission' => $this->vehicleTransmissionLabel($v),
+            'supplier' => $this->vehicleSupplierLabel($v),
+            'inventory_age' => $this->inventoryAgeBucketForVehicle($v, $asOf, $forSold),
+            default => 'Unknown',
+        };
+    }
+
+    protected function inventoryPotentialProfit(Vehicle $v): float
+    {
+        $posted = (float) ($v->posted_price ?? 0);
+        $purchase = (float) ($v->purchase_price ?? 0);
+        $repair = (float) ($v->expense?->total_repair_cost ?? 0);
+        $agent = (float) ($v->statusDetail?->agent_cost ?? 0);
+        $transfer = (float) ($v->statusDetail?->transfer_cost ?? 0);
+
+        if ($posted <= 0) {
+            return 0.0;
+        }
+
+        return $posted - ($purchase + $repair + $agent + $transfer);
+    }
+
+    protected function vehicleFuelTypeLabel(Vehicle $v): string
+    {
+        $raw = strtolower(trim((string) ($v->fuel_type ?? '')));
+        if ($raw === '') {
+            return 'Unspecified';
+        }
+        if (str_contains($raw, 'diesel')) {
+            return 'DIESEL';
+        }
+        if (str_contains($raw, 'hybrid')) {
+            return 'HYBRID';
+        }
+        if (str_contains($raw, 'electric') || $raw === 'ev') {
+            return 'ELECTRIC';
+        }
+        if (str_contains($raw, 'gas') || str_contains($raw, 'petrol')) {
+            return 'GAS';
+        }
+
+        return mb_strtoupper(trim((string) $v->fuel_type));
+    }
+
+    protected function vehicleTransmissionLabel(Vehicle $v): string
+    {
+        $raw = strtolower(trim((string) ($v->transmission ?? '')));
+        if ($raw === '') {
+            return 'Unspecified';
+        }
+        if (str_contains($raw, 'manual')) {
+            return 'MANUAL';
+        }
+        if (str_contains($raw, 'auto') || str_contains($raw, 'cvt') || str_contains($raw, 'dct')) {
+            return 'AUTOMATIC';
+        }
+
+        return mb_strtoupper(trim((string) $v->transmission));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function inventoryAgeBucketLabels(): array
+    {
+        return [
+            '< 1 MONTH',
+            '1 MONTH - 2 MONTHS',
+            '2 MONTHS - 3 MONTHS',
+            '3 MONTHS - 4 MONTHS',
+            '4 MONTHS - 5 MONTHS',
+            '5 MONTHS - 6 MONTHS',
+            '6 MONTHS - 7 MONTHS',
+            '7 MONTHS - 8 MONTHS',
+            '8 MONTHS - 9 MONTHS',
+            '9 MONTHS - 10 MONTHS',
+            '10 MONTHS - 11 MONTHS',
+            '11 MONTHS -12 MONTHS',
+            '1 YEAR - 1.5 YEARS',
+            '1.5 YEARS - 2 YEARS',
+            '2 YEARS AND ABOVE',
+        ];
+    }
+
+    protected function inventoryAgeBucketForVehicle(Vehicle $v, Carbon $asOf, bool $forSold): string
+    {
+        $start = $v->purchase_date ?? $v->created_at;
+        if (! $start) {
+            return '';
+        }
+
+        $end = $asOf;
+        if ($forSold) {
+            $endDate = $v->statusDetail?->sale_date ?? $v->statusDetail?->release_date;
+            if (! $endDate) {
+                return '';
+            }
+            $end = Carbon::parse($endDate);
+        }
+
+        $days = (float) Carbon::parse($start)->diffInDays($end);
+
+        return $this->inventoryAgeBucketFromDays($days);
+    }
+
+    protected function inventoryAgeBucketFromDays(float $days): string
+    {
+        if ($days < 30) {
+            return '< 1 MONTH';
+        }
+        if ($days < 60) {
+            return '1 MONTH - 2 MONTHS';
+        }
+        if ($days < 90) {
+            return '2 MONTHS - 3 MONTHS';
+        }
+        if ($days < 120) {
+            return '3 MONTHS - 4 MONTHS';
+        }
+        if ($days < 150) {
+            return '4 MONTHS - 5 MONTHS';
+        }
+        if ($days < 180) {
+            return '5 MONTHS - 6 MONTHS';
+        }
+        if ($days < 210) {
+            return '6 MONTHS - 7 MONTHS';
+        }
+        if ($days < 240) {
+            return '7 MONTHS - 8 MONTHS';
+        }
+        if ($days < 270) {
+            return '8 MONTHS - 9 MONTHS';
+        }
+        if ($days < 300) {
+            return '9 MONTHS - 10 MONTHS';
+        }
+        if ($days < 330) {
+            return '10 MONTHS - 11 MONTHS';
+        }
+        if ($days < 365) {
+            return '11 MONTHS -12 MONTHS';
+        }
+        if ($days < 548) { // ~1.5 years
+            return '1 YEAR - 1.5 YEARS';
+        }
+        if ($days < 730) {
+            return '1.5 YEARS - 2 YEARS';
+        }
+
+        return '2 YEARS AND ABOVE';
+    }
+
+    protected function buildCustomerReportsPageData(Request $request): array
+    {
+        $locationOptions = $this->salesLocationFilterOptions();
+        $selectedLocation = $this->resolveSelectedLocationFilter(
+            trim((string) $request->get('location', '')),
+            $locationOptions
+        );
+
+        $selectedYear = $this->resolveSelectedYear($request);
+        $monthRaw = $request->input('month', null);
+        $selectedMonth = is_string($monthRaw) ? trim($monthRaw) : '';
+        if ($selectedMonth !== '' && ! preg_match('/^(0?[1-9]|1[0-2])$/', $selectedMonth)) {
+            $selectedMonth = '';
+        }
+
+        $showResults = $request->boolean('run')
+            || $request->filled('year')
+            || $request->filled('month')
+            || $request->filled('location');
+
+        if (! $request->filled('year') && ! $request->boolean('run') && $monthRaw === null) {
+            $latest = $this->latestSalesActivityYearMonth();
+            $selectedYear = $latest['year'];
+            $selectedMonth = $latest['month'];
+        }
+
+        if ($selectedMonth !== '') {
+            $monthNum = (int) $selectedMonth;
+            $selectedMonth = sprintf('%02d', $monthNum);
+            $window = [
+                'from' => Carbon::create($selectedYear, $monthNum, 1)->startOfDay(),
+                'to' => Carbon::create($selectedYear, $monthNum, 1)->endOfMonth()->endOfDay(),
+            ];
+            $activeRangeLabel = Carbon::create($selectedYear, $monthNum, 1)->format('F Y');
+        } else {
+            $window = [
+                'from' => Carbon::create($selectedYear, 1, 1)->startOfDay(),
+                'to' => Carbon::create($selectedYear, 12, 31)->endOfDay(),
+            ];
+            $activeRangeLabel = (string) $selectedYear;
+        }
+
+        $reports = $showResults
+            ? $this->buildCustomerReportsTables($window, $selectedLocation)
+            : [
+                'by_age' => ['title' => 'Customers by Age', 'dimension_label' => 'Age', 'rows' => [], 'totals' => [], 'has_data' => false],
+                'by_gender' => ['title' => 'Customers by Gender', 'dimension_label' => 'Sex', 'rows' => [], 'totals' => [], 'has_data' => false],
+                'by_location' => ['title' => 'Customers by Location', 'dimension_label' => 'Location', 'rows' => [], 'totals' => [], 'has_data' => false],
+                'has_data' => false,
+            ];
+
+        $activeTab = (string) $request->get('excel_tab', 'by_age');
+        if (! in_array($activeTab, ['by_age', 'by_gender', 'by_location'], true)) {
+            $activeTab = 'by_age';
+        }
+
+        return [
+            'yearOptions' => $this->salesYearFilterOptions(),
+            'selectedYear' => $selectedYear,
+            'selectedMonth' => $selectedMonth,
+            'monthOptions' => [
+                '' => 'All months in year',
+                '01' => 'January',
+                '02' => 'February',
+                '03' => 'March',
+                '04' => 'April',
+                '05' => 'May',
+                '06' => 'June',
+                '07' => 'July',
+                '08' => 'August',
+                '09' => 'September',
+                '10' => 'October',
+                '11' => 'November',
+                '12' => 'December',
+            ],
+            'locationOptions' => $locationOptions,
+            'selectedLocation' => $selectedLocation,
+            'showResults' => $showResults,
+            'activeRangeLabel' => $activeRangeLabel,
+            'activeExcelTab' => $activeTab,
+            'byAgeReport' => $reports['by_age'],
+            'byGenderReport' => $reports['by_gender'],
+            'byLocationReport' => $reports['by_location'],
+            'hasData' => (bool) ($reports['has_data'] ?? false),
+        ];
+    }
+
+    /**
+     * Excel "(28-29) CUSTOMER REPORTS" (+ catalog #30 location):
+     * sales/releases by customer age, gender, and customer location.
+     *
+     * @return array<string, mixed>
+     */
+    protected function buildCustomerReportsTables(array $window, string $locationFilter = ''): array
+    {
+        $saleVehicles = Vehicle::with(['statusDetail', 'branchLocation'])
+            ->whereIn('status', ['Reserved', 'Released', 'Forfeited'])
+            ->whereHas('statusDetail', fn ($q) => $q->whereNotNull('sale_date'))
+            ->get()
+            ->filter(function (Vehicle $v) use ($window, $locationFilter) {
+                if (! $this->inWindow($v->statusDetail?->sale_date, $window)) {
+                    return false;
+                }
+
+                return $this->vehicleMatchesSalesLocation($v, $locationFilter);
+            })
+            ->values();
+
+        $releaseVehicles = $this->soldVehiclesBase($window)
+            ->filter(fn (Vehicle $v) => $this->vehicleMatchesSalesLocation($v, $locationFilter))
+            ->values();
+
+        $byAge = $this->buildCustomerDimensionTable(
+            'Customers by Age',
+            'Age',
+            $saleVehicles,
+            $releaseVehicles,
+            'age',
+            $this->customerAgeBucketLabels()
+        );
+        $byGender = $this->buildCustomerDimensionTable(
+            'Customers by Gender',
+            'Sex',
+            $saleVehicles,
+            $releaseVehicles,
+            'gender',
+            ['Male', 'Female', 'Other', 'Unspecified']
+        );
+        $byLocation = $this->buildCustomerDimensionTable(
+            'Customers by Location',
+            'Location',
+            $saleVehicles,
+            $releaseVehicles,
+            'customer_location'
+        );
+
+        return [
+            'by_age' => $byAge,
+            'by_gender' => $byGender,
+            'by_location' => $byLocation,
+            'has_data' => (bool) (
+                ($byAge['has_data'] ?? false)
+                || ($byGender['has_data'] ?? false)
+                || ($byLocation['has_data'] ?? false)
+            ),
+        ];
+    }
+
+    /**
+     * @param  Collection<int, Vehicle>  $saleVehicles
+     * @param  Collection<int, Vehicle>  $releaseVehicles
+     * @param  array<int, string>|null  $fixedLabels
+     * @return array{title:string,dimension_label:string,rows:array<int,array<string,mixed>>,totals:array<string,mixed>,has_data:bool}
+     */
+    protected function buildCustomerDimensionTable(
+        string $title,
+        string $dimensionLabel,
+        Collection $saleVehicles,
+        Collection $releaseVehicles,
+        string $dimension,
+        ?array $fixedLabels = null
+    ): array {
+        $salesBuckets = [];
+        foreach ($saleVehicles as $vehicle) {
+            $key = $this->customerDimensionKey($vehicle, $dimension, false);
+            if ($key === '') {
+                continue;
+            }
+            $salesBuckets[$key] = ($salesBuckets[$key] ?? 0) + 1;
+        }
+
+        $releaseBuckets = [];
+        foreach ($releaseVehicles as $vehicle) {
+            $key = $this->customerDimensionKey($vehicle, $dimension, true);
+            if ($key === '') {
+                continue;
+            }
+            $releaseBuckets[$key] = ($releaseBuckets[$key] ?? 0) + 1;
+        }
+
+        if ($fixedLabels !== null) {
+            $labels = collect($fixedLabels);
+        } else {
+            $labels = collect(array_unique(array_merge(
+                array_keys($salesBuckets),
+                array_keys($releaseBuckets)
+            )))
+                ->map(fn ($label) => trim((string) $label))
+                ->filter(fn ($label) => $label !== '')
+                ->unique(fn ($label) => mb_strtoupper($label))
+                ->values();
+        }
+
+        $totalSales = (int) array_sum($salesBuckets);
+        $totalReleases = (int) array_sum($releaseBuckets);
+
+        $rows = $labels
+            ->map(function ($label) use ($salesBuckets, $releaseBuckets, $totalSales, $totalReleases) {
+                $sales = (int) ($this->bucketValueForLabel($salesBuckets, $label));
+                $releases = (int) ($this->bucketValueForLabel($releaseBuckets, $label));
+
+                return [
+                    'label' => $label,
+                    'sales_count' => $sales,
+                    'sales_pct' => $totalSales > 0 ? round(($sales / $totalSales) * 100, 1) : 0.0,
+                    'release_count' => $releases,
+                    'release_pct' => $totalReleases > 0 ? round(($releases / $totalReleases) * 100, 1) : 0.0,
+                ];
+            })
+            ->filter(fn (array $row) => ((int) $row['sales_count'] + (int) $row['release_count']) > 0);
+
+        if ($fixedLabels === null) {
+            $rows = $rows->sort(function (array $a, array $b) {
+                if ($a['release_count'] !== $b['release_count']) {
+                    return $b['release_count'] <=> $a['release_count'];
+                }
+                if ($a['sales_count'] !== $b['sales_count']) {
+                    return $b['sales_count'] <=> $a['sales_count'];
+                }
+
+                return strcasecmp($a['label'], $b['label']);
+            })->values();
+        } else {
+            $rows = $rows->values();
+        }
+
+        $rows = $rows->map(function (array $row, int $index) {
+            $row['rank'] = $index + 1;
+
+            return $row;
+        });
+
+        $visibleSales = (int) $rows->sum('sales_count');
+        $visibleReleases = (int) $rows->sum('release_count');
+
+        return [
+            'title' => $title,
+            'dimension_label' => $dimensionLabel,
+            'rows' => $rows->all(),
+            'totals' => [
+                'sales_count' => $visibleSales,
+                'sales_pct' => $visibleSales > 0 ? 100.0 : 0.0,
+                'release_count' => $visibleReleases,
+                'release_pct' => $visibleReleases > 0 ? 100.0 : 0.0,
+            ],
+            'has_data' => $rows->isNotEmpty(),
+        ];
+    }
+
+    protected function customerDimensionKey(Vehicle $v, string $dimension, bool $forRelease): string
+    {
+        $detail = $v->statusDetail;
+
+        return match ($dimension) {
+            'age' => $this->customerAgeBucketLabel($detail, $forRelease
+                ? ($v->getAttribute('excel_period_release_date') ?? $detail?->release_date ?? $detail?->sale_date)
+                : ($detail?->sale_date)),
+            'gender' => $this->customerGenderLabel($detail?->customer_gender),
+            'customer_location' => $this->customerLocationLabel($detail?->customer_location),
+            default => 'Unknown',
+        };
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function customerAgeBucketLabels(): array
+    {
+        return [
+            '18-19',
+            '20-24',
+            '25-29',
+            '30-34',
+            '35-39',
+            '40-44',
+            '45-49',
+            '50-54',
+            '55-59',
+            '60+',
+            'Under 18',
+            'Unknown',
+        ];
+    }
+
+    protected function customerAgeBucketLabel($detail, $eventDate): string
+    {
+        $dob = $detail?->customer_date_of_birth ?? null;
+        if (! $dob || ! $eventDate) {
+            return 'Unknown';
+        }
+
+        try {
+            $age = (int) Carbon::parse($dob)->diffInYears(Carbon::parse($eventDate));
+        } catch (\Throwable $e) {
+            return 'Unknown';
+        }
+
+        if ($age < 18) {
+            return 'Under 18';
+        }
+        if ($age <= 19) {
+            return '18-19';
+        }
+        if ($age <= 24) {
+            return '20-24';
+        }
+        if ($age <= 29) {
+            return '25-29';
+        }
+        if ($age <= 34) {
+            return '30-34';
+        }
+        if ($age <= 39) {
+            return '35-39';
+        }
+        if ($age <= 44) {
+            return '40-44';
+        }
+        if ($age <= 49) {
+            return '45-49';
+        }
+        if ($age <= 54) {
+            return '50-54';
+        }
+        if ($age <= 59) {
+            return '55-59';
+        }
+
+        return '60+';
+    }
+
+    protected function customerGenderLabel(?string $gender): string
+    {
+        $raw = strtolower(trim((string) $gender));
+        if ($raw === '') {
+            return 'Unspecified';
+        }
+        if ($raw === 'male' || $raw === 'm') {
+            return 'Male';
+        }
+        if ($raw === 'female' || $raw === 'f') {
+            return 'Female';
+        }
+
+        return 'Other';
+    }
+
+    protected function customerLocationLabel(?string $location): string
+    {
+        $raw = trim((string) $location);
+        if ($raw === '') {
+            return 'Unknown';
+        }
+
+        return mb_strtoupper(preg_replace('/\s+/', ' ', $raw) ?? $raw);
+    }
+
+    protected function buildSalesReportsPageData(Request $request): array
+    {
+        $locationOptions = $this->salesLocationFilterOptions();
+        $selectedLocation = trim((string) $request->get('location', ''));
+        if ($selectedLocation !== '' && ! array_key_exists($selectedLocation, $locationOptions)) {
+            $selectedLocation = '';
+        }
+
+        $selectedYear = $this->resolveSelectedYear($request);
+        $monthRaw = $request->input('month', null);
+        $selectedMonth = is_string($monthRaw) ? trim($monthRaw) : '';
+        if ($selectedMonth !== '' && ! preg_match('/^(0?[1-9]|1[0-2])$/', $selectedMonth)) {
+            $selectedMonth = '';
+        }
+
+        $showResults = $request->boolean('run')
+            || $request->filled('year')
+            || $request->filled('month')
+            || $request->filled('location');
+
+        if (! $request->filled('year') && ! $request->boolean('run') && $monthRaw === null) {
+            $latest = $this->latestSalesActivityYearMonth();
+            $selectedYear = $latest['year'];
+            $selectedMonth = $latest['month'];
+        }
+
+        if ($selectedMonth !== '') {
+            $monthNum = (int) $selectedMonth;
+            $selectedMonth = sprintf('%02d', $monthNum);
+            $window = [
+                'from' => Carbon::create($selectedYear, $monthNum, 1)->startOfDay(),
+                'to' => Carbon::create($selectedYear, $monthNum, 1)->endOfMonth()->endOfDay(),
+            ];
+            $activeRangeLabel = Carbon::create($selectedYear, $monthNum, 1)->format('F Y');
+        } else {
+            $window = [
+                'from' => Carbon::create($selectedYear, 1, 1)->startOfDay(),
+                'to' => Carbon::create($selectedYear, 12, 31)->endOfDay(),
+            ];
+            $activeRangeLabel = (string) $selectedYear;
+        }
+
+        $reports = $showResults
+            ? $this->buildSalesReportsTables($window, $selectedLocation)
+            : [
+                'day_of_week' => ['title' => 'Sales by Day of Week', 'rows' => [], 'totals' => [], 'has_data' => false],
+                'days_to_sell' => ['title' => 'Days to Sell and Days to Release', 'rows' => [], 'totals' => [], 'has_data' => false],
+                'has_data' => false,
+            ];
+
+        $activeTab = (string) $request->get('excel_tab', 'day_of_week');
+        if (! in_array($activeTab, ['day_of_week', 'days_to_sell'], true)) {
+            $activeTab = 'day_of_week';
+        }
+
+        return [
+            'yearOptions' => $this->salesYearFilterOptions(),
+            'selectedYear' => $selectedYear,
+            'selectedMonth' => $selectedMonth,
+            'monthOptions' => [
+                '' => 'All months in year',
+                '01' => 'January',
+                '02' => 'February',
+                '03' => 'March',
+                '04' => 'April',
+                '05' => 'May',
+                '06' => 'June',
+                '07' => 'July',
+                '08' => 'August',
+                '09' => 'September',
+                '10' => 'October',
+                '11' => 'November',
+                '12' => 'December',
+            ],
+            'locationOptions' => $locationOptions,
+            'selectedLocation' => $selectedLocation,
+            'showResults' => $showResults,
+            'activeRangeLabel' => $activeRangeLabel,
+            'activeExcelTab' => $activeTab,
+            'dayOfWeekReport' => $reports['day_of_week'],
+            'daysToSellReport' => $reports['days_to_sell'],
+            'hasData' => (bool) ($reports['has_data'] ?? false),
+        ];
+    }
+
+    /**
+     * Excel "(18-19) SALES REPORTS" — day-of-week + days-to-sell/release by month.
+     *
+     * @return array<string, mixed>
+     */
+    protected function buildSalesReportsTables(array $window, string $locationFilter = ''): array
+    {
+        $dayNames = [
+            1 => 'MONDAY',
+            2 => 'TUESDAY',
+            3 => 'WEDNESDAY',
+            4 => 'THURSDAY',
+            5 => 'FRIDAY',
+            6 => 'SATURDAY',
+            7 => 'SUNDAY',
+        ];
+        $monthNames = [
+            1 => 'JANUARY', 2 => 'FEBRUARY', 3 => 'MARCH', 4 => 'APRIL',
+            5 => 'MAY', 6 => 'JUNE', 7 => 'JULY', 8 => 'AUGUST',
+            9 => 'SEPTEMBER', 10 => 'OCTOBER', 11 => 'NOVEMBER', 12 => 'DECEMBER',
+        ];
+
+        $saleVehicles = Vehicle::with(['statusDetail', 'branchLocation'])
+            ->whereIn('status', ['Reserved', 'Released'])
+            ->whereHas('statusDetail', fn ($q) => $q->whereNotNull('sale_date'))
+            ->get()
+            ->filter(function (Vehicle $v) use ($window, $locationFilter) {
+                if (! $this->inWindow($v->statusDetail?->sale_date, $window)) {
+                    return false;
+                }
+
+                return $this->vehicleMatchesSalesLocation($v, $locationFilter);
+            })
+            ->values();
+
+        $releaseVehicles = $this->soldVehiclesBase($window)
+            ->filter(fn (Vehicle $v) => $this->vehicleMatchesSalesLocation($v, $locationFilter))
+            ->values();
+
+        $dowSales = array_fill(1, 7, 0);
+        $dowReleases = array_fill(1, 7, 0);
+
+        foreach ($saleVehicles as $vehicle) {
+            $dow = (int) Carbon::parse($vehicle->statusDetail?->sale_date)->dayOfWeekIso;
+            if ($dow >= 1 && $dow <= 7) {
+                $dowSales[$dow]++;
+            }
+        }
+
+        foreach ($releaseVehicles as $vehicle) {
+            $event = $vehicle->getAttribute('excel_period_release_date')
+                ?? $vehicle->statusDetail?->release_date
+                ?? $vehicle->statusDetail?->sale_date;
+            if (! $event) {
+                continue;
+            }
+            $dow = (int) Carbon::parse($event)->dayOfWeekIso;
+            if ($dow >= 1 && $dow <= 7) {
+                $dowReleases[$dow]++;
+            }
+        }
+
+        $totalSalesDow = array_sum($dowSales);
+        $totalReleasesDow = array_sum($dowReleases);
+
+        $dowRows = collect($dayNames)
+            ->map(function ($label, $dow) use ($dowSales, $dowReleases, $totalSalesDow, $totalReleasesDow) {
+                $sales = (int) ($dowSales[$dow] ?? 0);
+                $releases = (int) ($dowReleases[$dow] ?? 0);
+
+                return [
+                    'rank' => (int) $dow,
+                    'label' => $label,
+                    'sales_count' => $sales,
+                    'sales_pct' => $totalSalesDow > 0 ? round(($sales / $totalSalesDow) * 100, 1) : 0.0,
+                    'release_count' => $releases,
+                    'release_pct' => $totalReleasesDow > 0 ? round(($releases / $totalReleasesDow) * 100, 1) : 0.0,
+                ];
+            })
+            ->filter(fn (array $row) => ((int) $row['sales_count'] + (int) $row['release_count']) > 0)
+            ->values();
+
+        // Days to sell / release by calendar month of the sale or release event.
+        $monthBuckets = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $monthBuckets[$m] = [
+                'sales' => 0,
+                'releases' => 0,
+                'days_to_sell' => [],
+                'days_to_release' => [],
+            ];
+        }
+
+        foreach ($saleVehicles as $vehicle) {
+            $saleDate = $vehicle->statusDetail?->sale_date;
+            if (! $saleDate) {
+                continue;
+            }
+            $m = (int) Carbon::parse($saleDate)->month;
+            if ($m < 1 || $m > 12) {
+                continue;
+            }
+            $monthBuckets[$m]['sales']++;
+            $purchase = $vehicle->purchase_date ?? $vehicle->created_at;
+            if ($purchase) {
+                $monthBuckets[$m]['days_to_sell'][] = (float) Carbon::parse($purchase)->diffInDays(Carbon::parse($saleDate));
+            }
+        }
+
+        foreach ($releaseVehicles as $vehicle) {
+            $event = $vehicle->getAttribute('excel_period_release_date')
+                ?? $vehicle->statusDetail?->release_date
+                ?? $vehicle->statusDetail?->sale_date;
+            if (! $event) {
+                continue;
+            }
+            $m = (int) Carbon::parse($event)->month;
+            if ($m < 1 || $m > 12) {
+                continue;
+            }
+            $monthBuckets[$m]['releases']++;
+            $purchase = $vehicle->purchase_date ?? $vehicle->created_at;
+            if ($purchase) {
+                $monthBuckets[$m]['days_to_release'][] = (float) Carbon::parse($purchase)->diffInDays(Carbon::parse($event));
+            }
+        }
+
+        $allSellDays = [];
+        $allReleaseDays = [];
+
+        $monthRows = collect($monthNames)
+            ->map(function ($label, $monthNum) use ($monthBuckets, &$allSellDays, &$allReleaseDays) {
+                $bucket = $monthBuckets[$monthNum];
+                $sellDays = $bucket['days_to_sell'];
+                $releaseDays = $bucket['days_to_release'];
+                foreach ($sellDays as $d) {
+                    $allSellDays[] = $d;
+                }
+                foreach ($releaseDays as $d) {
+                    $allReleaseDays[] = $d;
+                }
+
+                return [
+                    'label' => $label,
+                    'sales_count' => (int) $bucket['sales'],
+                    'days_to_sell' => count($sellDays) > 0 ? round(array_sum($sellDays) / count($sellDays), 1) : 0.0,
+                    'release_count' => (int) $bucket['releases'],
+                    'days_to_release' => count($releaseDays) > 0 ? round(array_sum($releaseDays) / count($releaseDays), 1) : 0.0,
+                ];
+            })
+            ->filter(fn (array $row) => ((int) $row['sales_count'] + (int) $row['release_count']) > 0)
+            ->values();
+
+        $monthSalesTotal = (int) $monthRows->sum('sales_count');
+        $monthReleaseTotal = (int) $monthRows->sum('release_count');
+
+        return [
+            'day_of_week' => [
+                'title' => 'Sales by Day of Week',
+                'rows' => $dowRows->all(),
+                'totals' => [
+                    'sales_count' => $totalSalesDow,
+                    'sales_pct' => $totalSalesDow > 0 ? 100.0 : 0.0,
+                    'release_count' => $totalReleasesDow,
+                    'release_pct' => $totalReleasesDow > 0 ? 100.0 : 0.0,
+                ],
+                'has_data' => $dowRows->isNotEmpty(),
+            ],
+            'days_to_sell' => [
+                'title' => 'Days to Sell and Days to Release',
+                'rows' => $monthRows->all(),
+                'totals' => [
+                    'sales_count' => $monthSalesTotal,
+                    'days_to_sell' => count($allSellDays) > 0 ? round(array_sum($allSellDays) / count($allSellDays), 1) : 0.0,
+                    'release_count' => $monthReleaseTotal,
+                    'days_to_release' => count($allReleaseDays) > 0 ? round(array_sum($allReleaseDays) / count($allReleaseDays), 1) : 0.0,
+                ],
+                'has_data' => $monthRows->isNotEmpty(),
+            ],
+            'has_data' => $dowRows->isNotEmpty() || $monthRows->isNotEmpty(),
+        ];
+    }
+
+    protected function buildFinancialMomPageData(Request $request): array
+    {
+        $locationOptions = $this->salesLocationFilterOptions();
+        $selectedLocation = trim((string) $request->get('location', ''));
+        if ($selectedLocation !== '' && ! array_key_exists($selectedLocation, $locationOptions)) {
+            $selectedLocation = '';
+        }
+
+        $selectedYear = $this->resolveSelectedYear($request);
+        $showResults = $request->boolean('run') || $request->filled('year') || $request->filled('location');
+
+        if (! $request->filled('year') && ! $request->boolean('run')) {
+            $latest = $this->latestSalesActivityYearMonth();
+            $selectedYear = $latest['year'];
+        }
+
+        $window = [
+            'from' => Carbon::create($selectedYear, 1, 1)->startOfDay(),
+            'to' => Carbon::create($selectedYear, 12, 31)->endOfDay(),
+        ];
+
+        $reports = $showResults
+            ? $this->buildFinancialMomReports($window, $selectedLocation)
+            : [
+                'sales_reservation' => ['title' => 'Sales and Reservation Summary', 'rows' => [], 'totals' => [], 'has_data' => false],
+                'cash_financing' => ['title' => 'Cash and Financing Sales Summary', 'rows' => [], 'totals' => [], 'has_data' => false],
+                'has_data' => false,
+            ];
+
+        $activeTab = (string) $request->get('excel_tab', 'sales_reservation');
+        if (! in_array($activeTab, ['sales_reservation', 'cash_financing'], true)) {
+            $activeTab = 'sales_reservation';
+        }
+
+        return [
+            'yearOptions' => $this->salesYearFilterOptions(),
+            'selectedYear' => $selectedYear,
+            'locationOptions' => $locationOptions,
+            'selectedLocation' => $selectedLocation,
+            'showResults' => $showResults,
+            'activeRangeLabel' => (string) $selectedYear,
+            'activeExcelTab' => $activeTab,
+            'salesReservationReport' => $reports['sales_reservation'],
+            'cashFinancingReport' => $reports['cash_financing'],
+            'hasData' => (bool) ($reports['has_data'] ?? false),
+        ];
+    }
+
+    /**
+     * Excel "(16-17) FINANCIAL REPORTS" — month-on-month summaries.
+     *
+     * @return array<string, mixed>
+     */
+    protected function buildFinancialMomReports(array $window, string $locationFilter = ''): array
+    {
+        $monthNames = [
+            1 => 'JANUARY', 2 => 'FEBRUARY', 3 => 'MARCH', 4 => 'APRIL',
+            5 => 'MAY', 6 => 'JUNE', 7 => 'JULY', 8 => 'AUGUST',
+            9 => 'SEPTEMBER', 10 => 'OCTOBER', 11 => 'NOVEMBER', 12 => 'DECEMBER',
+        ];
+
+        $saleVehicles = Vehicle::with(['statusDetail', 'expense', 'branchLocation'])
+            ->whereIn('status', ['Reserved', 'Released'])
+            ->whereHas('statusDetail', fn ($q) => $q->whereNotNull('sale_date'))
+            ->get()
+            ->filter(function (Vehicle $v) use ($window, $locationFilter) {
+                if (! $this->inWindow($v->statusDetail?->sale_date, $window)) {
+                    return false;
+                }
+
+                return $this->vehicleMatchesSalesLocation($v, $locationFilter);
+            })
+            ->values();
+
+        $releaseVehicles = $this->soldVehiclesBase($window)
+            ->filter(fn (Vehicle $v) => $this->vehicleMatchesSalesLocation($v, $locationFilter))
+            ->values();
+
+        $byMonth = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $byMonth[$m] = [
+                'sales' => 0,
+                'releases' => 0,
+                'gross' => 0.0,
+                'net' => 0.0,
+                'cash_releases' => 0,
+                'financing_releases' => 0,
+                'discount_total' => 0.0,
+                'amount_financed' => 0.0,
+            ];
+        }
+
+        foreach ($saleVehicles as $vehicle) {
+            $m = (int) Carbon::parse($vehicle->statusDetail?->sale_date)->month;
+            if ($m >= 1 && $m <= 12) {
+                $byMonth[$m]['sales']++;
+            }
+        }
+
+        foreach ($releaseVehicles as $vehicle) {
+            $detail = $vehicle->statusDetail;
+            $event = $vehicle->getAttribute('excel_period_release_date')
+                ?? $detail?->release_date
+                ?? $detail?->sale_date;
+            if (! $event) {
+                continue;
+            }
+            $m = (int) Carbon::parse($event)->month;
+            if ($m < 1 || $m > 12) {
+                continue;
+            }
+
+            $byMonth[$m]['releases']++;
+
+            $metrics = $this->supplierReleaseMetrics($vehicle, $locationFilter);
+            $byMonth[$m]['gross'] += (float) $metrics['gross'];
+            $byMonth[$m]['net'] += (float) $metrics['net'];
+
+            $cash = strtolower(trim((string) ($detail?->cash_financing ?? '')));
+            $finMetrics = $this->execFinancialMetrics($vehicle, $detail, $cash !== '' ? $cash : 'unknown');
+            if ($finMetrics['is_cash']) {
+                $byMonth[$m]['cash_releases']++;
+                $byMonth[$m]['discount_total'] += (float) $finMetrics['discount'];
+            }
+            if ($finMetrics['is_financing']) {
+                $byMonth[$m]['financing_releases']++;
+                $byMonth[$m]['amount_financed'] += (float) $finMetrics['amount_financed'];
+            }
+        }
+
+        $salesRows = collect($monthNames)
+            ->map(function ($label, $monthNum) use ($byMonth) {
+                $bucket = $byMonth[$monthNum];
+                $sales = (int) $bucket['sales'];
+                $releases = (int) $bucket['releases'];
+                $gross = (float) $bucket['gross'];
+                $net = (float) $bucket['net'];
+
+                return [
+                    'label' => $label,
+                    'sales_count' => $sales,
+                    'release_count' => $releases,
+                    'total_gross' => $gross,
+                    'avg_gross' => $releases > 0 ? $gross / $releases : 0.0,
+                    'total_net' => $net,
+                    'avg_net' => $releases > 0 ? $net / $releases : 0.0,
+                ];
+            })
+            ->filter(fn (array $row) => (
+                (int) $row['sales_count']
+                + (int) $row['release_count']
+                + (abs((float) $row['total_gross']) > 0 ? 1 : 0)
+                + (abs((float) $row['total_net']) > 0 ? 1 : 0)
+            ) > 0)
+            ->values();
+
+        $salesReleaseCount = (int) $salesRows->sum('release_count');
+        $salesGross = (float) $salesRows->sum('total_gross');
+        $salesNet = (float) $salesRows->sum('total_net');
+
+        $cashFinRows = collect($monthNames)
+            ->map(function ($label, $monthNum) use ($byMonth) {
+                $bucket = $byMonth[$monthNum];
+                $cash = (int) $bucket['cash_releases'];
+                $financing = (int) $bucket['financing_releases'];
+                $releases = (int) $bucket['releases'];
+                $discount = (float) $bucket['discount_total'];
+                $financed = (float) $bucket['amount_financed'];
+
+                return [
+                    'label' => $label,
+                    'cash_releases' => $cash,
+                    'discount_total' => $discount,
+                    'avg_discount' => $cash > 0 ? $discount / $cash : 0.0,
+                    'financing_releases' => $financing,
+                    'financing_pct' => $releases > 0 ? round(($financing / $releases) * 100, 1) : 0.0,
+                    'amount_financed' => $financed,
+                    'avg_amount_financed' => $financing > 0 ? $financed / $financing : 0.0,
+                ];
+            })
+            ->filter(fn (array $row) => (
+                (int) $row['cash_releases']
+                + (int) $row['financing_releases']
+                + (abs((float) $row['discount_total']) > 0 ? 1 : 0)
+                + (abs((float) $row['amount_financed']) > 0 ? 1 : 0)
+            ) > 0)
+            ->values();
+
+        $cashCount = (int) $cashFinRows->sum('cash_releases');
+        $finCount = (int) $cashFinRows->sum('financing_releases');
+        $discountTotal = (float) $cashFinRows->sum('discount_total');
+        $financedTotal = (float) $cashFinRows->sum('amount_financed');
+        $releaseBase = (int) $salesRows->sum('release_count');
+
+        return [
+            'sales_reservation' => [
+                'title' => 'Sales and Reservation Summary',
+                'rows' => $salesRows->all(),
+                'totals' => [
+                    'sales_count' => (int) $salesRows->sum('sales_count'),
+                    'release_count' => $salesReleaseCount,
+                    'total_gross' => $salesGross,
+                    'avg_gross' => $salesReleaseCount > 0 ? $salesGross / $salesReleaseCount : 0.0,
+                    'total_net' => $salesNet,
+                    'avg_net' => $salesReleaseCount > 0 ? $salesNet / $salesReleaseCount : 0.0,
+                ],
+                'has_data' => $salesRows->isNotEmpty(),
+            ],
+            'cash_financing' => [
+                'title' => 'Cash and Financing Sales Summary',
+                'rows' => $cashFinRows->all(),
+                'totals' => [
+                    'cash_releases' => $cashCount,
+                    'discount_total' => $discountTotal,
+                    'avg_discount' => $cashCount > 0 ? $discountTotal / $cashCount : 0.0,
+                    'financing_releases' => $finCount,
+                    'financing_pct' => $releaseBase > 0 ? round(($finCount / $releaseBase) * 100, 1) : 0.0,
+                    'amount_financed' => $financedTotal,
+                    'avg_amount_financed' => $finCount > 0 ? $financedTotal / $finCount : 0.0,
+                ],
+                'has_data' => $cashFinRows->isNotEmpty(),
+            ],
+            'has_data' => $salesRows->isNotEmpty() || $cashFinRows->isNotEmpty(),
+        ];
+    }
+
+    protected function buildFinancingPageData(Request $request): array
+    {
+        $locationOptions = $this->salesLocationFilterOptions();
+        $selectedLocation = trim((string) $request->get('location', ''));
+        if ($selectedLocation !== '' && ! array_key_exists($selectedLocation, $locationOptions)) {
+            $selectedLocation = '';
+        }
+
+        $selectedYear = $this->resolveSelectedYear($request);
+        $showResults = $request->boolean('run') || $request->filled('year') || $request->filled('location');
+
+        // First visit with defaults: jump to latest year that has financing activity.
+        if (! $request->filled('year') && ! $request->boolean('run')) {
+            $latest = $this->latestSalesActivityYearMonth();
+            $selectedYear = $latest['year'];
+        }
+
+        $window = [
+            'from' => Carbon::create($selectedYear, 1, 1)->startOfDay(),
+            'to' => Carbon::create($selectedYear, 12, 31)->endOfDay(),
+        ];
+
+        $reports = $showResults
+            ? $this->buildFinancingReports($window, $selectedYear, $selectedLocation)
+            : [
+                'summary' => ['title' => 'Financing Summary', 'rows' => [], 'totals' => [], 'has_data' => false],
+                'term_length' => ['title' => 'Financing Term Length Summary', 'rows' => [], 'totals' => [], 'has_data' => false, 'available' => false],
+                'by_company' => ['title' => 'Financing Summary by Company', 'rows' => [], 'totals' => [], 'has_data' => false],
+                'finishing' => ['title' => 'Financing Loans Finishing in 3/2/1 Months', 'rows' => [], 'has_data' => false, 'available' => false],
+                'has_data' => false,
+            ];
+
+        $activeTab = (string) $request->get('excel_tab', 'summary');
+        if (! in_array($activeTab, ['summary', 'term_length', 'by_company', 'finishing'], true)) {
+            $activeTab = 'summary';
+        }
+
+        return [
+            'yearOptions' => $this->salesYearFilterOptions(),
+            'selectedYear' => $selectedYear,
+            'locationOptions' => $locationOptions,
+            'selectedLocation' => $selectedLocation,
+            'showResults' => $showResults,
+            'activeRangeLabel' => (string) $selectedYear,
+            'activeExcelTab' => $activeTab,
+            'summaryReport' => $reports['summary'],
+            'termLengthReport' => $reports['term_length'],
+            'companyReport' => $reports['by_company'],
+            'finishingReport' => $reports['finishing'],
+            'hasData' => (bool) ($reports['has_data'] ?? false),
+        ];
+    }
+
+    /**
+     * Excel "(12-15) FINANCING REPORTS".
+     *
+     * @return array<string, mixed>
+     */
+    protected function buildFinancingReports(array $window, int $year, string $locationFilter = ''): array
+    {
+        $allReleased = $this->soldVehiclesBase($window)
+            ->filter(fn (Vehicle $v) => $this->vehicleMatchesSalesLocation($v, $locationFilter))
+            ->values();
+
+        $financingReleased = $allReleased
+            ->filter(function (Vehicle $v) {
+                $cash = strtolower(trim((string) ($v->statusDetail?->cash_financing ?? '')));
+
+                return str_contains($cash, 'financ');
+            })
+            ->values();
+
+        $monthNames = [
+            1 => 'JANUARY', 2 => 'FEBRUARY', 3 => 'MARCH', 4 => 'APRIL',
+            5 => 'MAY', 6 => 'JUNE', 7 => 'JULY', 8 => 'AUGUST',
+            9 => 'SEPTEMBER', 10 => 'OCTOBER', 11 => 'NOVEMBER', 12 => 'DECEMBER',
+        ];
+
+        $totalReleasesByMonth = array_fill(1, 12, 0);
+        foreach ($allReleased as $vehicle) {
+            $event = $vehicle->getAttribute('excel_period_release_date')
+                ?? $vehicle->statusDetail?->release_date
+                ?? $vehicle->statusDetail?->sale_date;
+            if (! $event) {
+                continue;
+            }
+            $m = (int) Carbon::parse($event)->month;
+            if ($m >= 1 && $m <= 12) {
+                $totalReleasesByMonth[$m]++;
+            }
+        }
+
+        $financingByMonth = [];
+        for ($m = 1; $m <= 12; $m++) {
+            $financingByMonth[$m] = [
+                'count' => 0,
+                'amount' => 0.0,
+            ];
+        }
+
+        foreach ($financingReleased as $vehicle) {
+            $detail = $vehicle->statusDetail;
+            $event = $vehicle->getAttribute('excel_period_release_date')
+                ?? $detail?->release_date
+                ?? $detail?->sale_date;
+            if (! $event) {
+                continue;
+            }
+            $m = (int) Carbon::parse($event)->month;
+            if ($m < 1 || $m > 12) {
+                continue;
+            }
+            $cash = strtolower(trim((string) ($detail?->cash_financing ?? 'financing')));
+            $metrics = $this->execFinancialMetrics($vehicle, $detail, $cash);
+            $financingByMonth[$m]['count']++;
+            $financingByMonth[$m]['amount'] += (float) $metrics['amount_financed'];
+        }
+
+        $summaryRows = collect($monthNames)
+            ->map(function ($label, $monthNum) use ($financingByMonth, $totalReleasesByMonth) {
+                $count = (int) ($financingByMonth[$monthNum]['count'] ?? 0);
+                $amount = (float) ($financingByMonth[$monthNum]['amount'] ?? 0);
+                $totalRel = (int) ($totalReleasesByMonth[$monthNum] ?? 0);
+
+                return [
+                    'label' => $label,
+                    'financing_releases' => $count,
+                    'financing_pct' => $totalRel > 0 ? round(($count / $totalRel) * 100, 1) : 0.0,
+                    'amount_financed' => $amount,
+                    'avg_amount_financed' => $count > 0 ? $amount / $count : 0.0,
+                ];
+            })
+            ->filter(fn (array $row) => (int) $row['financing_releases'] > 0 || (float) $row['amount_financed'] > 0)
+            ->values();
+
+        $summaryTotalsCount = (int) $summaryRows->sum('financing_releases');
+        $summaryTotalsAmount = (float) $summaryRows->sum('amount_financed');
+        $summaryTotalReleases = (int) array_sum($totalReleasesByMonth);
+
+        $companyCatalog = array_values(array_unique(array_merge(
+            \App\Models\VehicleStatusDetail::financingCompanyOptions(),
+            ['SAFC'],
+            $financingReleased
+                ->map(fn (Vehicle $v) => trim((string) ($v->statusDetail?->financing_company ?? '')))
+                ->filter(fn ($n) => $n !== '')
+                ->all()
+        )));
+
+        $companyBuckets = [];
+        foreach ($companyCatalog as $name) {
+            $companyBuckets[mb_strtoupper($name)] = [
+                'label' => mb_strtoupper($name),
+                'count' => 0,
+                'amount' => 0.0,
+                'days' => [],
+            ];
+        }
+
+        $totalFinancingReleases = $financingReleased->count();
+        foreach ($financingReleased as $vehicle) {
+            $detail = $vehicle->statusDetail;
+            $company = trim((string) ($detail?->financing_company ?? ''));
+            $key = $company !== '' ? mb_strtoupper($company) : 'UNKNOWN';
+            if (! isset($companyBuckets[$key])) {
+                $companyBuckets[$key] = [
+                    'label' => $key,
+                    'count' => 0,
+                    'amount' => 0.0,
+                    'days' => [],
+                ];
+            }
+            $cash = strtolower(trim((string) ($detail?->cash_financing ?? 'financing')));
+            $metrics = $this->execFinancialMetrics($vehicle, $detail, $cash);
+            $companyBuckets[$key]['count']++;
+            $companyBuckets[$key]['amount'] += (float) $metrics['amount_financed'];
+
+            $days = $detail?->days_from_reservation_to_release;
+            if ($days === null && $detail?->sale_date && $detail?->release_date) {
+                $days = Carbon::parse($detail->sale_date)->diffInDays(Carbon::parse($detail->release_date));
+            }
+            if ($days !== null) {
+                $companyBuckets[$key]['days'][] = (float) $days;
+            }
+        }
+
+        $companyRows = collect($companyBuckets)
+            ->map(function (array $bucket) use ($totalFinancingReleases) {
+                $count = (int) $bucket['count'];
+                $amount = (float) $bucket['amount'];
+                $days = $bucket['days'];
+
+                return [
+                    'label' => $bucket['label'],
+                    'financing_releases' => $count,
+                    'financing_pct' => $totalFinancingReleases > 0 ? round(($count / $totalFinancingReleases) * 100, 1) : 0.0,
+                    'amount_financed' => $amount,
+                    'avg_amount_financed' => $count > 0 ? $amount / $count : 0.0,
+                    'avg_days_to_release' => count($days) > 0 ? round(array_sum($days) / count($days), 1) : 0.0,
+                ];
+            })
+            ->filter(fn (array $row) => (int) $row['financing_releases'] > 0 || (float) $row['amount_financed'] > 0)
+            ->sortByDesc('financing_releases')
+            ->values();
+
+        $companyCount = (int) $companyRows->sum('financing_releases');
+        $companyAmount = (float) $companyRows->sum('amount_financed');
+        $companyDays = [];
+        foreach ($companyBuckets as $bucket) {
+            if ((int) $bucket['count'] <= 0) {
+                continue;
+            }
+            foreach ($bucket['days'] as $day) {
+                $companyDays[] = $day;
+            }
+        }
+
+        return [
+            'summary' => [
+                'title' => 'Financing Summary',
+                'rows' => $summaryRows->all(),
+                'totals' => [
+                    'financing_releases' => $summaryTotalsCount,
+                    'financing_pct' => $summaryTotalReleases > 0
+                        ? round(($summaryTotalsCount / $summaryTotalReleases) * 100, 1)
+                        : 0.0,
+                    'amount_financed' => $summaryTotalsAmount,
+                    'avg_amount_financed' => $summaryTotalsCount > 0 ? $summaryTotalsAmount / $summaryTotalsCount : 0.0,
+                ],
+                'has_data' => $summaryRows->isNotEmpty(),
+            ],
+            'term_length' => [
+                'title' => 'Financing Term Length Summary',
+                'rows' => [],
+                'totals' => [],
+                'has_data' => false,
+                'available' => false,
+                'message' => 'Loan term length is not stored on vehicle financing records yet, so this Excel table cannot be calculated.',
+            ],
+            'by_company' => [
+                'title' => 'Financing Summary by Company',
+                'rows' => $companyRows->all(),
+                'totals' => [
+                    'financing_releases' => $companyCount,
+                    'financing_pct' => 100.0,
+                    'amount_financed' => $companyAmount,
+                    'avg_amount_financed' => $companyCount > 0 ? $companyAmount / $companyCount : 0.0,
+                    'avg_days_to_release' => count($companyDays) > 0 ? round(array_sum($companyDays) / count($companyDays), 1) : 0.0,
+                ],
+                'has_data' => $companyRows->isNotEmpty(),
+            ],
+            'finishing' => [
+                'title' => 'Financing Loans Finishing in 3/2/1 Months',
+                'rows' => [],
+                'has_data' => false,
+                'available' => false,
+                'message' => 'Loan start date and term length are not stored on vehicle records yet, so finishing loans cannot be listed.',
+            ],
+            'has_data' => $summaryRows->isNotEmpty() || $companyRows->isNotEmpty(),
+        ];
+    }
+
     protected function buildSuppliersPageData(Request $request): array
     {
         $period = (string) $request->get('period', 'monthly');
@@ -574,6 +2662,11 @@ class AnalyticsReportController extends Controller
                 $window = [
                     'from' => Carbon::create($selectedYear, $monthNum, 1)->startOfDay(),
                     'to' => Carbon::create($selectedYear, $monthNum, 1)->endOfMonth()->endOfDay(),
+                ];
+            } else {
+                $window = [
+                    'from' => Carbon::create($selectedYear, 1, 1)->startOfDay(),
+                    'to' => Carbon::create($selectedYear, 12, 31)->endOfDay(),
                 ];
             }
         }
@@ -613,7 +2706,9 @@ class AnalyticsReportController extends Controller
     }
 
     /**
-     * Excel reports 10–11: sales/releases/speed by supplier, and gross/net of releases by supplier.
+     * Excel "(10-11) SUPPLIER REPORTS":
+     * 10) Units supplied, sales, releases, speed by supplier
+     * 11) Gross and net of releases by supplier
      *
      * @return array{speed:array<string,mixed>,gross_net:array<string,mixed>,has_data:bool}
      */
@@ -623,7 +2718,7 @@ class AnalyticsReportController extends Controller
             ->filter(fn (Vehicle $v) => $this->vehicleMatchesSalesLocation($v, $locationFilter))
             ->values();
 
-        $saleVehicles = Vehicle::with(['statusDetail', 'branchLocation'])
+        $saleVehicles = Vehicle::with(['statusDetail', 'branchLocation', 'expense'])
             ->whereIn('status', ['Reserved', 'Released'])
             ->whereHas('statusDetail', fn ($q) => $q->whereNotNull('sale_date'))
             ->get()
@@ -635,6 +2730,25 @@ class AnalyticsReportController extends Controller
                 return $this->vehicleMatchesSalesLocation($v, $locationFilter);
             })
             ->values();
+
+        // Units supplied = vehicles acquired/purchased in the selected window.
+        $suppliedVehicles = Vehicle::with(['branchLocation'])
+            ->get()
+            ->filter(function (Vehicle $v) use ($window, $locationFilter) {
+                $purchaseDate = $v->purchase_date ?? $v->created_at;
+                if (! $this->inWindow($purchaseDate, $window)) {
+                    return false;
+                }
+
+                return $this->vehicleMatchesSalesLocation($v, $locationFilter);
+            })
+            ->values();
+
+        $suppliedBuckets = [];
+        foreach ($suppliedVehicles as $vehicle) {
+            $key = $this->vehicleSupplierLabel($vehicle);
+            $suppliedBuckets[$key] = ($suppliedBuckets[$key] ?? 0) + 1;
+        }
 
         $salesBuckets = [];
         foreach ($saleVehicles as $vehicle) {
@@ -660,17 +2774,29 @@ class AnalyticsReportController extends Controller
         }
 
         $labels = collect(array_unique(array_merge(
+            array_keys($suppliedBuckets),
             array_keys($salesBuckets),
             array_keys($releaseBuckets)
         )))->filter(fn ($label) => $label !== '')->values();
 
+        $totalSupplied = (int) array_sum($suppliedBuckets);
         $totalSales = (int) array_sum($salesBuckets);
         $totalReleases = (int) array_sum($releaseBuckets);
+        $pctSuppliedBase = max($totalSupplied, 0);
         $pctSalesBase = max($totalSales, 0);
         $pctReleaseBase = max($totalReleases, 0);
 
         $speedRows = $labels
-            ->map(function ($label) use ($salesBuckets, $releaseBuckets, $daysBuckets, $pctSalesBase, $pctReleaseBase) {
+            ->map(function ($label) use (
+                $suppliedBuckets,
+                $salesBuckets,
+                $releaseBuckets,
+                $daysBuckets,
+                $pctSuppliedBase,
+                $pctSalesBase,
+                $pctReleaseBase
+            ) {
+                $suppliedCount = (int) ($suppliedBuckets[$label] ?? 0);
                 $salesCount = (int) ($salesBuckets[$label] ?? 0);
                 $releaseCount = (int) ($releaseBuckets[$label] ?? 0);
                 $days = $daysBuckets[$label] ?? [];
@@ -678,6 +2804,8 @@ class AnalyticsReportController extends Controller
 
                 return [
                     'supplier' => $label,
+                    'supplied_count' => $suppliedCount,
+                    'supplied_pct' => $pctSuppliedBase > 0 ? round(($suppliedCount / $pctSuppliedBase) * 100, 1) : 0.0,
                     'sales_count' => $salesCount,
                     'sales_pct' => $pctSalesBase > 0 ? round(($salesCount / $pctSalesBase) * 100, 1) : 0.0,
                     'release_count' => $releaseCount,
@@ -685,14 +2813,38 @@ class AnalyticsReportController extends Controller
                     'avg_days_to_sell' => $avgDays,
                 ];
             })
-            ->sortByDesc('release_count')
+            ->filter(function (array $row) {
+                return ((int) $row['supplied_count']
+                    + (int) $row['sales_count']
+                    + (int) $row['release_count']) > 0;
+            })
+            ->sort(function (array $a, array $b) {
+                if ($a['release_count'] !== $b['release_count']) {
+                    return $b['release_count'] <=> $a['release_count'];
+                }
+                if ($a['sales_count'] !== $b['sales_count']) {
+                    return $b['sales_count'] <=> $a['sales_count'];
+                }
+                if ($a['supplied_count'] !== $b['supplied_count']) {
+                    return $b['supplied_count'] <=> $a['supplied_count'];
+                }
+
+                return strcasecmp($a['supplier'], $b['supplier']);
+            })
             ->values();
 
-        $allDays = $daysBuckets === [] ? [] : array_merge(...array_values($daysBuckets));
+        $visibleDays = [];
+        foreach ($speedRows as $row) {
+            $days = $daysBuckets[$row['supplier']] ?? [];
+            foreach ($days as $day) {
+                $visibleDays[] = $day;
+            }
+        }
         $speedTotals = [
-            'sales_count' => $totalSales,
-            'release_count' => $totalReleases,
-            'avg_days_to_sell' => count($allDays) > 0 ? round(array_sum($allDays) / count($allDays), 1) : 0.0,
+            'supplied_count' => (int) $speedRows->sum('supplied_count'),
+            'sales_count' => (int) $speedRows->sum('sales_count'),
+            'release_count' => (int) $speedRows->sum('release_count'),
+            'avg_days_to_sell' => count($visibleDays) > 0 ? round(array_sum($visibleDays) / count($visibleDays), 1) : 0.0,
         ];
 
         $grossNetRows = $labels
@@ -710,17 +2862,19 @@ class AnalyticsReportController extends Controller
                     'avg_net' => $releaseCount > 0 ? $net / $releaseCount : 0.0,
                 ];
             })
-            ->filter(fn ($row) => (int) $row['release_count'] > 0)
+            ->filter(function (array $row) {
+                return (int) $row['release_count'] > 0
+                    && (abs((float) $row['total_gross']) + abs((float) $row['total_net'])) > 0;
+            })
             ->sortByDesc('total_gross')
             ->values();
 
         $totalGross = (float) $grossNetRows->sum('total_gross');
         $totalNet = (float) $grossNetRows->sum('total_net');
         $grossReleaseCount = (int) $grossNetRows->sum('release_count');
-
         return [
             'speed' => [
-                'title' => 'Sales and Releases by Supplier and Speed to Sell',
+                'title' => 'Units Supplied, Sales and Releases by Supplier and Speed to Sell',
                 'rows' => $speedRows->all(),
                 'totals' => $speedTotals,
                 'has_data' => $speedRows->isNotEmpty(),

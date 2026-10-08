@@ -30,7 +30,7 @@
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="filter_mode" id="filterModeCarType" value="car_type" {{ $isCarTypeMode ? 'checked' : '' }}>
-                            <label class="form-check-label" for="filterModeCarType">Filter by Car Type</label>
+                            <label class="form-check-label" for="filterModeCarType">Car Sales Tables (Excel)</label>
                         </div>
                     </div>
                 </div>
@@ -85,22 +85,8 @@
 
                 <div class="col-12 car-type-filter-fields" style="{{ $isCarTypeMode ? '' : 'display:none;' }}">
                     <input type="hidden" name="period" id="carTypePeriod" value="monthly" {{ $isCarTypeMode ? '' : 'disabled' }}>
+                    <input type="hidden" name="excel_tab" id="excelTab" value="{{ $activeExcelTab ?? 'by_model' }}" {{ $isCarTypeMode ? '' : 'disabled' }}>
                     <div class="row g-2 align-items-end">
-                        <div class="col-md-4 col-lg-3">
-                            <label for="car_type" class="form-label">Search car sales by</label>
-                            <select name="car_type" id="car_type" class="form-select" {{ $isCarTypeMode ? '' : 'disabled' }}>
-                                @foreach(($carTypeOptions ?? []) as $value => $label)
-                                    <option value="{{ $value }}" {{ ($selectedCarType ?? 'make') === $value ? 'selected' : '' }}>{{ $label }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-4 col-lg-3">
-                            <label for="car_search" class="form-label">Search value</label>
-                            <input type="text" name="car_search" id="car_search" class="form-control"
-                                   value="{{ $carSearch ?? '' }}"
-                                   placeholder="e.g. Toyota, SUV, Vios, 2022"
-                                   {{ $isCarTypeMode ? '' : 'disabled' }}>
-                        </div>
                         <div class="col-md-3 col-lg-2">
                             <label for="car_year" class="form-label">Year</label>
                             <select name="year" id="car_year" class="form-select" {{ $isCarTypeMode ? '' : 'disabled' }}>
@@ -125,9 +111,16 @@
                                 @endforeach
                             </select>
                         </div>
+                        <div class="col-md-5 col-lg-3">
+                            <label for="car_search" class="form-label">Search (optional)</label>
+                            <input type="text" name="car_search" id="car_search" class="form-control"
+                                   value="{{ $carSearch ?? '' }}"
+                                   placeholder="e.g. Toyota, Vios, SUV, 2022"
+                                   {{ $isCarTypeMode ? '' : 'disabled' }}>
+                        </div>
                     </div>
                     <p class="small text-muted mb-0 mt-2">
-                        Tabular Excel format: Total Sales / % of Sales / Total Releases / % of Releases for the selected car dimension.
+                        Matches Excel <strong>(5-9) CAR SALES REPORTS</strong>: five tables by Model, Speed to Sell, Make, Body Type, and Year Model using live database makes/models.
                     </p>
                 </div>
 
@@ -167,13 +160,13 @@
                         Unit counts follow Unit Report Excel release history for the selected dates.
                     @endif
                 @elseif($showResults && $isCarTypeMode)
-                    Car type breakdown for <strong>{{ $activeRangeLabel }}</strong>
+                    Excel car sales tables for <strong>{{ $activeRangeLabel }}</strong>
                     @if(($selectedLocation ?? '') !== '')
                         · Location: <strong>{{ $selectedLocation }}</strong>
                     @endif.
-                    Sales use reservation/sale dates; Releases use release dates.
+                    Sales use sale dates; Releases use release dates. Models/makes come from the database catalog.
                 @else
-                    Choose <strong>Filter by Period</strong> or <strong>Filter by Car Type</strong>, set your options, then click <strong>Update Report</strong>.
+                    Choose <strong>Filter by Period</strong> or <strong>Car Sales Tables (Excel)</strong>, set your options, then click <strong>Update Report</strong>.
                 @endif
             </p>
             <p class="small text-muted mt-2 mb-0 d-none" id="carSalesModeMismatchHint">
@@ -191,59 +184,119 @@
 
     <div id="carSalesResults" data-loaded-mode="{{ $filterMode }}" class="{{ $showResults ? '' : 'd-none' }}">
     @if($showResults && $isCarTypeMode)
-        @php $report = $carTypeReport ?? null; @endphp
-        @if(empty($report) || empty($report['has_data']))
+        @php
+            $tabs = $excelTabs ?? [];
+            $tabDefs = [
+                'by_model' => 'Sales & Releases by Model',
+                'by_speed' => 'Models by Speed to Sell',
+                'by_make' => 'Sales & Releases by Make',
+                'by_body_type' => 'Sales & Releases by Body Type',
+                'by_year_model' => 'Sales & Releases by Year Model',
+            ];
+            $activeTab = $activeExcelTab ?? 'by_model';
+            if (! array_key_exists($activeTab, $tabDefs)) {
+                $activeTab = 'by_model';
+            }
+        @endphp
+        @if(empty($tabs) || empty($tabs['has_data']))
             <div class="alert alert-info mb-0">
                 <i class="fas fa-info-circle me-2"></i>
-                No car sales/release rows found for this car type filter. Try clearing search or widening the month/year.
+                No car sales/release rows found for this month/year. Try another period or clear search.
             </div>
         @else
-            <div class="card">
-                <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <div>
-                        <strong>{{ $report['title'] }}</strong>
-                        <div class="small text-muted">{{ $activeRangeLabel }}</div>
+            <ul class="nav nav-tabs" id="carSalesExcelTabs" role="tablist">
+                @foreach($tabDefs as $tabKey => $tabLabel)
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link {{ $activeTab === $tabKey ? 'active' : '' }}"
+                                id="tab-{{ $tabKey }}-btn"
+                                data-bs-toggle="tab"
+                                data-bs-target="#tab-{{ $tabKey }}"
+                                data-excel-tab="{{ $tabKey }}"
+                                type="button"
+                                role="tab">
+                            {{ $tabLabel }}
+                        </button>
+                    </li>
+                @endforeach
+            </ul>
+            <div class="tab-content border border-top-0 bg-white mb-0" id="carSalesExcelTabContent">
+                @foreach($tabDefs as $tabKey => $tabLabel)
+                    @php $report = $tabs[$tabKey] ?? null; @endphp
+                    <div class="tab-pane fade {{ $activeTab === $tabKey ? 'show active' : '' }}"
+                         id="tab-{{ $tabKey }}"
+                         role="tabpanel">
+                        @if(empty($report) || empty($report['rows']))
+                            <div class="p-4 text-muted">No rows for this table.</div>
+                        @else
+                            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 px-3 pt-3">
+                                <div>
+                                    <strong>{{ $report['title'] ?? $tabLabel }}</strong>
+                                    <div class="small text-muted">{{ $activeRangeLabel }}</div>
+                                </div>
+                                <span class="badge text-bg-light border">{{ number_format(count($report['rows'])) }} rows</span>
+                            </div>
+                            <div class="table-responsive mt-2">
+                                <table class="table table-sm table-striped table-hover mb-0 align-middle">
+                                    <thead class="table-light">
+                                        @if(($report['columns'] ?? '') === 'speed')
+                                            <tr>
+                                                <th style="width:3rem;">Rank</th>
+                                                <th>{{ $report['dimension_label'] ?? 'Model' }}</th>
+                                                <th class="text-end">Total Sales</th>
+                                                <th class="text-end">Average Speed to Sell (Days)</th>
+                                            </tr>
+                                        @else
+                                            <tr>
+                                                <th style="width:3rem;">Rank</th>
+                                                <th>{{ $report['dimension_label'] ?? 'Label' }}</th>
+                                                <th class="text-end">Total Sales</th>
+                                                <th class="text-end">% of Total Sales</th>
+                                                <th class="text-end">Total Releases</th>
+                                                <th class="text-end">% of Total Releases</th>
+                                            </tr>
+                                        @endif
+                                    </thead>
+                                    <tbody>
+                                        @foreach($report['rows'] as $i => $row)
+                                            <tr>
+                                                <td>{{ $i + 1 }}</td>
+                                                <td class="fw-semibold">{{ $row['label'] }}</td>
+                                                @if(($report['columns'] ?? '') === 'speed')
+                                                    <td class="text-end">{{ number_format((int) ($row['sales_count'] ?? 0)) }}</td>
+                                                    <td class="text-end">{{ number_format((float) ($row['avg_days_to_sell'] ?? 0), 1) }}</td>
+                                                @else
+                                                    <td class="text-end">{{ number_format((int) ($row['sales_count'] ?? 0)) }}</td>
+                                                    <td class="text-end">{{ number_format((float) ($row['sales_pct'] ?? 0), 1) }}%</td>
+                                                    <td class="text-end">{{ number_format((int) ($row['release_count'] ?? 0)) }}</td>
+                                                    <td class="text-end">{{ number_format((float) ($row['release_pct'] ?? 0), 1) }}%</td>
+                                                @endif
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                    <tfoot class="table-light">
+                                        @if(($report['columns'] ?? '') === 'speed')
+                                            <tr>
+                                                <th>—</th>
+                                                <th>TOTAL</th>
+                                                <th class="text-end">{{ number_format((int) ($report['totals']['sales_count'] ?? 0)) }}</th>
+                                                <th class="text-end">{{ number_format((float) ($report['totals']['avg_days_to_sell'] ?? 0), 1) }}</th>
+                                            </tr>
+                                        @else
+                                            <tr>
+                                                <th>—</th>
+                                                <th>TOTAL</th>
+                                                <th class="text-end">{{ number_format((int) ($report['totals']['sales_count'] ?? 0)) }}</th>
+                                                <th class="text-end">—</th>
+                                                <th class="text-end">{{ number_format((int) ($report['totals']['release_count'] ?? 0)) }}</th>
+                                                <th class="text-end">—</th>
+                                            </tr>
+                                        @endif
+                                    </tfoot>
+                                </table>
+                            </div>
+                        @endif
                     </div>
-                    <span class="badge text-bg-light border">{{ number_format(count($report['rows'])) }} groups</span>
-                </div>
-                <div class="card-body p-0">
-                    <div class="table-responsive">
-                        <table class="table table-sm table-striped table-hover mb-0 align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width:3rem;">Rank</th>
-                                    <th>{{ $report['dimension_label'] }}</th>
-                                    <th class="text-end">Total Sales</th>
-                                    <th class="text-end">% of Total Sales</th>
-                                    <th class="text-end">Total Releases</th>
-                                    <th class="text-end">% of Total Releases</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($report['rows'] as $i => $row)
-                                    <tr>
-                                        <td>{{ $i + 1 }}</td>
-                                        <td class="fw-semibold">{{ $row['label'] }}</td>
-                                        <td class="text-end">{{ number_format((int) $row['sales_count']) }}</td>
-                                        <td class="text-end">{{ number_format((float) $row['sales_pct'], 1) }}%</td>
-                                        <td class="text-end">{{ number_format((int) $row['release_count']) }}</td>
-                                        <td class="text-end">{{ number_format((float) $row['release_pct'], 1) }}%</td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                            <tfoot class="table-light">
-                                <tr>
-                                    <th>—</th>
-                                    <th>TOTAL</th>
-                                    <th class="text-end">{{ number_format((int) ($report['totals']['sales_count'] ?? 0)) }}</th>
-                                    <th class="text-end">—</th>
-                                    <th class="text-end">{{ number_format((int) ($report['totals']['release_count'] ?? 0)) }}</th>
-                                    <th class="text-end">—</th>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
+                @endforeach
             </div>
         @endif
     @elseif($showResults && !$hasData)
@@ -931,6 +984,15 @@ document.addEventListener('DOMContentLoaded', function () {
     filterModeInputs.forEach(input => input.addEventListener('change', toggleFilterMode));
     if (period) period.addEventListener('change', toggleRangeFields);
     toggleFilterMode();
+
+    const excelTabInput = document.getElementById('excelTab');
+    document.querySelectorAll('#carSalesExcelTabs [data-excel-tab]').forEach(btn => {
+        btn.addEventListener('shown.bs.tab', function () {
+            if (excelTabInput) {
+                excelTabInput.value = btn.getAttribute('data-excel-tab') || 'by_model';
+            }
+        });
+    });
 
     const detailModal = document.getElementById('salesSummaryDetailModal');
     if (detailModal) {

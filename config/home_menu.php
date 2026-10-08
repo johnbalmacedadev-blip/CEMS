@@ -136,10 +136,14 @@ return [
             'icon_style' => 'color: #20c997; border-color: #20c997;',
             'icon' => 'fa-chart-pie',
             'items' => [
-                ['label' => 'FINANCIAL REPORT', 'route' => 'analytics-report.financial', 'page' => 'analytics', 'icon' => 'fa-chart-line'],
+                ['label' => 'SALES EXEC REPORTS', 'route' => 'analytics-report.sales-executive', 'page' => 'analytics', 'icon' => 'fa-user-tie'],
                 ['label' => 'CAR SALES REPORT', 'route' => 'analytics-report.sales', 'page' => 'analytics', 'icon' => 'fa-chart-bar'],
-                ['label' => 'SALES EXECUTIVE REPORT', 'route' => 'analytics-report.sales-executive', 'page' => 'analytics', 'icon' => 'fa-user-tie'],
-                ['label' => 'SUPPLIERS REPORT', 'route' => 'analytics-report.suppliers', 'page' => 'analytics', 'icon' => 'fa-truck'],
+                ['label' => 'SUPPLIER REPORTS', 'route' => 'analytics-report.suppliers', 'page' => 'analytics', 'icon' => 'fa-truck'],
+                ['label' => 'FINANCING REPORT', 'route' => 'analytics-report.financing', 'page' => 'analytics', 'icon' => 'fa-hand-holding-usd'],
+                ['label' => 'FINANCIAL REPORTS', 'route' => 'analytics-report.financial', 'page' => 'analytics', 'icon' => 'fa-chart-line'],
+                ['label' => 'SALES REPORTS', 'route' => 'analytics-report.sales-reports', 'page' => 'analytics', 'icon' => 'fa-file-invoice-dollar'],
+                ['label' => 'CURRENT INVENTORY', 'route' => 'analytics-report.current-inventory', 'page' => 'analytics', 'icon' => 'fa-warehouse'],
+                ['label' => 'CUSTOMER REPORTS', 'route' => 'analytics-report.customers', 'page' => 'analytics', 'icon' => 'fa-users'],
             ],
         ],
         [
