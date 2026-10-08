@@ -31,7 +31,7 @@
                     <input type="text" class="form-control" id="variant" name="variant" value="{{ $variant !== '' ? $variant : 'Any Variant' }}" placeholder="Any Variant" data-default-any-variant="1">
                 </div>
                 <div class="col-md-1">
-                    <button type="submit" class="btn btn-primary w-100" id="compareSubmitBtn">
+                    <button type="submit" class="btn btn-primary w-100" id="compareSubmitBtn" title="Search">
                         <i class="fas fa-search" id="compareSubmitIcon"></i>
                     </button>
                 </div>
@@ -41,111 +41,131 @@
                     </button>
                 </div>
                 <div class="col-12">
-                    <div id="compareLoading" class="small text-primary d-none align-items-center gap-2">
+                    <p class="small text-muted mb-0">
+                        Search returns competitor links for the same year / brand / model, plus average prices scraped from each competitor results page.
+                    </p>
+                    <div id="compareLoading" class="small text-primary d-none align-items-center gap-2 mt-2">
                         <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
-                        <span>Fetching data...</span>
+                        <span>Fetching competitor links and average prices…</span>
                     </div>
                 </div>
             </form>
         </div>
     </div>
 
-    @if(!empty($marketTable))
+    @if($searched)
         <div id="compareResults">
-        @php
-            $siteHeaders = array_keys($marketTable);
-            $attributes = ['Availability', 'Model Variant', 'Price Range', 'Mileage', 'Transmission'];
-        @endphp
-        <div class="card border-0 shadow-sm" style="background:#1f1f1f; color:#f8f9fa;">
-            <div class="card-body p-4">
-                <h2 class="h3 mb-4 text-white">
-                    <i class="fas fa-chart-bar me-2 text-info"></i>MARKET COMPARISON TABLE
-                </h2>
-                <div class="table-responsive">
-                    <table class="table table-borderless align-middle mb-0" style="color:#f8f9fa;">
-                        <thead>
-                            <tr style="border-bottom:1px solid rgba(255,255,255,0.12);">
-                                <th class="pb-3">Attribute</th>
-                                @foreach($siteHeaders as $siteHeader)
-                                    <th class="pb-3">{{ $siteHeader }}</th>
-                                @endforeach
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach($attributes as $attribute)
-                                <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
-                                    <td class="py-3">{{ $attribute }}</td>
-                                    @foreach($siteHeaders as $siteHeader)
-                                        @php $value = $marketTable[$siteHeader][$attribute] ?? 'N/A'; @endphp
-                                        <td class="py-3">
-                                            @if($attribute === 'Availability')
-                                                @if($value === 'Available')
-                                                    <span class="text-success">✔ {{ $value }}</span>
-                                                @elseif($value === 'None')
-                                                    <span class="text-danger">✖ {{ $value }}</span>
-                                                @else
-                                                    <span class="text-warning">{{ $value }}</span>
-                                                @endif
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                <div>
+                    <h2 class="h5 mb-0">Competitor links & prices</h2>
+                    <div class="small text-muted">Matching: <strong>{{ $queryLabel }}</strong></div>
+                </div>
+                <span class="badge text-bg-light border">{{ number_format(count($links)) }} links</span>
+            </div>
+
+            @if(!empty($priceSummary))
+                <div class="card mb-3 border-0 shadow-sm">
+                    <div class="card-header bg-white">
+                        <strong>Average price by competitor</strong>
+                        <span class="small text-muted ms-1">(from their search results page)</span>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0 align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Competitor</th>
+                                    <th class="text-end">Average Price</th>
+                                    <th class="text-end">Min</th>
+                                    <th class="text-end">Max</th>
+                                    <th class="text-end">Samples</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($priceSummary as $row)
+                                    <tr>
+                                        <td class="fw-semibold">{{ $row['label'] }}</td>
+                                        <td class="text-end">
+                                            @if(!empty($row['avg_price_label']))
+                                                <span class="text-success fw-semibold">{{ $row['avg_price_label'] }}</span>
                                             @else
-                                                {{ $value }}
+                                                <span class="text-muted">{{ $row['price_note'] ?? 'N/A' }}</span>
                                             @endif
                                         </td>
-                                    @endforeach
-                                </tr>
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <div class="row g-3 mt-1">
-            @foreach($results as $site => $siteResult)
-                <div class="col-lg-4">
-                    <div class="card h-100">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <strong>{{ $site }}</strong>
-                            @if(!empty($siteResult['used_url']))
-                                <a href="{{ $siteResult['used_url'] }}" target="_blank" class="small">open source</a>
-                            @endif
-                        </div>
-                        <div class="card-body">
-                            @if(!empty($siteResult['error']))
-                                <p class="text-danger small mb-0">{{ $siteResult['error'] }}</p>
-                            @elseif(empty($siteResult['matches']))
-                                <p class="text-muted mb-0">No matching listings found.</p>
-                            @else
-                                @foreach(array_slice($siteResult['matches'], 0, 3) as $match)
-                                    <div class="d-flex gap-2 mb-2">
-                                        @if(!empty($match['image_url']))
-                                            <img src="{{ $match['image_url'] }}" alt="" style="width:64px;height:48px;object-fit:cover;border-radius:6px;border:1px solid #ddd;">
-                                        @else
-                                            <div style="width:64px;height:48px;border-radius:6px;border:1px solid #ddd;background:#f3f3f3;"></div>
-                                        @endif
-                                        <div class="flex-grow-1">
-                                            <div class="small fw-semibold">
-                                                <a href="{{ $match['url'] ?? '#' }}" target="_blank" rel="noopener">
-                                                    {{ $match['short_title'] ?? ($match['title'] ?? '-') }}
-                                                </a>
-                                            </div>
-                                            <div class="small text-muted">
-                                                @if(!empty($match['price'])) {{ $match['price'] }} @endif
-                                                @if(!empty($match['mileage'])) <span class="ms-2">{{ $match['mileage'] }}</span> @endif
-                                                @if(!empty($match['transmission'])) <span class="ms-2">{{ $match['transmission'] }}</span> @endif
-                                            </div>
-                                        </div>
-                                    </div>
+                                        <td class="text-end">{{ $row['min_price_label'] ?? '—' }}</td>
+                                        <td class="text-end">{{ $row['max_price_label'] ?? '—' }}</td>
+                                        <td class="text-end">{{ number_format((int) ($row['price_count'] ?? 0)) }}</td>
+                                        <td class="text-end">
+                                            <a href="{{ $row['url'] }}" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-outline-primary">
+                                                Open <i class="fas fa-external-link-alt ms-1"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
                                 @endforeach
-                            @endif
-                        </div>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-            @endforeach
-        </div>
+            @endif
 
-        <div class="alert alert-info mt-3 mb-0">
-            This table is built from public website results. When a site does not expose enough structured data, unavailable fields are shown as `N/A`.
-        </div>
+            @if(empty($links))
+                <div class="alert alert-info mb-0">No links could be built for this search.</div>
+            @else
+                @php
+                    $groups = [
+                        'competitor' => 'Competitor sites',
+                        'marketplace' => 'Marketplaces',
+                        'search' => 'Search engine shortcuts',
+                    ];
+                @endphp
+
+                @foreach($groups as $type => $groupLabel)
+                    @php
+                        $groupLinks = array_values(array_filter($links, fn ($l) => ($l['type'] ?? '') === $type));
+                    @endphp
+                    @if(!empty($groupLinks))
+                        <h3 class="h6 text-uppercase text-muted mt-3 mb-2">{{ $groupLabel }}</h3>
+                        <div class="list-group mb-3">
+                            @foreach($groupLinks as $link)
+                                <a href="{{ $link['url'] }}"
+                                   target="_blank"
+                                   rel="noopener noreferrer"
+                                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-start gap-3">
+                                    <div>
+                                        <div class="fw-semibold">
+                                            {{ $link['label'] }}
+                                            @if(($link['type'] ?? '') === 'competitor' && !empty($link['avg_price_label']))
+                                                <span class="badge text-bg-success ms-1">Avg {{ $link['avg_price_label'] }}</span>
+                                            @elseif(($link['type'] ?? '') === 'competitor')
+                                                <span class="badge text-bg-light border ms-1">Avg N/A</span>
+                                            @endif
+                                        </div>
+                                        <div class="small text-muted">{{ $link['description'] }}</div>
+                                        @if(($link['type'] ?? '') === 'competitor' && !empty($link['price_count']))
+                                            <div class="small text-muted mt-1">
+                                                Based on {{ number_format((int) $link['price_count']) }} price(s)
+                                                @if(!empty($link['min_price_label']) && !empty($link['max_price_label']))
+                                                    · {{ $link['min_price_label'] }} – {{ $link['max_price_label'] }}
+                                                @endif
+                                            </div>
+                                        @elseif(($link['type'] ?? '') === 'competitor' && !empty($link['price_note']))
+                                            <div class="small text-warning mt-1">{{ $link['price_note'] }}</div>
+                                        @endif
+                                        <div class="small text-break mt-1" style="opacity:.75;">{{ $link['url'] }}</div>
+                                    </div>
+                                    <span class="badge text-bg-primary align-self-center text-nowrap">
+                                        Open <i class="fas fa-external-link-alt ms-1"></i>
+                                    </span>
+                                </a>
+                            @endforeach
+                        </div>
+                    @endif
+                @endforeach
+
+                <div class="alert alert-light border small mb-0">
+                    Average prices are estimated from public numbers on each competitor’s search results page. Sites that block scraping or show no prices will show N/A.
+                </div>
+            @endif
         </div>
     @endif
 </div>
@@ -156,13 +176,12 @@
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('compareForm');
     const submitBtn = document.getElementById('compareSubmitBtn');
-    const loadingEl = document.getElementById('compareLoading');
     const iconEl = document.getElementById('compareSubmitIcon');
+    const loadingEl = document.getElementById('compareLoading');
     const variantEl = document.getElementById('variant');
     const resetBtn = document.getElementById('compareResetBtn');
-    const resultsEl = document.getElementById('compareResults');
 
-    if (!form || !submitBtn || !loadingEl) return;
+    if (!form || !submitBtn) return;
 
     if (variantEl) {
         const anyVariantLabel = 'Any Variant';
@@ -182,45 +201,22 @@ document.addEventListener('DOMContentLoaded', function () {
         if (variantEl && (variantEl.value || '').trim().toLowerCase() === 'any variant') {
             variantEl.value = '';
         }
-        submitBtn.disabled = true;
-        loadingEl.classList.remove('d-none');
-        loadingEl.classList.add('d-flex');
         if (iconEl) {
             iconEl.classList.remove('fa-search');
             iconEl.classList.add('fa-spinner', 'fa-spin');
         }
+        if (loadingEl) {
+            loadingEl.classList.remove('d-none');
+            loadingEl.classList.add('d-flex');
+        }
+        submitBtn.disabled = true;
     });
 
     if (resetBtn) {
         resetBtn.addEventListener('click', function () {
-            // Hide current results immediately (UI feedback)
-            if (resultsEl) {
-                resultsEl.style.display = 'none';
-            }
-
-            // Clear inputs
-            const yearEl = document.getElementById('year');
-            const brandEl = document.getElementById('vehicle_brand');
-            const modelEl = document.getElementById('model');
-            if (yearEl) yearEl.value = '';
-            if (brandEl) brandEl.value = '';
-            if (modelEl) modelEl.value = '';
-            if (variantEl) variantEl.value = 'Any Variant';
-
-            // Reset loading + submit state
-            submitBtn.disabled = false;
-            loadingEl.classList.add('d-none');
-            loadingEl.classList.remove('d-flex');
-            if (iconEl) {
-                iconEl.classList.add('fa-search');
-                iconEl.classList.remove('fa-spinner', 'fa-spin');
-            }
-
-            // Navigate to clean URL (no query params) so server-side results are cleared.
             window.location.href = @json(route('compare.index'));
         });
     }
 });
 </script>
 @endsection
-
