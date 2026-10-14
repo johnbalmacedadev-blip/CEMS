@@ -94,13 +94,14 @@ class ImportBuffingTrackerCommand extends Command
                                 $parts = preg_split('/\s+/', $empName) ?: [$empName];
                                 $first = $parts[0];
                                 $last = count($parts) > 1 ? implode(' ', array_slice($parts, 1)) : 'Buffing';
-                                $emp = Employee::create([
+                                $emp = new Employee([
                                     'first_name' => mb_convert_case(mb_strtolower($first), MB_CASE_TITLE, 'UTF-8'),
                                     'last_name' => mb_convert_case(mb_strtolower($last), MB_CASE_TITLE, 'UTF-8'),
                                     'role' => 'BUFFER - GEN. STAFF',
                                     'status' => 'active',
                                     'notes' => 'Imported from Buffing Tracker',
                                 ]);
+                                $this->saveWithManualId($emp, ((int) Employee::query()->max('id')) + 1);
                                 $employeeByKey[$key] = $emp->id;
                                 $employeeByKey[$this->normalizeName($first)] = $emp->id;
                                 $employeeId = $emp->id;
@@ -148,7 +149,7 @@ class ImportBuffingTrackerCommand extends Command
                         return;
                     }
 
-                    BuffingRecord::create([
+                    $record = new BuffingRecord([
                         'vehicle_id' => $vehicleId,
                         'employee_id' => $employeeId,
                         'buffing_date' => $date,
@@ -158,6 +159,7 @@ class ImportBuffingTrackerCommand extends Command
                             ? $date.' 17:00:00'
                             : null,
                     ]);
+                    $this->saveWithManualId($record, ((int) BuffingRecord::query()->max('id')) + 1);
                     $created++;
                 });
             } catch (\Throwable $e) {
@@ -197,5 +199,15 @@ class ImportBuffingTrackerCommand extends Command
     private function normalizeName(?string $name): string
     {
         return strtoupper(trim(preg_replace('/\s+/', ' ', (string) $name) ?? ''));
+    }
+
+    /**
+     * Persist with an explicit id on DBs that lack AUTO_INCREMENT.
+     */
+    private function saveWithManualId(\Illuminate\Database\Eloquent\Model $model, int $id): void
+    {
+        $model->id = $id;
+        $model->incrementing = false;
+        $model->save();
     }
 }

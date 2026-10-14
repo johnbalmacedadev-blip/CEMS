@@ -105,6 +105,11 @@ class ImportMechanicTrackerCommand extends Command
             }
 
             if ($payload !== []) {
+                // Production DB often lacks AUTO_INCREMENT on id.
+                $nextId = ((int) MechanicJob::query()->max('id')) + 1;
+                foreach ($payload as $i => $row) {
+                    $payload[$i]['id'] = $nextId + $i;
+                }
                 MechanicJob::insert($payload);
                 $created += count($payload);
             }

@@ -272,6 +272,68 @@
                 </div>
             </div>
 
+            <!-- Start of Deduction -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-file-invoice-dollar me-2"></i>Start of Deduction
+                    </h5>
+                    <span class="text-muted small">Linked from EMPLOYEE LIST deduction tabs</span>
+                </div>
+                <div class="card-body">
+                    @if(($deductions ?? collect())->isEmpty())
+                        <p class="text-muted mb-0">No deduction records linked to this employee yet.</p>
+                    @else
+                        @foreach($deductions as $year => $rows)
+                            @php
+                                $contrib = $rows->where('category', 'contribution');
+                                $annual = $rows->whereIn('category', ['sss', 'philhealth', 'pagibig']);
+                                $yearTotals = $deductionTotals[$year] ?? ['ee' => 0, 'er' => 0];
+                            @endphp
+                            <div class="mb-4">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                                    <h6 class="mb-0 fw-semibold">{{ $year }}</h6>
+                                    <div class="small">
+                                        <span class="me-3">EE total: <strong>₱{{ number_format($yearTotals['ee'], 2) }}</strong></span>
+                                        <span>ER total: <strong>₱{{ number_format($yearTotals['er'], 2) }}</strong></span>
+                                    </div>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-striped table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Period</th>
+                                                <th class="text-end">Employee share (EE)</th>
+                                                <th class="text-end">Employer share (ER)</th>
+                                                <th class="text-end">Total</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($contrib as $row)
+                                                <tr>
+                                                    <td>{{ $row->period_label }}</td>
+                                                    <td class="text-end">{{ $row->ee_share !== null ? '₱'.number_format((float) $row->ee_share, 2) : '—' }}</td>
+                                                    <td class="text-end">{{ $row->er_share !== null ? '₱'.number_format((float) $row->er_share, 2) : '—' }}</td>
+                                                    <td class="text-end fw-semibold">₱{{ number_format((float) $row->ee_share + (float) $row->er_share, 2) }}</td>
+                                                </tr>
+                                            @endforeach
+                                            @foreach($annual as $row)
+                                                <tr class="table-secondary">
+                                                    <td>{{ $row->period_label }}</td>
+                                                    <td class="text-end">{{ $row->ee_share !== null ? '₱'.number_format((float) $row->ee_share, 2) : '—' }}</td>
+                                                    <td class="text-end">{{ $row->er_share !== null ? '₱'.number_format((float) $row->er_share, 2) : '—' }}</td>
+                                                    <td class="text-end fw-semibold">₱{{ number_format((float) $row->ee_share + (float) $row->er_share, 2) }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        @endforeach
+                    @endif
+                </div>
+            </div>
+
             <!-- Quick Actions -->
             <div class="card">
                 <div class="card-header">

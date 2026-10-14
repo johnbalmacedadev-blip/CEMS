@@ -125,6 +125,96 @@ class SalesAgentController extends Controller
         ));
     }
 
+    /**
+     * Staff report detail: one sales agent with date-filtered commission earnings.
+     */
+    public function staffReportShow(Request $request, SalesAgent $salesAgent)
+    {
+        $salesAgent->load('executiveAgent');
+
+        $dateFrom = $request->filled('date_from')
+            ? Carbon::parse($request->string('date_from'))->startOfDay()
+            : null;
+        $dateTo = $request->filled('date_to')
+            ? Carbon::parse($request->string('date_to'))->endOfDay()
+            : null;
+
+        // Optional period+anchor from the list page pre-fills the date range when date_from/to omitted.
+        if ($dateFrom === null && $dateTo === null && $request->filled('period') && $request->input('period') !== 'all') {
+            $period = $request->input('period');
+            $anchor = $request->filled('anchor')
+                ? Carbon::parse($request->string('anchor'))->startOfDay()
+                : Carbon::now()->startOfDay();
+
+            switch ($period) {
+                case 'day':
+                    $dateFrom = $anchor->copy()->startOfDay();
+                    $dateTo = $anchor->copy()->endOfDay();
+                    break;
+                case 'week':
+                    $dateFrom = $anchor->copy()->startOfWeek(Carbon::MONDAY)->startOfDay();
+                    $dateTo = $anchor->copy()->endOfWeek(Carbon::SUNDAY)->endOfDay();
+                    break;
+                case 'month':
+                    $dateFrom = $anchor->copy()->startOfMonth()->startOfDay();
+                    $dateTo = $anchor->copy()->endOfMonth()->endOfDay();
+                    break;
+                case 'year':
+                    $dateFrom = $anchor->copy()->startOfYear()->startOfDay();
+                    $dateTo = $anchor->copy()->endOfYear()->endOfDay();
+                    break;
+            }
+        }
+
+        if ($dateFrom !== null && $dateTo !== null && $dateFrom->gt($dateTo)) {
+            [$dateFrom, $dateTo] = [$dateTo->copy()->startOfDay(), $dateFrom->copy()->endOfDay()];
+        }
+
+        $rangeStart = $dateFrom;
+        $rangeEnd = $dateTo;
+        // If only one bound is set, treat as open-ended range.
+        if ($rangeStart !== null && $rangeEnd === null) {
+            $rangeEnd = Carbon::now()->endOfDay();
+        }
+        if ($rangeStart === null && $rangeEnd !== null) {
+            $rangeStart = Carbon::parse('2000-01-01')->startOfDay();
+        }
+
+        $hasDateFilter = $request->filled('date_from') || $request->filled('date_to')
+            || ($request->filled('period') && $request->input('period') !== 'all');
+
+        $earningsTotal = $salesAgent->totalCommissionEarnings(
+            $hasDateFilter ? $rangeStart : null,
+            $hasDateFilter ? $rangeEnd : null
+        );
+
+        $commissions = $salesAgent->earningsCommissionsQuery(
+            $hasDateFilter ? $rangeStart : null,
+            $hasDateFilter ? $rangeEnd : null
+        )
+            ->with('vehicle')
+            ->orderByRaw('COALESCE(date_of_payment, date_sent, DATE(created_at)) DESC')
+            ->orderByDesc('id')
+            ->paginate(50)
+            ->withQueryString();
+
+        $listQuery = array_filter([
+            'period' => $request->input('period'),
+            'anchor' => $request->input('anchor'),
+            'sort' => $request->input('sort'),
+        ], fn ($v) => $v !== null && $v !== '');
+
+        return view('staff-reports.sales-agent-show', [
+            'agent' => $salesAgent,
+            'commissions' => $commissions,
+            'earningsTotal' => $earningsTotal,
+            'dateFrom' => $dateFrom?->toDateString(),
+            'dateTo' => $dateTo?->toDateString(),
+            'hasDateFilter' => $hasDateFilter,
+            'listQuery' => $listQuery,
+        ]);
+    }
+
     public function index(Request $request)
     {
         $status = $request->get('status', 'all');

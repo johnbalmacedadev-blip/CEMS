@@ -944,7 +944,11 @@ function openFloatedFundsModal() {
 document.addEventListener('DOMContentLoaded', function() {
     const paymentMethodSelect = document.getElementById('payment_method_id');
     if (paymentMethodSelect && !paymentMethodSelect.value) {
-        const firstRealOption = Array.from(paymentMethodSelect.options).find(opt => opt.value);
+        const cashVault = Array.from(paymentMethodSelect.options).find(opt =>
+            opt.value && /cash\s*vault/i.test(opt.textContent || '')
+        );
+        const firstRealOption = cashVault
+            || Array.from(paymentMethodSelect.options).find(opt => opt.value);
         if (firstRealOption) {
             paymentMethodSelect.value = firstRealOption.value;
         }

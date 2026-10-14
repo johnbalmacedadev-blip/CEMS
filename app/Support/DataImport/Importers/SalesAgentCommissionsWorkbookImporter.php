@@ -193,16 +193,19 @@ class SalesAgentCommissionsWorkbookImporter extends AbstractJsonWorkbookImporter
             return [];
         }
         $names = [];
-        if (preg_match_all('/AGENT\s*:\s*([^|;\/]+)/i', $source, $m)) {
-            foreach ($m[1] as $name) {
-                $n = trim($name);
-                if ($n !== '') {
-                    $names[] = $n;
+        // AGENT: Name  or  REFERRAL: Name  (split multi-names on /)
+        if (preg_match_all('/(?:AGENT|REFERRAL)\s*:\s*([^|;]+)/i', $source, $m)) {
+            foreach ($m[1] as $chunk) {
+                foreach (preg_split('/\s*\/\s*/', $chunk) ?: [] as $name) {
+                    $n = trim($name);
+                    if ($n !== '') {
+                        $names[] = $n;
+                    }
                 }
             }
         }
-        if ($names === [] && stripos($source, 'AGENT') !== false) {
-            $n = trim(preg_replace('/^.*AGENT\s*:?\s*/i', '', $source));
+        if ($names === [] && preg_match('/(?:AGENT|REFERRAL)\s*:?\s*(.+)$/i', $source, $m)) {
+            $n = trim($m[1]);
             if ($n !== '') {
                 $names[] = $n;
             }

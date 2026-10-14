@@ -51,10 +51,10 @@ class GasPoWorkbookImporter extends AbstractJsonWorkbookImporter
 
     public function listSheets(string $path): array
     {
-        $ss = ExcelSheetHelper::load($path);
         $out = [];
-        foreach ($ss->getWorksheetIterator() as $ws) {
-            $name = $ws->getTitle();
+        foreach (ExcelSheetHelper::sheetNames($path) as $name) {
+            $ss = ExcelSheetHelper::load($path, [$name]);
+            $ws = $ss->getSheetByName($name) ?: $ss->getActiveSheet();
             $header = ExcelSheetHelper::findHeaderMap($ws, ['PLATE NUMBER', 'PLATE', 'GAS AMOUNT'], 10, 30);
             $supported = $header
                 && ExcelSheetHelper::col($header['map'], ['DATE']) !== null
@@ -75,23 +75,23 @@ class GasPoWorkbookImporter extends AbstractJsonWorkbookImporter
                 'tables' => $this->tables(),
                 'note' => $supported ? null : 'Needs DATE / DRIVER / PLATE / GAS AMOUNT headers.',
             ];
+            $ss->disconnectWorksheets();
+            unset($ss, $ws);
         }
-        $ss->disconnectWorksheets();
 
         return $out;
     }
 
     protected function parseRows(string $path, array $sheetNames): array
     {
-        $ss = ExcelSheetHelper::load($path);
         $rows = [];
         foreach ($sheetNames as $name) {
-            $ws = $ss->getSheetByName($name);
-            if (! $ws) {
-                continue;
-            }
+            $ss = ExcelSheetHelper::load($path, [$name]);
+            $ws = $ss->getSheetByName($name) ?: $ss->getActiveSheet();
             $header = ExcelSheetHelper::findHeaderMap($ws, ['PLATE NUMBER', 'GAS AMOUNT', 'DRIVER'], 10, 30);
             if (! $header) {
+                $ss->disconnectWorksheets();
+                unset($ss, $ws);
                 continue;
             }
             $map = $header['map'];
@@ -111,6 +111,8 @@ class GasPoWorkbookImporter extends AbstractJsonWorkbookImporter
             $cChecked = ExcelSheetHelper::col($map, ['CHECKED IN SHELL SOA', 'CHECKED BY', 'CHECKED']);
 
             if (! $cDate || ! $cPlate || ! $cAmount) {
+                $ss->disconnectWorksheets();
+                unset($ss, $ws);
                 continue;
             }
 
@@ -149,8 +151,9 @@ class GasPoWorkbookImporter extends AbstractJsonWorkbookImporter
                     'checked_by' => $checkedBy,
                 ];
             }
+            $ss->disconnectWorksheets();
+            unset($ss, $ws);
         }
-        $ss->disconnectWorksheets();
 
         return $rows;
     }

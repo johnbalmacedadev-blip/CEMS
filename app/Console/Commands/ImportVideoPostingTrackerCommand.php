@@ -71,7 +71,7 @@ class ImportVideoPostingTrackerCommand extends Command
 
                 // JSON is pre-deduped; always insert after --fresh to avoid overwrites.
                 if ($this->option('fresh')) {
-                    VideoPostingRecord::create($payload);
+                    $this->createWithManualId($payload);
                     $created++;
                 } else {
                     $existing = $this->findExisting($payload);
@@ -86,7 +86,7 @@ class ImportVideoPostingTrackerCommand extends Command
                         $existing->update($merge);
                         $updated++;
                     } else {
-                        VideoPostingRecord::create($payload);
+                        $this->createWithManualId($payload);
                         $created++;
                     }
                 }
@@ -238,5 +238,20 @@ class ImportVideoPostingTrackerCommand extends Command
         } catch (\Throwable $e) {
             return null;
         }
+    }
+
+    /**
+     * Persist with an explicit id on DBs that lack AUTO_INCREMENT.
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function createWithManualId(array $payload): VideoPostingRecord
+    {
+        $record = new VideoPostingRecord($payload);
+        $record->id = ((int) VideoPostingRecord::query()->max('id')) + 1;
+        $record->incrementing = false;
+        $record->save();
+
+        return $record;
     }
 }

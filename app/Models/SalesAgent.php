@@ -95,10 +95,11 @@ class SalesAgent extends Model
     }
 
     /**
-     * Total commission earnings (linked rows, or legacy rows matched by agent name).
-     * Optional date range uses payment date when set, else reservation date, else record date (date only).
+     * Commission rows for this agent (linked id, or legacy rows matched by agent name).
+     *
+     * @return \Illuminate\Database\Eloquent\Builder<\App\Models\SalesAgentCommission>
      */
-    public function totalCommissionEarnings(?Carbon $rangeStart = null, ?Carbon $rangeEnd = null): float
+    public function earningsCommissionsQuery(?Carbon $rangeStart = null, ?Carbon $rangeEnd = null)
     {
         $query = SalesAgentCommission::query()
             ->where(function ($q) {
@@ -116,7 +117,16 @@ class SalesAgent extends Model
             );
         }
 
-        return (float) $query->sum('amount');
+        return $query;
+    }
+
+    /**
+     * Total commission earnings (linked rows, or legacy rows matched by agent name).
+     * Optional date range uses payment date when set, else date sent, else record date (date only).
+     */
+    public function totalCommissionEarnings(?Carbon $rangeStart = null, ?Carbon $rangeEnd = null): float
+    {
+        return (float) $this->earningsCommissionsQuery($rangeStart, $rangeEnd)->sum('amount');
     }
 
     /**
@@ -124,22 +134,6 @@ class SalesAgent extends Model
      */
     public function totalExecutiveCommissionShare(?Carbon $rangeStart = null, ?Carbon $rangeEnd = null): float
     {
-        $query = SalesAgentCommission::query()
-            ->where(function ($q) {
-                $q->where('sales_agent_id', $this->id)
-                    ->orWhere(function ($q2) {
-                        $q2->whereNull('sales_agent_id')
-                            ->where('agent_name', $this->name);
-                    });
-            });
-
-        if ($rangeStart !== null && $rangeEnd !== null) {
-            $query->whereRaw(
-                'COALESCE(date_of_payment, date_sent, DATE(created_at)) BETWEEN ? AND ?',
-                [$rangeStart->toDateString(), $rangeEnd->toDateString()]
-            );
-        }
-
-        return (float) $query->sum('sales_executive_commission');
+        return (float) $this->earningsCommissionsQuery($rangeStart, $rangeEnd)->sum('sales_executive_commission');
     }
 }

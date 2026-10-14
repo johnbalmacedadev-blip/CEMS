@@ -14,6 +14,7 @@ class PaymentMethodSeeder extends Seeder
     public function run(): void
     {
         $paymentMethods = [
+            ['name' => 'CASH VAULT', 'sort_order' => 0],
             ['name' => 'COST CENTER (FLAGSHIP BUDGET)', 'sort_order' => 1],
             ['name' => 'COST CENTER (WAREHOUSE BUDGET)', 'sort_order' => 2],
             ['name' => 'COST CENTER (ANNEX BUDGET)', 'sort_order' => 3],

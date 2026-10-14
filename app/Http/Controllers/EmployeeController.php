@@ -110,7 +110,24 @@ class EmployeeController extends Controller
      */
     public function show(Employee $employee)
     {
-        return view('employees.show', compact('employee'));
+        $deductions = $employee->deductions()
+            ->orderByDesc('year')
+            ->orderBy('category')
+            ->orderBy('period_key')
+            ->get()
+            ->groupBy('year');
+
+        $deductionTotals = [];
+        foreach ($deductions as $year => $rows) {
+            $contrib = $rows->where('category', 'contribution');
+            $deductionTotals[$year] = [
+                'ee' => (float) $contrib->sum('ee_share'),
+                'er' => (float) $contrib->sum('er_share'),
+                'lines' => $rows->count(),
+            ];
+        }
+
+        return view('employees.show', compact('employee', 'deductions', 'deductionTotals'));
     }
 
     /**

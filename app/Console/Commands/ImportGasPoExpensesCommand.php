@@ -91,6 +91,11 @@ class ImportGasPoExpensesCommand extends Command
             }
 
             if ($payload !== []) {
+                // Production DB often lacks AUTO_INCREMENT on id.
+                $nextId = ((int) GasExpense::query()->max('id')) + 1;
+                foreach ($payload as $i => $row) {
+                    $payload[$i]['id'] = $nextId + $i;
+                }
                 GasExpense::insert($payload);
                 $created += count($payload);
             }
@@ -106,6 +111,7 @@ class ImportGasPoExpensesCommand extends Command
                 ['Total gas expenses', GasExpense::count()],
                 ['2024', GasExpense::whereYear('date', 2024)->count()],
                 ['2025', GasExpense::whereYear('date', 2025)->count()],
+                ['2026', GasExpense::whereYear('date', 2026)->count()],
             ]
         );
 

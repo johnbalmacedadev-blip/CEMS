@@ -67,6 +67,9 @@ class ImportEmployeesCommand extends Command
                     }
 
                     $middle = $row['middle_name'] ?? null;
+                    if (is_string($middle) && in_array(strtoupper(trim($middle)), ['', 'N/A', 'NA', '-'], true)) {
+                        $middle = null;
+                    }
                     $key = $this->nameKey($first, $middle, $last);
 
                     $contractType = $row['contract_type'] ?? null;
@@ -94,7 +97,11 @@ class ImportEmployeesCommand extends Command
                         Employee::where('id', $existing[$key])->update($payload);
                         $updated++;
                     } else {
-                        $emp = Employee::create($payload);
+                        // Production DB often lacks AUTO_INCREMENT on id.
+                        $emp = new Employee($payload);
+                        $emp->id = ((int) Employee::query()->max('id')) + 1;
+                        $emp->incrementing = false;
+                        $emp->save();
                         $existing[$key] = $emp->id;
                         $created++;
                     }

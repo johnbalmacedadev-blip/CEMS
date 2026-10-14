@@ -118,7 +118,11 @@ class ImportUnitsMasterlistCommand extends Command
                     $existing->update($payload);
                     $updated++;
                 } else {
-                    UnitMasterlist::create($payload);
+                    // Production DB often lacks AUTO_INCREMENT on id.
+                    $row = new UnitMasterlist($payload);
+                    $row->id = ((int) UnitMasterlist::query()->max('id')) + 1;
+                    $row->incrementing = false;
+                    $row->save();
                     $created++;
                 }
             } catch (\Throwable $e) {

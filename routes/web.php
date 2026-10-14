@@ -420,6 +420,7 @@ Route::middleware(['auth', 'page.permission', 'log.activity'])->group(function (
 
         // Sales Agents routes
         Route::get('/staff-reports/sales-agents', [App\Http\Controllers\SalesAgentController::class, 'staffReport'])->name('staff-reports.sales-agents');
+        Route::get('/staff-reports/sales-agents/{salesAgent}', [App\Http\Controllers\SalesAgentController::class, 'staffReportShow'])->name('staff-reports.sales-agents.show');
         Route::get('/staff-reports/executive-agents', [App\Http\Controllers\ExecutiveAgentController::class, 'index'])->name('staff-reports.executive-agents');
         Route::post('/staff-reports/executive-agents', [App\Http\Controllers\ExecutiveAgentController::class, 'store'])->name('staff-reports.executive-agents.store');
         Route::get('/staff-reports/executive-agents/{executiveAgent}', [App\Http\Controllers\ExecutiveAgentController::class, 'show'])->name('staff-reports.executive-agents.show');

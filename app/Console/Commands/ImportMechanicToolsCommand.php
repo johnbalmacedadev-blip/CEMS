@@ -15,6 +15,7 @@ class ImportMechanicToolsCommand extends Command
     protected $signature = 'import:mechanic-tools
                             {--file= : Path to MECHANIC TOOLS AND EXPENSES.xlsx}
                             {--fresh : Truncate tools + parts/external before import}
+                            {--skip-existing : Skip rows already in DB (default when not --fresh)}
                             {--dry-run : Parse and report without writing}';
 
     protected $description = 'Import TOOLS INVENTORY, PARTS, and EXTERNAL EXPENSES from MECHANIC TOOLS AND EXPENSES.xlsx';
@@ -36,7 +37,18 @@ class ImportMechanicToolsCommand extends Command
         $this->info('Parts rows: '.count($partRows));
         $this->info('External expense rows: '.count($externalRows));
 
+        $skipExisting = (bool) $this->option('skip-existing') || ! $this->option('fresh');
+
         if ($this->option('dry-run')) {
+            if ($skipExisting) {
+                $existingTools = $this->existingToolKeys();
+                $existingParts = $this->existingExpenseKeys('parts');
+                $existingExt = $this->existingExpenseKeys('external');
+                $newTools = count(array_filter($toolRows, fn ($r) => ! isset($existingTools[$this->toolKey($r)])));
+                $newParts = count(array_filter($partRows, fn ($r) => ! isset($existingParts[$this->expenseKey('parts', $r)])));
+                $newExt = count(array_filter($externalRows, fn ($r) => ! isset($existingExt[$this->expenseKey('external', $r)])));
+                $this->info("Would create — tools: {$newTools}, parts: {$newParts}, external: {$newExt}");
+            }
             $this->warn('Dry run — no database writes.');
 
             return self::SUCCESS;
@@ -48,12 +60,21 @@ class ImportMechanicToolsCommand extends Command
             MechanicExpenseRecord::query()->truncate();
             DB::statement('SET FOREIGN_KEY_CHECKS=1');
             $this->warn('tools_inventory + mechanic_expense_records truncated.');
+            $skipExisting = false;
         }
 
         $now = now();
+        $toolsCreated = 0;
+        $toolsSkipped = 0;
+        $existingTools = $skipExisting ? $this->existingToolKeys() : [];
         foreach (array_chunk($toolRows, 200) as $chunk) {
             $payload = [];
             foreach ($chunk as $row) {
+                $key = $this->toolKey($row);
+                if ($skipExisting && isset($existingTools[$key])) {
+                    $toolsSkipped++;
+                    continue;
+                }
                 $payload[] = [
                     'name' => $row['name'],
                     'quantity' => $row['quantity'],
@@ -63,12 +84,32 @@ class ImportMechanicToolsCommand extends Command
                     'created_at' => $now,
                     'updated_at' => $now,
                 ];
+                $existingTools[$key] = true;
             }
-            DB::table('tools_inventory')->insert($payload);
+            if ($payload !== []) {
+                $nextId = ((int) DB::table('tools_inventory')->max('id')) + 1;
+                foreach ($payload as $i => $item) {
+                    $payload[$i]['id'] = $nextId + $i;
+                }
+                DB::table('tools_inventory')->insert($payload);
+                $toolsCreated += count($payload);
+            }
         }
+
+        $partsCreated = 0;
+        $partsSkipped = 0;
+        $extCreated = 0;
+        $extSkipped = 0;
+        $existingParts = $skipExisting ? $this->existingExpenseKeys('parts') : [];
+        $existingExt = $skipExisting ? $this->existingExpenseKeys('external') : [];
 
         $expensePayload = [];
         foreach ($partRows as $row) {
+            $key = $this->expenseKey('parts', $row);
+            if ($skipExisting && isset($existingParts[$key])) {
+                $partsSkipped++;
+                continue;
+            }
             $expensePayload[] = [
                 'record_type' => 'parts',
                 'description' => $row['description'],
@@ -79,8 +120,15 @@ class ImportMechanicToolsCommand extends Command
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
+            $existingParts[$key] = true;
+            $partsCreated++;
         }
         foreach ($externalRows as $row) {
+            $key = $this->expenseKey('external', $row);
+            if ($skipExisting && isset($existingExt[$key])) {
+                $extSkipped++;
+                continue;
+            }
             $expensePayload[] = [
                 'record_type' => 'external',
                 'description' => $row['description'],
@@ -91,16 +139,95 @@ class ImportMechanicToolsCommand extends Command
                 'created_at' => $now,
                 'updated_at' => $now,
             ];
+            $existingExt[$key] = true;
+            $extCreated++;
         }
         foreach (array_chunk($expensePayload, 200) as $chunk) {
+            $nextId = ((int) DB::table('mechanic_expense_records')->max('id')) + 1;
+            foreach ($chunk as $i => $item) {
+                $chunk[$i]['id'] = $nextId + $i;
+            }
             DB::table('mechanic_expense_records')->insert($chunk);
         }
 
-        $this->info('Tools in DB: '.Tool::count());
-        $this->info('Parts in DB: '.MechanicExpenseRecord::parts()->count());
-        $this->info('External in DB: '.MechanicExpenseRecord::external()->count());
+        $this->table(
+            ['Metric', 'Count'],
+            [
+                ['Tools created', $toolsCreated],
+                ['Tools skipped (existing)', $toolsSkipped],
+                ['Parts created', $partsCreated],
+                ['Parts skipped (existing)', $partsSkipped],
+                ['External created', $extCreated],
+                ['External skipped (existing)', $extSkipped],
+                ['Tools in DB', Tool::count()],
+                ['Parts in DB', MechanicExpenseRecord::parts()->count()],
+                ['External in DB', MechanicExpenseRecord::external()->count()],
+            ]
+        );
 
         return self::SUCCESS;
+    }
+
+    /** @param  array<string, mixed>  $row */
+    private function toolKey(array $row): string
+    {
+        return strtoupper(implode('|', [
+            (string) ($row['entry_type'] ?? 'purchase'),
+            (string) ($row['name'] ?? ''),
+            (string) ($row['date_acquired'] ?? ''),
+            (string) ($row['quantity'] ?? ''),
+            number_format((float) ($row['amount'] ?? 0), 2, '.', ''),
+        ]));
+    }
+
+    /** @param  array<string, mixed>  $row */
+    private function expenseKey(string $type, array $row): string
+    {
+        return strtoupper(implode('|', [
+            $type,
+            (string) ($row['description'] ?? ''),
+            number_format((float) ($row['amount'] ?? 0), 2, '.', ''),
+            (string) ($row['expense_date'] ?? ''),
+            (string) ($row['repaired_by'] ?? ''),
+            (string) ($row['unit_label'] ?? ''),
+        ]));
+    }
+
+    /** @return array<string, true> */
+    private function existingToolKeys(): array
+    {
+        $keys = [];
+        foreach (Tool::query()->get(['name', 'quantity', 'amount', 'date_acquired', 'entry_type']) as $row) {
+            $keys[$this->toolKey([
+                'entry_type' => $row->entry_type ?? 'purchase',
+                'name' => $row->name,
+                'date_acquired' => optional($row->date_acquired)->format('Y-m-d'),
+                'quantity' => $row->quantity,
+                'amount' => $row->amount,
+            ])] = true;
+        }
+
+        return $keys;
+    }
+
+    /** @return array<string, true> */
+    private function existingExpenseKeys(string $type): array
+    {
+        $keys = [];
+        $query = $type === 'parts'
+            ? MechanicExpenseRecord::parts()
+            : MechanicExpenseRecord::external();
+        foreach ($query->get() as $row) {
+            $keys[$this->expenseKey($type, [
+                'description' => $row->description,
+                'amount' => $row->amount,
+                'expense_date' => optional($row->expense_date)->format('Y-m-d'),
+                'repaired_by' => $row->repaired_by,
+                'unit_label' => $row->unit_label,
+            ])] = true;
+        }
+
+        return $keys;
     }
 
     /**

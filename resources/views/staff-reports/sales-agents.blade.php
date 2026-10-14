@@ -115,32 +115,38 @@
                                     <span class="d-inline-block text-end">Earnings<br><span class="small fw-normal" style="opacity: .85;">{{ $periodLabel ?? '' }}</span></span>
                                 @endif
                             </th>
-                            @canPage('sales-agents', 'update')
                             <th class="text-end" style="width: 1%;">Actions</th>
-                            @endcanPage
                         </tr>
                     </thead>
                     <tbody>
                         @forelse($agents as $agent)
                             <tr>
-                                <td><strong>{{ $agent->name }}</strong></td>
+                                <td>
+                                    <a href="{{ route('staff-reports.sales-agents.show', array_filter(['salesAgent' => $agent, 'period' => $period ?? null, 'anchor' => ($period ?? 'all') !== 'all' ? ($anchor ?? now())->format('Y-m-d') : null, 'sort' => $sort ?? null])) }}" class="text-decoration-none text-dark fw-semibold">
+                                        {{ $agent->name }}
+                                    </a>
+                                </td>
                                 <td><span class="badge bg-secondary">{{ $agent->sales_agent_id }}</span></td>
                                 <td>{{ $agent->executiveAgent?->name ?? '—' }}</td>
                                 <td>{{ $agent->phone ?: '—' }}</td>
                                 <td>{{ $agent->position ?: '—' }}</td>
                                 <td class="text-end fw-semibold">₱{{ number_format($agent->total_commission_earnings ?? 0, 2) }}</td>
-                                @canPage('sales-agents', 'update')
-                                <td class="text-end">
+                                <td class="text-end text-nowrap">
+                                    <a href="{{ route('staff-reports.sales-agents.show', array_filter(['salesAgent' => $agent, 'period' => $period ?? null, 'anchor' => ($period ?? 'all') !== 'all' ? ($anchor ?? now())->format('Y-m-d') : null, 'sort' => $sort ?? null])) }}"
+                                       class="btn btn-sm btn-outline-secondary" title="View earnings">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    @canPage('sales-agents', 'update')
                                     <button type="button" class="btn btn-sm btn-outline-primary btn-staff-edit-sa" title="Edit"
                                         data-agent-id="{{ $agent->id }}">
                                         <i class="fas fa-edit"></i>
                                     </button>
+                                    @endcanPage
                                 </td>
-                                @endcanPage
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="{{ auth()->check() && auth()->user()->canAccessPage('sales-agents', 'update') ? 7 : 6 }}" class="text-center text-muted py-4">No active sales agents found.</td>
+                                <td colspan="7" class="text-center text-muted py-4">No active sales agents found.</td>
                             </tr>
                         @endforelse
                     </tbody>

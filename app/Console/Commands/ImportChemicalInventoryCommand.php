@@ -16,6 +16,8 @@ class ImportChemicalInventoryCommand extends Command
                             {--annex= : Path to CHEMICAL INVENTORY - ANNEX.xlsx}
                             {--premium= : Path to CHEMICAL INVENTORY - PREMIUM.xlsx}
                             {--fresh : Truncate chemical tables before import}
+                            {--movements-only : Only import INCOMING/OUTGOING (skip CURRENT STOCK)}
+                            {--skip-existing : Skip movements/stocks that already exist (default when not --fresh)}
                             {--dry-run : Parse and report without writing}';
 
     protected $description = 'Import CURRENT STOCK and INCOMING/OUTGOING sheets from Annex and Premium chemical inventory workbooks';
@@ -45,10 +47,28 @@ class ImportChemicalInventoryCommand extends Command
             $allMovements = array_merge($allMovements, $parsed['movements']);
         }
 
+        $movementsOnly = (bool) $this->option('movements-only');
+        $skipExisting = (bool) $this->option('skip-existing') || ! $this->option('fresh');
+
+        if ($movementsOnly) {
+            $allStocks = [];
+            $this->info('Movements-only mode: CURRENT STOCK sheets ignored.');
+        }
+
         $this->info('Total stocks: '.count($allStocks));
         $this->info('Total movements: '.count($allMovements));
 
         if ($this->option('dry-run')) {
+            if ($skipExisting && ! $this->option('fresh')) {
+                $existingKeys = $this->existingMovementKeys();
+                $newCount = 0;
+                foreach ($allMovements as $row) {
+                    if (! isset($existingKeys[$this->movementKey($row)])) {
+                        $newCount++;
+                    }
+                }
+                $this->info("Movements that would be created (missing only): {$newCount}");
+            }
             $this->warn('Dry run — no database writes.');
 
             return self::SUCCESS;
@@ -60,19 +80,129 @@ class ImportChemicalInventoryCommand extends Command
             ChemicalMovement::query()->truncate();
             DB::statement('SET FOREIGN_KEY_CHECKS=1');
             $this->warn('chemical_stocks + chemical_movements truncated.');
+            $skipExisting = false;
         }
 
+        $stocksCreated = 0;
+        $stocksSkipped = 0;
+        $existingStockKeys = $skipExisting ? $this->existingStockKeys() : [];
         foreach ($allStocks as $row) {
-            ChemicalStock::create($row);
-        }
-        foreach ($allMovements as $row) {
-            ChemicalMovement::create($row);
+            if ($skipExisting && isset($existingStockKeys[$this->stockKey($row)])) {
+                $stocksSkipped++;
+                continue;
+            }
+            $this->saveWithManualId(new ChemicalStock($row), ((int) ChemicalStock::query()->max('id')) + 1);
+            $stocksCreated++;
+            if ($skipExisting) {
+                $existingStockKeys[$this->stockKey($row)] = true;
+            }
         }
 
-        $this->info('Stocks in DB: '.ChemicalStock::count());
-        $this->info('Movements in DB: '.ChemicalMovement::count());
+        $movementsCreated = 0;
+        $movementsSkipped = 0;
+        $existingMovementKeys = $skipExisting ? $this->existingMovementKeys() : [];
+        foreach ($allMovements as $row) {
+            $key = $this->movementKey($row);
+            if ($skipExisting && isset($existingMovementKeys[$key])) {
+                $movementsSkipped++;
+                continue;
+            }
+            $this->saveWithManualId(new ChemicalMovement($row), ((int) ChemicalMovement::query()->max('id')) + 1);
+            $movementsCreated++;
+            $existingMovementKeys[$key] = true;
+        }
+
+        $this->table(
+            ['Metric', 'Count'],
+            [
+                ['Stocks created', $stocksCreated],
+                ['Stocks skipped (existing)', $stocksSkipped],
+                ['Movements created', $movementsCreated],
+                ['Movements skipped (existing)', $movementsSkipped],
+                ['Stocks in DB', ChemicalStock::count()],
+                ['Movements in DB', ChemicalMovement::count()],
+            ]
+        );
 
         return self::SUCCESS;
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function movementKey(array $row): string
+    {
+        return strtoupper(implode('|', [
+            (string) ($row['location'] ?? ''),
+            (string) ($row['period_label'] ?? ''),
+            (string) ($row['item'] ?? ''),
+            (string) ($row['brand'] ?? ''),
+            (string) ($row['size_or_pieces'] ?? ''),
+            (string) ($row['movement_date'] ?? ''),
+            (string) ($row['movement_type'] ?? ''),
+            (string) ($row['quantity'] ?? $row['quantity_text'] ?? ''),
+            (string) ($row['moved_by'] ?? ''),
+            (string) ($row['remaining_count'] ?? ''),
+        ]));
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function stockKey(array $row): string
+    {
+        return strtoupper(implode('|', [
+            (string) ($row['location'] ?? ''),
+            (string) ($row['item'] ?? ''),
+            (string) ($row['count_date'] ?? ''),
+            (string) ($row['existing_count'] ?? ''),
+        ]));
+    }
+
+    /** @return array<string, true> */
+    private function existingMovementKeys(): array
+    {
+        $keys = [];
+        foreach (ChemicalMovement::query()->get() as $row) {
+            $keys[$this->movementKey([
+                'location' => $row->location,
+                'period_label' => $row->period_label,
+                'item' => $row->item,
+                'brand' => $row->brand,
+                'size_or_pieces' => $row->size_or_pieces,
+                'movement_date' => optional($row->movement_date)->format('Y-m-d'),
+                'movement_type' => $row->movement_type,
+                'quantity' => $row->quantity,
+                'quantity_text' => $row->quantity_text,
+                'moved_by' => $row->moved_by,
+                'remaining_count' => $row->remaining_count,
+            ])] = true;
+        }
+
+        return $keys;
+    }
+
+    /** @return array<string, true> */
+    private function existingStockKeys(): array
+    {
+        $keys = [];
+        foreach (ChemicalStock::query()->get(['location', 'item', 'count_date', 'existing_count']) as $row) {
+            $keys[$this->stockKey([
+                'location' => $row->location,
+                'item' => $row->item,
+                'count_date' => optional($row->count_date)->format('Y-m-d'),
+                'existing_count' => $row->existing_count,
+            ])] = true;
+        }
+
+        return $keys;
+    }
+
+    private function saveWithManualId(\Illuminate\Database\Eloquent\Model $model, int $id): void
+    {
+        $model->id = $id;
+        $model->incrementing = false;
+        $model->save();
     }
 
     private function parseWorkbook(string $path, string $location): array

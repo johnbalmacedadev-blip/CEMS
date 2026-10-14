@@ -551,6 +551,225 @@
     #homeCategoryModal {
         z-index: 1060;
     }
+
+    /* Quick menu search */
+    .home-search-wrap {
+        max-width: 560px;
+        margin: 0 auto 2.25rem;
+        position: relative;
+    }
+
+    .home-search-input-group {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .home-search-input-group .home-search-icon {
+        position: absolute;
+        left: 1rem;
+        color: rgba(255, 255, 255, 0.65);
+        pointer-events: none;
+        z-index: 2;
+    }
+
+    [data-home-theme="light"] .home-search-input-group .home-search-icon,
+    body[data-home-theme="light"] .home-search-input-group .home-search-icon {
+        color: rgba(0, 0, 0, 0.45);
+    }
+
+    #homeMenuSearch {
+        width: 100%;
+        padding: 0.85rem 2.75rem 0.85rem 2.75rem;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.22);
+        background: rgba(26, 26, 26, 0.8);
+        color: #fff;
+        backdrop-filter: blur(10px);
+        font-size: 1rem;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+        transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    }
+
+    #homeMenuSearch::placeholder {
+        color: rgba(255, 255, 255, 0.55);
+    }
+
+    #homeMenuSearch:focus {
+        outline: none;
+        border-color: rgba(220, 53, 69, 0.75);
+        box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.25), 0 6px 24px rgba(0, 0, 0, 0.3);
+        background: rgba(26, 26, 26, 0.92);
+    }
+
+    [data-home-theme="light"] #homeMenuSearch,
+    body[data-home-theme="light"] #homeMenuSearch {
+        background: rgba(255, 255, 255, 0.95);
+        color: #212529;
+        border-color: rgba(0, 0, 0, 0.15);
+        box-shadow: 0 4px 18px rgba(0, 0, 0, 0.08);
+    }
+
+    [data-home-theme="light"] #homeMenuSearch::placeholder,
+    body[data-home-theme="light"] #homeMenuSearch::placeholder {
+        color: rgba(0, 0, 0, 0.4);
+    }
+
+    [data-home-theme="light"] #homeMenuSearch:focus,
+    body[data-home-theme="light"] #homeMenuSearch:focus {
+        border-color: rgba(13, 110, 253, 0.55);
+        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15), 0 6px 20px rgba(0, 0, 0, 0.1);
+        background: #fff;
+    }
+
+    .home-search-clear {
+        position: absolute;
+        right: 0.65rem;
+        border: none;
+        background: transparent;
+        color: rgba(255, 255, 255, 0.55);
+        width: 2rem;
+        height: 2rem;
+        border-radius: 50%;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+
+    .home-search-clear.is-visible {
+        display: inline-flex;
+    }
+
+    .home-search-clear:hover {
+        color: #fff;
+        background: rgba(255, 255, 255, 0.12);
+    }
+
+    [data-home-theme="light"] .home-search-clear,
+    body[data-home-theme="light"] .home-search-clear {
+        color: rgba(0, 0, 0, 0.4);
+    }
+
+    [data-home-theme="light"] .home-search-clear:hover,
+    body[data-home-theme="light"] .home-search-clear:hover {
+        color: #212529;
+        background: rgba(0, 0, 0, 0.06);
+    }
+
+    .home-search-results {
+        position: absolute;
+        top: calc(100% + 0.45rem);
+        left: 0;
+        right: 0;
+        max-height: min(55vh, 380px);
+        overflow-y: auto;
+        border-radius: 12px;
+        background: rgba(26, 26, 26, 0.96);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+        display: none;
+        z-index: 1040;
+        backdrop-filter: blur(12px);
+    }
+
+    .home-search-results.is-open {
+        display: block;
+    }
+
+    [data-home-theme="light"] .home-search-results,
+    body[data-home-theme="light"] .home-search-results {
+        background: rgba(255, 255, 255, 0.98);
+        border-color: rgba(0, 0, 0, 0.12);
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+    }
+
+    .home-search-result {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.7rem 1rem;
+        text-decoration: none;
+        color: #fff;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        transition: background 0.15s ease;
+    }
+
+    .home-search-result:last-child {
+        border-bottom: none;
+    }
+
+    .home-search-result:hover,
+    .home-search-result.is-active {
+        background: rgba(220, 53, 69, 0.22);
+        color: #fff;
+    }
+
+    [data-home-theme="light"] .home-search-result,
+    body[data-home-theme="light"] .home-search-result {
+        color: #212529;
+        border-bottom-color: rgba(0, 0, 0, 0.06);
+    }
+
+    [data-home-theme="light"] .home-search-result:hover,
+    [data-home-theme="light"] .home-search-result.is-active,
+    body[data-home-theme="light"] .home-search-result:hover,
+    body[data-home-theme="light"] .home-search-result.is-active {
+        background: rgba(13, 110, 253, 0.1);
+        color: #212529;
+    }
+
+    .home-search-result-icon {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        background: rgba(255, 255, 255, 0.08);
+        color: #6ea8fe;
+        font-size: 0.85rem;
+    }
+
+    [data-home-theme="light"] .home-search-result-icon,
+    body[data-home-theme="light"] .home-search-result-icon {
+        background: rgba(13, 110, 253, 0.1);
+        color: #0d6efd;
+    }
+
+    .home-search-result-text {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .home-search-result-label {
+        font-weight: 600;
+        font-size: 0.92rem;
+        line-height: 1.25;
+    }
+
+    .home-search-result-meta {
+        font-size: 0.75rem;
+        opacity: 0.7;
+        margin-top: 0.1rem;
+    }
+
+    .home-search-empty {
+        padding: 1rem;
+        text-align: center;
+        color: rgba(255, 255, 255, 0.65);
+        font-size: 0.9rem;
+    }
+
+    [data-home-theme="light"] .home-search-empty,
+    body[data-home-theme="light"] .home-search-empty {
+        color: rgba(0, 0, 0, 0.5);
+    }
+
+    .category-card.is-search-hidden {
+        display: none !important;
+    }
 </style>
 
 <div class="container py-5 home-container">
@@ -573,15 +792,37 @@
         </p>
     </div>
 
+    @if(count($homeCategories) > 0)
+    <div class="home-search-wrap" id="homeSearchWrap">
+        <div class="home-search-input-group">
+            <i class="fas fa-search home-search-icon" aria-hidden="true"></i>
+            <input type="search"
+                   id="homeMenuSearch"
+                   placeholder="Quick search menus or pages…"
+                   autocomplete="off"
+                   spellcheck="false"
+                   aria-label="Search menus and pages"
+                   aria-controls="homeSearchResults"
+                   aria-expanded="false">
+            <button type="button" class="home-search-clear" id="homeSearchClear" title="Clear search" aria-label="Clear search">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="home-search-results" id="homeSearchResults" role="listbox" aria-label="Search results"></div>
+    </div>
+    @endif
+
     @if(count($homeCategories) === 0)
         <div class="text-center py-5">
             <p class="text-white-50 mb-0">Contact your administrator to request access to features.</p>
         </div>
     @endif
 
-    <div class="row g-4">
+    <div class="row g-4" id="homeCategoryGrid">
         @foreach($homeCategories as $category)
-        <div class="col-12 col-sm-6 col-lg-4 category-card">
+        <div class="col-12 col-sm-6 col-lg-4 category-card"
+             data-category-id="{{ $category['id'] }}"
+             data-search="{{ strtolower(($category['title'] ?? '').' '.($category['description'] ?? '').' '.collect($category['items'] ?? [])->pluck('label')->implode(' ')) }}">
             <div class="card h-100 home-card {{ $category['border'] ?? '' }}"
                  @if(!empty($category['border_style'])) style="{{ $category['border_style'] }}" @endif>
                 <div class="card-body">
@@ -598,7 +839,10 @@
                     <ul class="category-sublinks">
                         @foreach($category['items'] as $item)
                         <li>
-                            <a href="{{ $item['url'] }}" class="home-sublink-item">
+                            <a href="{{ $item['url'] }}" class="home-sublink-item"
+                               data-label="{{ $item['label'] }}"
+                               data-category="{{ $category['title'] }}"
+                               data-icon="{{ $item['icon'] }}">
                                 <i class="fas {{ $item['icon'] }} fa-fw home-sublink-icon" aria-hidden="true"></i>
                                 <span>{{ $item['label'] }}</span>
                             </a>
@@ -752,6 +996,146 @@ document.addEventListener('DOMContentLoaded', function() {
     if (homeCategoryModalEl) {
         homeCategoryModalEl.addEventListener('show.bs.modal', syncHomeModalTheme);
     }
+
+    // Quick search: menus / pages
+    (function initHomeMenuSearch() {
+        const input = document.getElementById('homeMenuSearch');
+        const resultsEl = document.getElementById('homeSearchResults');
+        const clearBtn = document.getElementById('homeSearchClear');
+        const cards = Array.from(document.querySelectorAll('#homeCategoryGrid .category-card'));
+        if (!input || !resultsEl) return;
+
+        const pages = [];
+        document.querySelectorAll('#homeCategoryGrid .home-sublink-item').forEach(function(a) {
+            pages.push({
+                label: (a.getAttribute('data-label') || a.textContent || '').trim(),
+                category: (a.getAttribute('data-category') || '').trim(),
+                icon: (a.getAttribute('data-icon') || 'fa-link').trim(),
+                url: a.getAttribute('href') || '#',
+                search: ((a.getAttribute('data-label') || '') + ' ' + (a.getAttribute('data-category') || '')).toLowerCase()
+            });
+        });
+
+        let activeIndex = -1;
+
+        function normalize(q) {
+            return (q || '').trim().toLowerCase().replace(/\s+/g, ' ');
+        }
+
+        function setOpen(open) {
+            resultsEl.classList.toggle('is-open', open);
+            input.setAttribute('aria-expanded', open ? 'true' : 'false');
+        }
+
+        function filterCards(q) {
+            cards.forEach(function(card) {
+                const hay = card.getAttribute('data-search') || '';
+                const show = !q || hay.indexOf(q) !== -1;
+                card.classList.toggle('is-search-hidden', !show);
+            });
+        }
+
+        function renderResults(q) {
+            activeIndex = -1;
+            clearBtn.classList.toggle('is-visible', !!q);
+            filterCards(q);
+
+            if (!q) {
+                resultsEl.innerHTML = '';
+                setOpen(false);
+                return;
+            }
+
+            const matches = pages.filter(function(p) {
+                return p.search.indexOf(q) !== -1;
+            }).slice(0, 12);
+
+            if (matches.length === 0) {
+                resultsEl.innerHTML = '<div class="home-search-empty">No menus or pages match “' + q.replace(/[<>&]/g, '') + '”</div>';
+                setOpen(true);
+                return;
+            }
+
+            resultsEl.innerHTML = matches.map(function(p, i) {
+                return '<a href="' + p.url + '" class="home-search-result" role="option" data-index="' + i + '">' +
+                    '<span class="home-search-result-icon"><i class="fas ' + p.icon + '" aria-hidden="true"></i></span>' +
+                    '<span class="home-search-result-text">' +
+                    '<div class="home-search-result-label">' + p.label + '</div>' +
+                    '<div class="home-search-result-meta">' + p.category + '</div>' +
+                    '</span></a>';
+            }).join('');
+            setOpen(true);
+        }
+
+        function highlightActive() {
+            const items = resultsEl.querySelectorAll('.home-search-result');
+            items.forEach(function(el, i) {
+                el.classList.toggle('is-active', i === activeIndex);
+            });
+            if (activeIndex >= 0 && items[activeIndex]) {
+                items[activeIndex].scrollIntoView({ block: 'nearest' });
+            }
+        }
+
+        input.addEventListener('input', function() {
+            renderResults(normalize(input.value));
+        });
+
+        input.addEventListener('keydown', function(e) {
+            const items = resultsEl.querySelectorAll('.home-search-result');
+            if (e.key === 'ArrowDown') {
+                if (!items.length) return;
+                e.preventDefault();
+                activeIndex = (activeIndex + 1) % items.length;
+                highlightActive();
+            } else if (e.key === 'ArrowUp') {
+                if (!items.length) return;
+                e.preventDefault();
+                activeIndex = activeIndex <= 0 ? items.length - 1 : activeIndex - 1;
+                highlightActive();
+            } else if (e.key === 'Enter') {
+                if (activeIndex >= 0 && items[activeIndex]) {
+                    e.preventDefault();
+                    window.location.href = items[activeIndex].getAttribute('href');
+                } else if (items.length === 1) {
+                    e.preventDefault();
+                    window.location.href = items[0].getAttribute('href');
+                }
+            } else if (e.key === 'Escape') {
+                input.value = '';
+                renderResults('');
+                input.blur();
+            }
+        });
+
+        clearBtn.addEventListener('click', function() {
+            input.value = '';
+            renderResults('');
+            input.focus();
+        });
+
+        document.addEventListener('click', function(e) {
+            const wrap = document.getElementById('homeSearchWrap');
+            if (wrap && !wrap.contains(e.target)) {
+                setOpen(false);
+            }
+        });
+
+        input.addEventListener('focus', function() {
+            if (normalize(input.value)) {
+                renderResults(normalize(input.value));
+            }
+        });
+
+        // Press "/" anywhere on home (when not typing elsewhere) to focus search
+        document.addEventListener('keydown', function(e) {
+            if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
+            const tag = (e.target && e.target.tagName) ? e.target.tagName.toLowerCase() : '';
+            if (tag === 'input' || tag === 'textarea' || (e.target && e.target.isContentEditable)) return;
+            e.preventDefault();
+            input.focus();
+        });
+    })();
 });
 </script>
 @endsection

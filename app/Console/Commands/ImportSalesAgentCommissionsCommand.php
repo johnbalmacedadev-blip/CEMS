@@ -111,7 +111,7 @@ class ImportSalesAgentCommissionsCommand extends Command
                     foreach ($agentNames as $name) {
                         $norm = $this->normalizeName($name);
                         if (! isset($agentByName[$norm])) {
-                            $agent = SalesAgent::create([
+                            $agent = new SalesAgent([
                                 'name' => $this->displayName($name),
                                 'email' => $this->uniqueEmail($name),
                                 'sales_agent_id' => 'SA'.str_pad((string) $agentCodeSeq++, 3, '0', STR_PAD_LEFT),
@@ -124,6 +124,7 @@ class ImportSalesAgentCommissionsCommand extends Command
                                 'status' => 'active',
                                 'notes' => 'Imported from 2026 Sales Agent Commissions Tracker',
                             ]);
+                            $this->saveWithManualId($agent, ((int) SalesAgent::query()->max('id')) + 1);
                             $agentByName[$norm] = $agent->id;
                             $agentsCreated++;
                         }
@@ -142,7 +143,7 @@ class ImportSalesAgentCommissionsCommand extends Command
                         if ($norm === '' || isset($execByName[$norm])) {
                             continue;
                         }
-                        $exec = ExecutiveAgent::create([
+                        $exec = new ExecutiveAgent([
                             'name' => $this->displayName($execName),
                             'email' => $this->uniqueExecEmail($execName),
                             'executive_code' => 'EA'.str_pad((string) $execCodeSeq++, 3, '0', STR_PAD_LEFT),
@@ -150,6 +151,7 @@ class ImportSalesAgentCommissionsCommand extends Command
                             'status' => 'active',
                             'notes' => 'Imported from commissions tracker (SE / sales person)',
                         ]);
+                        $this->saveWithManualId($exec, ((int) ExecutiveAgent::query()->max('id')) + 1);
                         $execByName[$norm] = $exec->id;
                         $executivesCreated++;
                     }
@@ -166,7 +168,7 @@ class ImportSalesAgentCommissionsCommand extends Command
                     if (! isset($vehicleByPlate[$plate])) {
                         [$makeId, $makeName] = $this->resolveMake($row['make'] ?? 'Unknown', $makeCache);
                         [$modelId, $modelName] = $this->resolveModel($makeId, $row['model'] ?? 'Unknown', $modelCache);
-                        $vehicle = Vehicle::create([
+                        $vehicle = new Vehicle([
                             'year' => (int) ($row['year'] ?? 2000),
                             'make_id' => $makeId,
                             'model_id' => $modelId,
@@ -188,6 +190,7 @@ class ImportSalesAgentCommissionsCommand extends Command
                             'spare_key' => false,
                             'status' => 'Released',
                         ]);
+                        $this->saveWithManualId($vehicle, ((int) Vehicle::query()->max('id')) + 1);
                         $vehicleByPlate[$plate] = $vehicle->id;
                         $vehiclesCreated++;
                     }
@@ -197,22 +200,19 @@ class ImportSalesAgentCommissionsCommand extends Command
                     $releaseDate = $row['release_date'] ?? null;
                     $payDate = $row['date_of_payment'] ?? null;
 
-                    $exists = SalesAgentCommission::query()
+                    // Dedupe on agent + plate/vehicle + amount (+ release/payment date when present).
+                    $existsQuery = SalesAgentCommission::query()
                         ->where('sales_agent_id', $primaryAgentId)
                         ->where(function ($q) use ($plate, $vehicleId) {
                             $q->where('plate_number', $plate)->orWhere('vehicle_id', $vehicleId);
                         })
-                        ->where('amount', $amount)
-                        ->where(function ($q) use ($releaseDate, $payDate, $row) {
-                            if ($releaseDate) {
-                                $q->whereDate('release_date', $releaseDate);
-                            } elseif ($payDate) {
-                                $q->whereDate('date_of_payment', $payDate);
-                            } else {
-                                $q->where('notes', 'LIKE', '%'.($row['sheet'] ?? '').'%');
-                            }
-                        })
-                        ->exists();
+                        ->where('amount', $amount);
+                    if ($releaseDate) {
+                        $existsQuery->whereDate('release_date', $releaseDate);
+                    } elseif ($payDate) {
+                        $existsQuery->whereDate('date_of_payment', $payDate);
+                    }
+                    $exists = $existsQuery->exists();
 
                     if ($exists) {
                         $commissionsSkipped++;
@@ -230,7 +230,7 @@ class ImportSalesAgentCommissionsCommand extends Command
                         $status = SalesAgentCommission::STATUS_PENDING;
                     }
 
-                    SalesAgentCommission::create([
+                    $commission = new SalesAgentCommission([
                         'showroom' => $row['showroom'] ?? null,
                         'commission_status' => $status,
                         'sales_agent_id' => $primaryAgentId,
@@ -250,6 +250,7 @@ class ImportSalesAgentCommissionsCommand extends Command
                         'date_of_payment' => $payDate,
                         'notes' => $row['notes'] ?? null,
                     ]);
+                    $this->saveWithManualId($commission, ((int) SalesAgentCommission::query()->max('id')) + 1);
                     $commissionsCreated++;
                 });
             } catch (\Throwable $e) {
@@ -384,7 +385,8 @@ class ImportSalesAgentCommissionsCommand extends Command
         }
         $make = Make::query()->whereRaw('UPPER(name) = ?', [$key])->first();
         if (! $make) {
-            $make = Make::create(['name' => ucwords(strtolower($name)), 'is_active' => true]);
+            $make = new Make(['name' => ucwords(strtolower($name)), 'is_active' => true]);
+            $this->saveWithManualId($make, ((int) Make::query()->max('id')) + 1);
         }
         $cache[$key] = [$make->id, $make->name];
 
@@ -407,14 +409,25 @@ class ImportSalesAgentCommissionsCommand extends Command
             ->whereRaw('UPPER(name) = ?', [strtoupper($trimmed)])
             ->first();
         if (! $model) {
-            $model = VehicleModel::create([
+            $model = new VehicleModel([
                 'make_id' => $makeId,
                 'name' => ucwords(strtolower($trimmed)),
                 'is_active' => true,
             ]);
+            $this->saveWithManualId($model, ((int) VehicleModel::query()->max('id')) + 1);
         }
         $cache[$key] = [$model->id, $model->name];
 
         return $cache[$key];
+    }
+
+    /**
+     * Persist with an explicit id on DBs that lack AUTO_INCREMENT.
+     */
+    private function saveWithManualId(\Illuminate\Database\Eloquent\Model $model, int $id): void
+    {
+        $model->id = $id;
+        $model->incrementing = false;
+        $model->save();
     }
 }

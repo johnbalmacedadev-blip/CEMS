@@ -9,24 +9,23 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class ExcelSheetHelper
 {
-    public static function load(string $path)
+    public static function load(string $path, ?array $onlySheets = null)
     {
         $reader = IOFactory::createReader('Xlsx');
         $reader->setReadDataOnly(true);
+        $reader->setReadEmptyCells(false);
+        if ($onlySheets) {
+            $reader->setLoadSheetsOnly($onlySheets);
+        }
 
         return $reader->load($path);
     }
 
     public static function sheetNames(string $path): array
     {
-        $ss = self::load($path);
-        $names = [];
-        foreach ($ss->getWorksheetIterator() as $ws) {
-            $names[] = $ws->getTitle();
-        }
-        $ss->disconnectWorksheets();
+        $reader = IOFactory::createReader('Xlsx');
 
-        return $names;
+        return $reader->listWorksheetNames($path);
     }
 
     public static function normalizeHeader(?string $value): string
