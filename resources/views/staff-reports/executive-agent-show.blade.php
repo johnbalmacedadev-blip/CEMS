@@ -12,6 +12,9 @@
             <a href="{{ route('staff-reports.executive-agents') }}" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left me-1"></i>Back to Executive Agents
             </a>
+            <a href="{{ route('staff-reports.executive-agents.leads', $executive) }}" class="btn btn-primary">
+                <i class="fas fa-address-book me-1"></i>View Leads ({{ number_format($masterlistLeadCount ?? 0) }})
+            </a>
             <a href="{{ route('client-follow-up-list.index', ['executive_agent_id' => $executive->id]) }}" class="btn btn-outline-primary">
                 <i class="fas fa-user-friends me-1"></i>View Clients ({{ number_format($clientLeadCount) }})
             </a>
@@ -55,7 +58,15 @@
                             <div>{{ $executive->department ?: '—' }}</div>
                         </div>
                         <div class="col-md-6">
-                            <div class="text-muted small">Client Leads</div>
+                            <div class="text-muted small">Leads Master List</div>
+                            <div>
+                                <a href="{{ route('staff-reports.executive-agents.leads', $executive) }}">
+                                    {{ number_format($masterlistLeadCount ?? 0) }} leads
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="text-muted small">Client Follow-ups</div>
                             <div>
                                 <a href="{{ route('client-follow-up-list.index', ['executive_agent_id' => $executive->id]) }}">
                                     {{ number_format($clientLeadCount) }} clients

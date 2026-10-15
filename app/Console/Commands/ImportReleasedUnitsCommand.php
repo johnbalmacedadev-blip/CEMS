@@ -15,6 +15,7 @@ class ImportReleasedUnitsCommand extends Command
     protected $signature = 'import:released-units
                             {--file= : Path to JSON export (default: storage/app/released_units_import.json)}
                             {--branch= : Optional branch/location name (e.g. Annex, Flagship) to set on vehicles}
+                            {--create-only : Only insert plates that do not exist yet; never update}
                             {--dry-run : Parse and report without writing}';
 
     protected $description = 'Import released units + vehicle expenses from released_units Excel JSON export';
@@ -61,9 +62,15 @@ class ImportReleasedUnitsCommand extends Command
 
         $created = 0;
         $updated = 0;
+        $skippedExisting = 0;
         $expensesUpserted = 0;
         $statusUpserted = 0;
         $errors = 0;
+
+        $createOnly = (bool) $this->option('create-only');
+        if ($createOnly) {
+            $this->info('Mode: create-only (existing plates are left unchanged).');
+        }
 
         // Preload vehicles keyed by normalized plate
         $vehicleByPlate = [];
@@ -88,17 +95,25 @@ class ImportReleasedUnitsCommand extends Command
                     $row,
                     $branchId,
                     $branchName,
+                    $createOnly,
                     &$vehicleByPlate,
                     &$makeCache,
                     &$modelCache,
                     &$created,
                     &$updated,
+                    &$skippedExisting,
                     &$expensesUpserted,
                     &$statusUpserted
                 ) {
                     $plate = $this->normalizePlate($row['plate_number'] ?? '');
                     if ($plate === '') {
                         throw new \RuntimeException('Missing plate number');
+                    }
+
+                    if ($createOnly && isset($vehicleByPlate[$plate])) {
+                        $skippedExisting++;
+
+                        return;
                     }
 
                     [$makeId, $makeName] = $this->resolveMake($row['make'] ?? 'Unknown', $makeCache);
@@ -227,6 +242,7 @@ class ImportReleasedUnitsCommand extends Command
             [
                 ['Created vehicles', $created],
                 ['Updated vehicles', $updated],
+                ['Skipped (already exists)', $skippedExisting],
                 ['Expenses upserted', $expensesUpserted],
                 ['Status details upserted', $statusUpserted],
                 ['Errors', $errors],

@@ -10,7 +10,7 @@
             <!-- Breadcrumb -->
             <nav aria-label="breadcrumb" class="pt-3">
                 <ol class="breadcrumb">
-                    <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ route('home') }}">Home</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('employees.index') }}">Employees</a></li>
                     <li class="breadcrumb-item"><a href="{{ route('employees.show', $employee) }}">{{ $employee->full_name }}</a></li>
                     <li class="breadcrumb-item active" aria-current="page">Edit</li>

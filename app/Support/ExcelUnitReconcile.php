@@ -687,7 +687,9 @@ class ExcelUnitReconcile
         }
 
         $status = $request->get('status', 'Available');
-        if (in_array($status, ['all', 'Under Maintenance', 'Archived'], true)) {
+        // Available Excel tabs often still list units that were later Released/Reserved/Forfeited
+        // in the database — that is expected; DB status wins, so do not warn on Available.
+        if (in_array($status, ['all', 'Available', 'Under Maintenance', 'Archived'], true)) {
             return [];
         }
 
@@ -768,6 +770,81 @@ class ExcelUnitReconcile
         $data = json_decode(File::get($path), true);
 
         return is_array($data) ? $data : null;
+    }
+
+    /**
+     * Vehicle IDs that appear on Excel Available tabs (FLAGSHIP/ANNEX - UNITS),
+     * including units whose current DB status is Released / Reserved / Forfeited.
+     *
+     * @return list<int>
+     */
+    public static function vehicleIdsOnExcelAvailable(?string $branchName = null): array
+    {
+        $snapshot = self::loadSnapshot();
+        if (! $snapshot) {
+            return [];
+        }
+
+        $allVehicles = self::vehiclesByPlate();
+        $ids = [];
+
+        foreach ($snapshot['designations'] ?? [] as $designation) {
+            if (($designation['status'] ?? null) !== 'Available') {
+                continue;
+            }
+            $designationBranch = (string) ($designation['branch'] ?? '');
+            if ($branchName !== null && $branchName !== ''
+                && strcasecmp($designationBranch, $branchName) !== 0) {
+                continue;
+            }
+
+            foreach ($designation['rows'] ?? [] as $row) {
+                $plate = self::normalizePlate($row['plate'] ?? '');
+                if ($plate === '') {
+                    continue;
+                }
+                $matches = $allVehicles[$plate] ?? [];
+                foreach ($matches as $vehicle) {
+                    if ($vehicle instanceof Vehicle) {
+                        $ids[(int) $vehicle->id] = true;
+                    }
+                }
+            }
+        }
+
+        return array_map('intval', array_keys($ids));
+    }
+
+    /**
+     * Excel Available row counts by branch name.
+     *
+     * @return array<string, int>
+     */
+    public static function excelAvailableCountsByBranch(): array
+    {
+        $snapshot = self::loadSnapshot();
+        if (! $snapshot) {
+            return [];
+        }
+
+        $counts = [];
+        foreach ($snapshot['designations'] ?? [] as $designation) {
+            if (($designation['status'] ?? null) !== 'Available') {
+                continue;
+            }
+            $branch = trim((string) ($designation['branch'] ?? 'Unknown'));
+            if ($branch === '') {
+                $branch = 'Unknown';
+            }
+            $counts[$branch] = ($counts[$branch] ?? 0) + count($designation['rows'] ?? []);
+        }
+
+        return $counts;
+    }
+
+    public static function excelAvailableTotalCount(): int
+    {
+        return array_sum(self::excelAvailableCountsByBranch());
     }
 
     /**

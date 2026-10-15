@@ -30,7 +30,13 @@
                         @forelse(($report['rows'] ?? []) as $i => $row)
                             <tr>
                                 <td>{{ $i + 1 }}</td>
-                                <td class="fw-semibold">{{ $row['name'] ?? '—' }}</td>
+                                <td class="fw-semibold">
+                                    @if(!empty($row['profile_url']))
+                                        <a href="{{ $row['profile_url'] }}" class="text-decoration-none">{{ $row['name'] ?? '—' }}</a>
+                                    @else
+                                        {{ $row['name'] ?? '—' }}
+                                    @endif
+                                </td>
                                 @foreach($columns as $col)
                                     @php
                                         $value = $row[$col['key']] ?? 0;

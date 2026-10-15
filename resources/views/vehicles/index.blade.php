@@ -536,6 +536,32 @@
                                 </div>
                             </div>
                         @endforeach
+                        @if(($status ?? '') === 'Available' && ($excelAvailableTotal ?? 0) > 0)
+                            @php $excelAvailChecked = !empty($includeExcelAvailable); @endphp
+                            <div class="col-sm-6 col-lg-3">
+                                <div class="border rounded px-3 py-2 h-100 position-relative {{ $excelAvailChecked ? '' : 'opacity-50' }}" style="background-color: #e8f5e9; border-color: #66bb6a !important;">
+                                    <div class="form-check position-absolute top-0 end-0 m-2">
+                                        <input class="form-check-input"
+                                               type="checkbox"
+                                               role="switch"
+                                               id="includeExcelAvailableToggle"
+                                               @checked($excelAvailChecked)
+                                               title="Also show units still listed on Excel Available that were recently released or reserved">
+                                        <label class="form-check-label visually-hidden" for="includeExcelAvailableToggle">Include Excel Available released/reserved</label>
+                                    </div>
+                                    <div class="d-flex align-items-center justify-content-between pe-4">
+                                        <div>
+                                            <div class="small text-muted text-uppercase fw-semibold">Excel Available list</div>
+                                            <div class="fs-5 fw-bold text-dark">{{ number_format($excelAvailableTotal) }}</div>
+                                            <div class="small text-muted">
+                                                +{{ number_format($excelAvailableExtraCount ?? 0) }} released/reserved
+                                            </div>
+                                        </div>
+                                        <span class="badge bg-success">Match Excel</span>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
                         @if(($unassignedLocationCount ?? 0) > 0)
                             @php
                                 $allLocationsEnabled = ($locationVisibility['ids'] ?? null) === null;
@@ -826,7 +852,19 @@
                                         </td>
                                         <td>{{ $vehicle->colour }}</td>
                                         @canViewPurchasePrice
-                                        <td>{{ $vehicle->formatted_purchase_price }}</td>
+                                        <td>
+                                            <button type="button"
+                                                    class="btn btn-link p-0 text-decoration-none fw-semibold purchase-price-summary-btn"
+                                                    title="View purchase price summary"
+                                                    data-plate="{{ $vehicle->plate_number }}"
+                                                    data-vehicle="{{ $vehicle->full_name }}"
+                                                    data-purchase="{{ number_format((float) ($vehicle->purchase_price ?? 0), 2, '.', '') }}"
+                                                    data-costs="{{ number_format((float) ($vehicle->total_costs ?? 0), 2, '.', '') }}"
+                                                    data-revenue="{{ number_format((float) ($vehicle->total_revenue ?? 0), 2, '.', '') }}"
+                                                    data-profit="{{ number_format((float) ($vehicle->total_profit ?? 0), 2, '.', '') }}">
+                                                {{ $vehicle->formatted_purchase_price }}
+                                            </button>
+                                        </td>
                                         @endcanViewPurchasePrice
                                         <td>
                                             @if(!empty($vehicle->getAttribute('excel_only')))
@@ -1140,6 +1178,54 @@
 </div>
 @endcanPage
 
+@canViewPurchasePrice
+<div class="modal fade" id="purchasePriceSummaryModal" tabindex="-1" aria-labelledby="purchasePriceSummaryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="purchasePriceSummaryModalLabel">
+                    <i class="fas fa-coins me-2"></i>Purchase Price Summary
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <div class="small text-muted text-uppercase">Vehicle</div>
+                    <div class="fw-semibold" id="ppSummaryVehicle">—</div>
+                    <div class="small"><span class="badge bg-secondary" id="ppSummaryPlate">—</span></div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm table-bordered mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>PURCHASE PRICE</th>
+                                <th>TOTAL COSTS</th>
+                                <th>TOTAL REVENUE</th>
+                                <th>TOTAL PROFIT</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td class="fw-semibold" id="ppSummaryPurchase">₱0.00</td>
+                                <td id="ppSummaryCosts">₱0.00</td>
+                                <td id="ppSummaryRevenue">₱0.00</td>
+                                <td id="ppSummaryProfit">₱0.00</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <p class="small text-muted mb-0 mt-3">
+                    Values from the Purchase Prices workbook (Available / Reserved / Released financial columns).
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+@endcanViewPurchasePrice
+
 @canPage('vehicles', 'create')
 <div class="modal fade" id="vehicleExcelImportModal" tabindex="-1" aria-labelledby="vehicleExcelImportModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -1182,7 +1268,7 @@
                                     <th>Showroom</th>
                                     <th>Rows</th>
                                     <th>Create</th>
-                                    <th>Update</th>
+                                    <th>Skip existing</th>
                                 </tr>
                             </thead>
                             <tbody id="importTabsBody"></tbody>
@@ -1311,6 +1397,26 @@
     color: #fff;
 }
 
+.purchase-price-summary-btn {
+    color: #212529 !important;
+    border-radius: 0.25rem;
+    padding: 0.1rem 0.35rem !important;
+    transition: color 0.15s ease, background-color 0.15s ease, text-decoration-color 0.15s ease;
+    cursor: pointer;
+    text-decoration: underline dotted transparent !important;
+    text-underline-offset: 0.2em;
+}
+.purchase-price-summary-btn:hover,
+.purchase-price-summary-btn:focus {
+    color: #0d6efd !important;
+    background-color: rgba(13, 110, 253, 0.1);
+    text-decoration: underline !important;
+}
+.purchase-price-summary-btn:focus-visible {
+    outline: 2px solid rgba(13, 110, 253, 0.45);
+    outline-offset: 2px;
+}
+
 .vehicle-quick-view-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1403,6 +1509,42 @@
 @section('scripts')
 <script>
     window.canViewPurchasePrice = @json(auth()->user()?->canViewPurchasePrice() ?? false);
+
+    (function initPurchasePriceSummaryModal() {
+        const modalEl = document.getElementById('purchasePriceSummaryModal');
+        if (!modalEl || !window.canViewPurchasePrice) {
+            return;
+        }
+
+        function peso(value) {
+            const n = Number(value || 0);
+            return '₱' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function openSummary(btn) {
+            document.getElementById('ppSummaryVehicle').textContent = btn.getAttribute('data-vehicle') || '—';
+            document.getElementById('ppSummaryPlate').textContent = btn.getAttribute('data-plate') || '—';
+            document.getElementById('ppSummaryPurchase').textContent = peso(btn.getAttribute('data-purchase'));
+            document.getElementById('ppSummaryCosts').textContent = peso(btn.getAttribute('data-costs'));
+            document.getElementById('ppSummaryRevenue').textContent = peso(btn.getAttribute('data-revenue'));
+            const profitEl = document.getElementById('ppSummaryProfit');
+            const profit = Number(btn.getAttribute('data-profit') || 0);
+            profitEl.textContent = peso(profit);
+            profitEl.classList.toggle('text-success', profit > 0);
+            profitEl.classList.toggle('text-danger', profit < 0);
+            bootstrap.Modal.getOrCreateInstance(modalEl).show();
+        }
+
+        document.addEventListener('click', function (e) {
+            const btn = e.target.closest('.purchase-price-summary-btn');
+            if (!btn) {
+                return;
+            }
+            e.preventDefault();
+            openSummary(btn);
+        });
+    })();
+
 (function () {
     const currentStatus = @json($status);
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
@@ -1633,6 +1775,28 @@
         });
     })();
 
+    // Excel Available toggle: also list recently released/reserved plates still on Excel Available tabs.
+    (function () {
+        const excelToggle = document.getElementById('includeExcelAvailableToggle');
+        if (!excelToggle) {
+            return;
+        }
+        excelToggle.addEventListener('change', function () {
+            const params = new URLSearchParams(window.location.search);
+            params.delete('page');
+            if (excelToggle.checked) {
+                params.set('include_excel_available', '1');
+            } else {
+                params.delete('include_excel_available');
+            }
+            if (!params.get('status')) {
+                params.set('status', 'Available');
+            }
+            const query = params.toString();
+            window.location.href = window.location.pathname + (query ? '?' + query : '');
+        });
+    })();
+
     function escapeHtml(value) {
         return String(value ?? '')
             .replace(/&/g, '&amp;')
@@ -1712,7 +1876,16 @@
             '<td>' + escapeHtml(vehicle.model) + '</td>' +
             '<td><span class="badge bg-secondary">' + escapeHtml(vehicle.plate_number) + '</span></td>' +
             '<td>' + escapeHtml(vehicle.colour) + '</td>' +
-            (window.canViewPurchasePrice ? ('<td>' + escapeHtml(vehicle.purchase_price || '') + '</td>') : '') +
+            (window.canViewPurchasePrice
+                ? ('<td><button type="button" class="btn btn-link p-0 text-decoration-none fw-semibold purchase-price-summary-btn" title="View purchase price summary"' +
+                    ' data-plate="' + escapeHtml(vehicle.plate_number || '') + '"' +
+                    ' data-vehicle="' + escapeHtml(vehicle.full_name || '') + '"' +
+                    ' data-purchase="' + escapeHtml(vehicle.purchase_price_raw || '0') + '"' +
+                    ' data-costs="' + escapeHtml(vehicle.total_costs_raw || '0') + '"' +
+                    ' data-revenue="' + escapeHtml(vehicle.total_revenue_raw || '0') + '"' +
+                    ' data-profit="' + escapeHtml(vehicle.total_profit_raw || '0') + '">' +
+                    escapeHtml(vehicle.purchase_price || '') + '</button></td>')
+                : '') +
             '<td><span class="badge badge-neutral">Archived</span>' + archivedDate + '</td>' +
             '<td><div class="btn-group" role="group">' +
                 '<button type="button" class="btn btn-sm btn-outline-primary vehicle-quick-view-btn" title="View Details" aria-label="View Details" ' +
@@ -2059,7 +2232,7 @@
                     '<div class="col-md-3"><div class="border rounded p-2"><div class="small text-muted">Excel rows</div><div class="fs-5 fw-bold">' + Number(totals.excel_rows || 0).toLocaleString() + '</div></div></div>' +
                     '<div class="col-md-3"><div class="border rounded p-2"><div class="small text-muted">Unique plates</div><div class="fs-5 fw-bold">' + Number(totals.unique_plates || 0).toLocaleString() + '</div></div></div>' +
                     '<div class="col-md-3"><div class="border rounded p-2"><div class="small text-muted">Will create</div><div class="fs-5 fw-bold text-success">' + Number(totals.will_create_vehicles || 0).toLocaleString() + '</div></div></div>' +
-                    '<div class="col-md-3"><div class="border rounded p-2"><div class="small text-muted">Will update</div><div class="fs-5 fw-bold text-primary">' + Number(totals.will_update_vehicles || 0).toLocaleString() + '</div></div></div>';
+                    '<div class="col-md-3"><div class="border rounded p-2"><div class="small text-muted">Skip existing</div><div class="fs-5 fw-bold text-secondary">' + Number(totals.will_skip_existing || totals.will_update_vehicles || 0).toLocaleString() + '</div></div></div>';
 
                 tabsBody.innerHTML = (summary.tabs || []).map(function (t) {
                     return '<tr>' +
@@ -2068,7 +2241,7 @@
                         '<td>' + escapeHtml(t.branch) + '</td>' +
                         '<td>' + Number(t.excel_rows || 0).toLocaleString() + '</td>' +
                         '<td>' + Number(t.will_create_vehicles || 0).toLocaleString() + '</td>' +
-                        '<td>' + Number(t.will_update_vehicles || 0).toLocaleString() + '</td>' +
+                        '<td>' + Number(t.will_skip_existing || t.will_update_vehicles || 0).toLocaleString() + '</td>' +
                         '</tr>';
                 }).join('');
 
@@ -2101,7 +2274,7 @@
                 showError('Nothing to import.');
                 return;
             }
-            const ok = window.confirm('Proceed with importing the selected Excel tabs? Existing plates will be updated.');
+            const ok = window.confirm('Proceed with importing the selected Excel tabs? Existing plates will be skipped; only missing plates will be added.');
             if (!ok) return;
 
             confirmBtn.disabled = true;

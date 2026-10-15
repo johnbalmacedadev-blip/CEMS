@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\CompareController;
 use App\Http\Controllers\UserManagementController;
 use App\Http\Controllers\VehicleController;
@@ -145,11 +144,15 @@ Route::middleware(['auth', 'admin', 'log.activity'])->group(function () {
     Route::put('/settings/users/{user}/permissions', [UserManagementController::class, 'updatePermissions'])->name('settings.users.permissions.update');
 });
 
+// Old dashboard URL → Home (auth only; no separate dashboard page)
+Route::middleware('auth')->get('/dashboard', function () {
+    return redirect()->route('home');
+})->name('dashboard');
+
 // Protected routes: page-level permissions applied for non-admins
 Route::middleware(['auth', 'page.permission', 'log.activity'])->group(function () {
     // Main home page after login
     Route::get('/home', [HomeController::class, 'index'])->name('home');
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/compare', [CompareController::class, 'index'])->name('compare.index');
 
     // WooCommerce Integration
@@ -423,6 +426,12 @@ Route::middleware(['auth', 'page.permission', 'log.activity'])->group(function (
         Route::get('/staff-reports/sales-agents/{salesAgent}', [App\Http\Controllers\SalesAgentController::class, 'staffReportShow'])->name('staff-reports.sales-agents.show');
         Route::get('/staff-reports/executive-agents', [App\Http\Controllers\ExecutiveAgentController::class, 'index'])->name('staff-reports.executive-agents');
         Route::post('/staff-reports/executive-agents', [App\Http\Controllers\ExecutiveAgentController::class, 'store'])->name('staff-reports.executive-agents.store');
+        Route::post('/staff-reports/executive-agents/import-leads', [App\Http\Controllers\ExecutiveAgentController::class, 'importLeads'])->name('staff-reports.executive-agents.import-leads');
+        Route::put('/staff-reports/executive-agents/{executiveAgent}', [App\Http\Controllers\ExecutiveAgentController::class, 'update'])->name('staff-reports.executive-agents.update');
+        Route::get('/staff-reports/executive-agents/{executiveAgent}/leads', [App\Http\Controllers\ExecutiveAgentController::class, 'leads'])->name('staff-reports.executive-agents.leads');
+        Route::post('/staff-reports/executive-agents/{executiveAgent}/leads', [App\Http\Controllers\ExecutiveAgentController::class, 'storeLead'])->name('staff-reports.executive-agents.leads.store');
+        Route::put('/staff-reports/executive-agents/{executiveAgent}/leads/{lead}', [App\Http\Controllers\ExecutiveAgentController::class, 'updateLead'])->name('staff-reports.executive-agents.leads.update');
+        Route::delete('/staff-reports/executive-agents/{executiveAgent}/leads/{lead}', [App\Http\Controllers\ExecutiveAgentController::class, 'destroyLead'])->name('staff-reports.executive-agents.leads.destroy');
         Route::get('/staff-reports/executive-agents/{executiveAgent}', [App\Http\Controllers\ExecutiveAgentController::class, 'show'])->name('staff-reports.executive-agents.show');
         Route::resource('sales-agents', App\Http\Controllers\SalesAgentController::class);
 

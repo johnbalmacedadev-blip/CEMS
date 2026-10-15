@@ -786,9 +786,6 @@
             @else
                 No modules are assigned to your account yet
             @endif
-            @if($canViewDashboard ?? false)
-                or <a href="{{ route('dashboard') }}" class="text-decoration-none" style="color: #dc3545; font-weight: 600;">go to dashboard</a>
-            @endif
         </p>
     </div>
 

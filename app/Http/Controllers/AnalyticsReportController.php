@@ -3073,6 +3073,11 @@ class AnalyticsReportController extends Controller
             $viewLabel = 'Sales Team';
         }
 
+        $activeRanking = $this->enrichPerformerProfileLinks($activeRanking, $viewMode, $agentNameMap, $execNameMap);
+        $agentRanking = $this->enrichPerformerProfileLinks($agentRanking, 'agents', $agentNameMap, $execNameMap);
+        $executiveRanking = $this->enrichPerformerProfileLinks($executiveRanking, 'executives', $agentNameMap, $execNameMap);
+        $teamRanking = $this->enrichPerformerProfileLinks($teamRanking, 'team', $agentNameMap, $execNameMap);
+
         $topByUnits = $activeRanking->take(10)->values();
         $topBySales = $activeRanking->sortByDesc('sales')->take(10)->values();
 
@@ -3161,19 +3166,83 @@ class AnalyticsReportController extends Controller
                 'recent_deals' => $rows
                     ->sortByDesc('release_date_raw')
                     ->take(25)
-                    ->map(fn ($r) => [
-                        'date' => Carbon::parse($r['release_date_raw'])->format('M d, Y'),
-                        'plate' => $r['plate'],
-                        'unit' => $r['unit'],
-                        'name' => $r['name'],
-                        'role' => $r['role'],
-                        'sales' => $r['sold_price'],
-                    ])
+                    ->map(function ($r) {
+                        $deal = [
+                            'date' => Carbon::parse($r['release_date_raw'])->format('M d, Y'),
+                            'plate' => $r['plate'],
+                            'unit' => $r['unit'],
+                            'name' => $r['name'],
+                            'role' => $r['role'],
+                            'sales' => $r['sold_price'],
+                            'profile_url' => null,
+                        ];
+                        if (($r['role'] ?? '') === 'Executive' && ! empty($r['executive_agent_id'])) {
+                            $deal['profile_url'] = route('staff-reports.executive-agents.show', $r['executive_agent_id']);
+                        } elseif (! empty($r['sales_agent_id'])) {
+                            $deal['profile_url'] = route('sales-agents.show', $r['sales_agent_id']);
+                        } elseif (! empty($r['executive_agent_id'])) {
+                            $deal['profile_url'] = route('staff-reports.executive-agents.show', $r['executive_agent_id']);
+                        }
+
+                        return $deal;
+                    })
                     ->values()
                     ->all(),
             ],
-            'metric_reports' => $this->buildSalesExecMetricReports($rows, $saleRows, $viewMode, $executives, $viewLabel),
+            'metric_reports' => $this->buildSalesExecMetricReports($rows, $saleRows, $viewMode, $executives, $viewLabel, $agentNameMap, $execNameMap),
         ];
+    }
+
+    /**
+     * Resolve profile URLs for ranking rows (S.E. → executive agent, agent → sales agent).
+     *
+     * @param  \Illuminate\Support\Collection<int, array<string, mixed>>  $ranking
+     * @param  array<string, \App\Models\SalesAgent>  $agentNameMap
+     * @param  array<string, \App\Models\ExecutiveAgent>  $execNameMap
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    protected function enrichPerformerProfileLinks(
+        Collection $ranking,
+        string $viewMode,
+        array $agentNameMap,
+        array $execNameMap
+    ): Collection {
+        return $ranking->map(function (array $row) use ($viewMode, $agentNameMap, $execNameMap) {
+            $nameKey = $row['name_key'] ?? $this->normalizePersonName($row['name'] ?? '');
+            $salesAgentId = $row['sales_agent_id'] ?? null;
+            $executiveAgentId = $row['executive_agent_id'] ?? null;
+
+            if (! $salesAgentId && isset($agentNameMap[$nameKey])) {
+                $salesAgentId = $agentNameMap[$nameKey]->id;
+                if (! $executiveAgentId) {
+                    $executiveAgentId = $agentNameMap[$nameKey]->executive_agent_id;
+                }
+            }
+            if (! $executiveAgentId && isset($execNameMap[$nameKey])) {
+                $executiveAgentId = $execNameMap[$nameKey]->id;
+            }
+
+            $row['sales_agent_id'] = $salesAgentId;
+            $row['executive_agent_id'] = $executiveAgentId;
+
+            $role = $row['role'] ?? '';
+            $url = null;
+            if ($viewMode === 'executives' && $executiveAgentId) {
+                $url = route('staff-reports.executive-agents.show', $executiveAgentId);
+            } elseif ($viewMode === 'agents' && $salesAgentId) {
+                $url = route('sales-agents.show', $salesAgentId);
+            } elseif ($role === 'Executive' && $executiveAgentId) {
+                $url = route('staff-reports.executive-agents.show', $executiveAgentId);
+            } elseif ($salesAgentId) {
+                $url = route('sales-agents.show', $salesAgentId);
+            } elseif ($executiveAgentId) {
+                $url = route('staff-reports.executive-agents.show', $executiveAgentId);
+            }
+
+            $row['profile_url'] = $url;
+
+            return $row;
+        })->values();
     }
 
     /**
@@ -3194,6 +3263,8 @@ class AnalyticsReportController extends Controller
                     'name_key' => $first['name_key'] ?? 'unassigned',
                     'role' => $first['role'] ?? 'Sales Team',
                     'executive_name' => $group->pluck('executive_name')->filter()->unique()->implode(', ') ?: null,
+                    'sales_agent_id' => $group->pluck('sales_agent_id')->filter()->first(),
+                    'executive_agent_id' => $group->pluck('executive_agent_id')->filter()->first(),
                     'units' => $units,
                     'sales' => $sales,
                     'avg_sale' => $units > 0 ? $sales / $units : 0.0,
@@ -3258,6 +3329,8 @@ class AnalyticsReportController extends Controller
                 'name_key' => $this->normalizePersonName($exec->name),
                 'role' => 'Executive',
                 'executive_name' => $exec->name,
+                'executive_agent_id' => $exec->id,
+                'sales_agent_id' => null,
                 'team_size' => $exec->salesAgents->count(),
                 'units' => $units,
                 'sales' => $sales,
@@ -3286,6 +3359,8 @@ class AnalyticsReportController extends Controller
                     'name_key' => $first['name_key'],
                     'role' => 'Executive',
                     'executive_name' => $first['name'],
+                    'executive_agent_id' => $first['executive_agent_id'] ?? null,
+                    'sales_agent_id' => null,
                     'team_size' => null,
                     'units' => $units,
                     'sales' => $sales,
@@ -3417,6 +3492,8 @@ class AnalyticsReportController extends Controller
             'agent_name' => $agentName !== '' ? $agentName : null,
             'sale_origin' => $saleOrigin !== '' ? $saleOrigin : null,
             'executive_name' => $matchedExec?->name,
+            'executive_agent_id' => $matchedExec?->id,
+            'sales_agent_id' => $matchedAgent?->id,
             'sales_agent_record' => $matchedAgent?->name,
             'plate' => $v->plate_number,
             'unit' => $v->full_name,
@@ -3498,6 +3575,8 @@ class AnalyticsReportController extends Controller
                     'agent_name' => $agentName,
                     'sale_origin' => 'Agent',
                     'executive_name' => $matchedExec?->name,
+                    'executive_agent_id' => $matchedExec?->id,
+                    'sales_agent_id' => $matchedAgent?->id,
                     'sales_agent_record' => $matchedAgent?->name ?? $agentName,
                     'plate' => $c->plate_number ?: ($vehicle?->plate_number ?? ''),
                     'unit' => $unitLabel,
@@ -3598,6 +3677,8 @@ class AnalyticsReportController extends Controller
                     'name_key' => $norm !== '' ? $norm : 'unassigned',
                     'agent_name' => $agentName !== '' ? $agentName : null,
                     'executive_name' => $matchedExec?->name,
+                    'executive_agent_id' => $matchedExec?->id,
+                    'sales_agent_id' => $matchedAgent?->id,
                     'reservation_amount' => (float) ($detail?->sale_reservation_amount ?? 0),
                     'is_cash' => str_contains($cashFinancing, 'cash'),
                     'is_financing' => str_contains($cashFinancing, 'financ'),
@@ -3621,9 +3702,11 @@ class AnalyticsReportController extends Controller
         Collection $saleRows,
         string $viewMode,
         Collection $executives,
-        string $viewLabel
+        string $viewLabel,
+        array $agentNameMap = [],
+        array $execNameMap = []
     ): array {
-        $people = $this->metricReportPeople($releaseRows, $saleRows, $viewMode, $executives);
+        $people = $this->metricReportPeople($releaseRows, $saleRows, $viewMode, $executives, $agentNameMap, $execNameMap);
 
         $totalSales = max((int) $saleRows->count(), 0);
         $totalReleases = max((int) $releaseRows->count(), 0);
@@ -3642,6 +3725,7 @@ class AnalyticsReportController extends Controller
 
             return [
                 'name' => $person['name'],
+                'profile_url' => $person['profile_url'] ?? null,
                 'sales_count' => $salesCount,
                 'sales_pct' => $totalSales > 0 ? round(($salesCount / $totalSales) * 100, 1) : 0.0,
                 'release_count' => $releaseCount,
@@ -3660,6 +3744,7 @@ class AnalyticsReportController extends Controller
 
             return [
                 'name' => $person['name'],
+                'profile_url' => $person['profile_url'] ?? null,
                 'cash_releases' => $count,
                 'cash_pct' => $totalCashReleases > 0 ? round(($count / $totalCashReleases) * 100, 1) : 0.0,
                 'discount_total' => $discountTotal,
@@ -3677,6 +3762,7 @@ class AnalyticsReportController extends Controller
 
             return [
                 'name' => $person['name'],
+                'profile_url' => $person['profile_url'] ?? null,
                 'financing_releases' => $count,
                 'financing_pct' => $totalFinancingReleases > 0 ? round(($count / $totalFinancingReleases) * 100, 1) : 0.0,
                 'financed_total' => $financedTotal,
@@ -3695,6 +3781,7 @@ class AnalyticsReportController extends Controller
 
             return [
                 'name' => $person['name'],
+                'profile_url' => $person['profile_url'] ?? null,
                 'units' => $count,
                 'gross_total' => $grossTotal,
                 'gross_avg' => $count > 0 ? $grossTotal / $count : 0.0,
@@ -3784,7 +3871,9 @@ class AnalyticsReportController extends Controller
         Collection $releaseRows,
         Collection $saleRows,
         string $viewMode,
-        Collection $executives
+        Collection $executives,
+        array $agentNameMap = [],
+        array $execNameMap = []
     ): Collection {
         if ($viewMode === 'executives') {
             $fromRoster = $executives->map(function ($exec) {
@@ -3801,6 +3890,9 @@ class AnalyticsReportController extends Controller
                     'name_key' => $this->normalizePersonName($exec->name),
                     'match_keys' => $keys,
                     'executive_key' => $this->normalizePersonName($exec->name),
+                    'executive_agent_id' => $exec->id,
+                    'sales_agent_id' => null,
+                    'profile_url' => route('staff-reports.executive-agents.show', $exec->id),
                 ];
             });
 
@@ -3810,29 +3902,43 @@ class AnalyticsReportController extends Controller
                 ->map(fn ($r) => [
                     'name' => $r['executive_name'] ?: $r['name'],
                     'name_key' => $this->normalizePersonName($r['executive_name'] ?: $r['name']),
+                    'executive_agent_id' => $r['executive_agent_id'] ?? null,
                 ])
                 ->filter(fn ($r) => $r['name_key'] !== '' && ! in_array($r['name_key'], $known, true))
                 ->unique('name_key')
-                ->map(fn ($r) => [
-                    'name' => $r['name'],
-                    'name_key' => $r['name_key'],
-                    'match_keys' => [$r['name_key']],
-                    'executive_key' => $r['name_key'],
-                ]);
+                ->map(function ($r) use ($execNameMap) {
+                    $execId = $r['executive_agent_id'] ?? ($execNameMap[$r['name_key']]->id ?? null);
+
+                    return [
+                        'name' => $r['name'],
+                        'name_key' => $r['name_key'],
+                        'match_keys' => [$r['name_key']],
+                        'executive_key' => $r['name_key'],
+                        'executive_agent_id' => $execId,
+                        'sales_agent_id' => null,
+                        'profile_url' => $execId
+                            ? route('staff-reports.executive-agents.show', $execId)
+                            : null,
+                    ];
+                });
 
             return $fromRoster->concat($extra)->values();
         }
 
         if ($viewMode === 'agents') {
             return $releaseRows->concat($saleRows)
-                ->map(function ($r) {
+                ->map(function ($r) use ($agentNameMap) {
                     $name = $r['agent_name'] ?: $r['name'];
                     $key = $this->normalizePersonName($name);
+                    $agentId = $r['sales_agent_id'] ?? ($agentNameMap[$key]->id ?? null);
 
                     return [
                         'name' => $name,
                         'name_key' => $key !== '' ? $key : 'unassigned',
                         'match_keys' => [$key !== '' ? $key : 'unassigned'],
+                        'sales_agent_id' => $agentId,
+                        'executive_agent_id' => $r['executive_agent_id'] ?? null,
+                        'profile_url' => $agentId ? route('sales-agents.show', $agentId) : null,
                     ];
                 })
                 ->unique('name_key')
@@ -3840,11 +3946,29 @@ class AnalyticsReportController extends Controller
         }
 
         return $releaseRows->concat($saleRows)
-            ->map(fn ($r) => [
-                'name' => $r['name'],
-                'name_key' => $r['name_key'] ?: 'unassigned',
-                'match_keys' => [$r['name_key'] ?: 'unassigned'],
-            ])
+            ->map(function ($r) use ($agentNameMap, $execNameMap) {
+                $key = $r['name_key'] ?: 'unassigned';
+                $role = $r['role'] ?? '';
+                $agentId = $r['sales_agent_id'] ?? ($agentNameMap[$key]->id ?? null);
+                $execId = $r['executive_agent_id'] ?? ($execNameMap[$key]->id ?? null);
+                $url = null;
+                if ($role === 'Executive' && $execId) {
+                    $url = route('staff-reports.executive-agents.show', $execId);
+                } elseif ($agentId) {
+                    $url = route('sales-agents.show', $agentId);
+                } elseif ($execId) {
+                    $url = route('staff-reports.executive-agents.show', $execId);
+                }
+
+                return [
+                    'name' => $r['name'],
+                    'name_key' => $key,
+                    'match_keys' => [$key],
+                    'sales_agent_id' => $agentId,
+                    'executive_agent_id' => $execId,
+                    'profile_url' => $url,
+                ];
+            })
             ->unique('name_key')
             ->values();
     }

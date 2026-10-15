@@ -15,6 +15,7 @@ class ImportForfeitedUnitsCommand extends Command
                             {--file= : Path to JSON export}
                             {--branch=Flagship : Branch/location name}
                             {--force : Set status to Forfeited even if currently Released/Available/Reserved}
+                            {--create-only : Do not overwrite existing vehicles; only create missing vehicles / forfeit rows}
                             {--dry-run : Parse and report without writing}';
 
     protected $description = 'Import forfeited units + forfeit details from FLAGSHIP- FORFEITREFUND Excel JSON export';
@@ -57,10 +58,16 @@ class ImportForfeitedUnitsCommand extends Command
 
         $createdVehicles = 0;
         $updatedVehicles = 0;
+        $skippedExisting = 0;
         $skippedStatus = 0;
         $forfeitCreated = 0;
         $forfeitSkipped = 0;
         $errors = 0;
+
+        $createOnly = (bool) $this->option('create-only');
+        if ($createOnly) {
+            $this->info('Mode: create-only (existing vehicles are left unchanged; missing forfeit rows may still be added).');
+        }
 
         $vehicleByPlate = [];
         foreach (Vehicle::query()->get(['id', 'plate_number', 'status']) as $vehicle) {
@@ -78,11 +85,13 @@ class ImportForfeitedUnitsCommand extends Command
                 DB::transaction(function () use (
                     $row,
                     $branchId,
+                    $createOnly,
                     &$vehicleByPlate,
                     &$makeCache,
                     &$modelCache,
                     &$createdVehicles,
                     &$updatedVehicles,
+                    &$skippedExisting,
                     &$skippedStatus,
                     &$forfeitCreated,
                     &$forfeitSkipped
@@ -102,28 +111,32 @@ class ImportForfeitedUnitsCommand extends Command
 
                     if ($existing) {
                         $vehicle = Vehicle::findOrFail($existing->id);
-                        $payload = [
-                            'status' => 'Forfeited',
-                            'branch_location_id' => $branchId,
-                        ];
-                        if (! $vehicle->make_id || ! $vehicle->year) {
-                            [$makeId, $makeName] = $this->resolveMake($row['make'] ?? 'Unknown', $makeCache);
-                            [$modelId, $modelName] = $this->resolveModel($makeId, $row['model'] ?? 'Unknown', $modelCache);
-                            $payload = array_merge($payload, [
-                                'year' => (int) ($row['year'] ?? $vehicle->year ?: 2000),
-                                'make_id' => $makeId,
-                                'model_id' => $modelId,
-                                'make' => $makeName,
-                                'model' => $modelName,
-                            ]);
+                        if ($createOnly) {
+                            $skippedExisting++;
+                        } else {
+                            $payload = [
+                                'status' => 'Forfeited',
+                                'branch_location_id' => $branchId,
+                            ];
+                            if (! $vehicle->make_id || ! $vehicle->year) {
+                                [$makeId, $makeName] = $this->resolveMake($row['make'] ?? 'Unknown', $makeCache);
+                                [$modelId, $modelName] = $this->resolveModel($makeId, $row['model'] ?? 'Unknown', $modelCache);
+                                $payload = array_merge($payload, [
+                                    'year' => (int) ($row['year'] ?? $vehicle->year ?: 2000),
+                                    'make_id' => $makeId,
+                                    'model_id' => $modelId,
+                                    'make' => $makeName,
+                                    'model' => $modelName,
+                                ]);
+                            }
+                            $vehicle->update($payload);
+                            $updatedVehicles++;
+                            $vehicleByPlate[$plate] = (object) [
+                                'id' => $vehicle->id,
+                                'plate_number' => $vehicle->plate_number,
+                                'status' => 'Forfeited',
+                            ];
                         }
-                        $vehicle->update($payload);
-                        $updatedVehicles++;
-                        $vehicleByPlate[$plate] = (object) [
-                            'id' => $vehicle->id,
-                            'plate_number' => $vehicle->plate_number,
-                            'status' => 'Forfeited',
-                        ];
                     } else {
                         [$makeId, $makeName] = $this->resolveMake($row['make'] ?? 'Unknown', $makeCache);
                         [$modelId, $modelName] = $this->resolveModel($makeId, $row['model'] ?? 'Unknown', $modelCache);
@@ -195,6 +208,7 @@ class ImportForfeitedUnitsCommand extends Command
             [
                 ['Created vehicles', $createdVehicles],
                 ['Updated vehicles', $updatedVehicles],
+                ['Skipped vehicle overwrite (exists)', $skippedExisting],
                 ['Forfeit details created', $forfeitCreated],
                 ['Forfeit details skipped (dup)', $forfeitSkipped],
                 ['Errors', $errors],

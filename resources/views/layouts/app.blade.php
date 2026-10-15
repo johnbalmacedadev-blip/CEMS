@@ -472,8 +472,8 @@
         <div class="pt-3 px-3">
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
-                        <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                    <a class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}">
+                        <i class="fas fa-home me-2"></i>Home
                     </a>
                 </li>
                 <li class="nav-item">

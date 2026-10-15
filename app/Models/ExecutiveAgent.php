@@ -27,6 +27,11 @@ class ExecutiveAgent extends Model
         return $this->hasMany(ClientFollowUp::class, 'executive_agent_id');
     }
 
+    public function masterlistLeads(): HasMany
+    {
+        return $this->hasMany(ExecutiveAgentLead::class, 'executive_agent_id');
+    }
+
     public function scopeActive($query)
     {
         return $query->where('status', 'active');

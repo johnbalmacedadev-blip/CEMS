@@ -11,8 +11,7 @@ class HomeController extends Controller
     {
         $user = Auth::user();
         $homeCategories = HomeMenu::categoriesForUser($user);
-        $canViewDashboard = $user && $user->canAccessPage('dashboard', 'view');
 
-        return view('home', compact('homeCategories', 'canViewDashboard'));
+        return view('home', compact('homeCategories'));
     }
 }

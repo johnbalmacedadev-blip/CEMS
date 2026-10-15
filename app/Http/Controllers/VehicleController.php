@@ -310,7 +310,21 @@ class VehicleController extends Controller
             $with[] = 'forfeitDetails';
         }
         $query = Vehicle::with($with);
-        $query->forUnitReportStatus($status);
+
+        $includeExcelAvailable = $status === 'Available' && $request->boolean('include_excel_available');
+        if ($includeExcelAvailable) {
+            // Match Excel Available tabs exactly (includes recently released/reserved still listed there).
+            $excelAvailableIds = $this->excelAvailableIdsForRequest($request);
+            $query->where('status', '!=', 'Archived');
+            if ($excelAvailableIds !== []) {
+                $query->whereIn('id', $excelAvailableIds);
+            } else {
+                $query->whereRaw('0 = 1');
+            }
+            // Location cards are applied via excel branch selection above; skip DB branch filter.
+        } else {
+            $query->forUnitReportStatus($status);
+        }
 
         if ($search) {
             $query->where(function ($q) use ($search) {
@@ -350,11 +364,13 @@ class VehicleController extends Controller
             $query->where('purchased_from', 'like', '%' . trim($purchasedFrom) . '%');
         }
 
-        if ($branchLocationId !== null && $branchLocationId !== '' && is_numeric($branchLocationId)) {
-            $query->where('branch_location_id', (int) $branchLocationId);
-        }
+        if (! $includeExcelAvailable) {
+            if ($branchLocationId !== null && $branchLocationId !== '' && is_numeric($branchLocationId)) {
+                $query->where('branch_location_id', (int) $branchLocationId);
+            }
 
-        $this->applyLocationVisibilityFilter($query, $request);
+            $this->applyLocationVisibilityFilter($query, $request);
+        }
 
         $hasReservationFrom = is_string($reservationDateFrom) && trim($reservationDateFrom) !== '';
         $hasReservationTo = is_string($reservationDateTo) && trim($reservationDateTo) !== '';
@@ -389,6 +405,52 @@ class VehicleController extends Controller
         }
 
         return $query->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Vehicle IDs from Excel Available designations, limited by location card / showroom filters.
+     *
+     * @return list<int>
+     */
+    protected function excelAvailableIdsForRequest(Request $request): array
+    {
+        $branchNames = null;
+
+        $branchLocationId = $request->get('branch_location_id');
+        if ($branchLocationId !== null && $branchLocationId !== '' && is_numeric($branchLocationId)) {
+            $name = optional(BranchLocation::find((int) $branchLocationId))->name;
+            $branchNames = $name ? [$name] : [];
+        } elseif ($request->has('locations') || $request->has('locations_none')) {
+            $ids = array_values(array_unique(array_filter(array_map(
+                'intval',
+                (array) $request->input('locations', [])
+            ), fn ($id) => $id > 0)));
+            $branchNames = [];
+            if ($ids !== []) {
+                $branchNames = BranchLocation::query()
+                    ->whereIn('id', $ids)
+                    ->pluck('name')
+                    ->all();
+            }
+            // locations_none does not map to an Excel Available tab — ignore for this mode.
+        }
+
+        if ($branchNames === null) {
+            return ExcelUnitReconcile::vehicleIdsOnExcelAvailable();
+        }
+
+        if ($branchNames === []) {
+            return [];
+        }
+
+        $ids = [];
+        foreach ($branchNames as $name) {
+            foreach (ExcelUnitReconcile::vehicleIdsOnExcelAvailable((string) $name) as $id) {
+                $ids[$id] = true;
+            }
+        }
+
+        return array_map('intval', array_keys($ids));
     }
 
     /**
@@ -650,6 +712,9 @@ class VehicleController extends Controller
             $releasedCount = Vehicle::where('status', 'Released')->count();
             $underMaintenanceCount = Vehicle::where('status', 'Under Maintenance')->count();
             $forfeitedCount = $this->forfeitedVehicleCount();
+            $includeExcelAvailable = false;
+            $excelAvailableTotal = 0;
+            $excelAvailableExtraCount = 0;
 
             return view('vehicles.index', compact(
                 'vehicles',
@@ -682,7 +747,10 @@ class VehicleController extends Controller
                 'unassignedLocationCount',
                 'excelReconcileNotes',
                 'excelReleaseWarning',
-                'locationVisibility'
+                'locationVisibility',
+                'includeExcelAvailable',
+                'excelAvailableTotal',
+                'excelAvailableExtraCount'
             ));
         }
 
@@ -736,6 +804,22 @@ class VehicleController extends Controller
 
             $unassignedLocationCount = (clone $locationSummaryBase)->whereNull('branch_location_id')->count();
             $excelReconcileNotes = ExcelUnitReconcile::notesForRequest($request);
+
+            // When showing Excel Available extras, align location card totals to the workbook tabs.
+            if ($status === 'Available' && $request->boolean('include_excel_available')) {
+                $excelAvailableByBranch = ExcelUnitReconcile::excelAvailableCountsByBranch();
+                $locationCounts = $locationCounts->map(function ($loc) use ($excelAvailableByBranch) {
+                    foreach ($excelAvailableByBranch as $branchName => $count) {
+                        if (strcasecmp((string) $loc['name'], (string) $branchName) === 0) {
+                            $loc['count'] = (int) $count;
+
+                            return $loc;
+                        }
+                    }
+
+                    return $loc;
+                })->values();
+            }
         }
 
         ExcelUnitReconcile::attachExcelSourceRows($vehicles);
@@ -746,6 +830,19 @@ class VehicleController extends Controller
         $releasedCount = Vehicle::where('status', 'Released')->count();
         $underMaintenanceCount = Vehicle::where('status', 'Under Maintenance')->count();
         $forfeitedCount = $this->forfeitedVehicleCount();
+        $includeExcelAvailable = $status === 'Available' && $request->boolean('include_excel_available');
+        $excelAvailableTotal = ExcelUnitReconcile::excelAvailableTotalCount();
+        $excelAvailableExtraCount = 0;
+        if ($status === 'Available' && $excelAvailableTotal > 0) {
+            $excelAvailableIds = ExcelUnitReconcile::vehicleIdsOnExcelAvailable();
+            if ($excelAvailableIds !== []) {
+                $alreadyAvailableOnList = Vehicle::query()
+                    ->whereIn('id', $excelAvailableIds)
+                    ->where('status', 'Available')
+                    ->count();
+                $excelAvailableExtraCount = max(0, count($excelAvailableIds) - $alreadyAvailableOnList);
+            }
+        }
 
         return view('vehicles.index', compact(
             'vehicles',
@@ -772,7 +869,10 @@ class VehicleController extends Controller
             'unassignedLocationCount',
             'excelReconcileNotes',
             'excelReleaseWarning',
-            'locationVisibility'
+            'locationVisibility',
+            'includeExcelAvailable',
+            'excelAvailableTotal',
+            'excelAvailableExtraCount'
         ));
     }
 
@@ -1828,6 +1928,18 @@ class VehicleController extends Controller
                     'colour' => $vehicle->colour,
                     'purchase_price' => auth()->user()?->canViewPurchasePrice()
                         ? $vehicle->formatted_purchase_price
+                        : null,
+                    'purchase_price_raw' => auth()->user()?->canViewPurchasePrice()
+                        ? number_format((float) ($vehicle->purchase_price ?? 0), 2, '.', '')
+                        : null,
+                    'total_costs_raw' => auth()->user()?->canViewPurchasePrice()
+                        ? number_format((float) ($vehicle->total_costs ?? 0), 2, '.', '')
+                        : null,
+                    'total_revenue_raw' => auth()->user()?->canViewPurchasePrice()
+                        ? number_format((float) ($vehicle->total_revenue ?? 0), 2, '.', '')
+                        : null,
+                    'total_profit_raw' => auth()->user()?->canViewPurchasePrice()
+                        ? number_format((float) ($vehicle->total_profit ?? 0), 2, '.', '')
                         : null,
                     'transmission' => $vehicle->transmission,
                     'fuel_type' => $vehicle->fuel_type,

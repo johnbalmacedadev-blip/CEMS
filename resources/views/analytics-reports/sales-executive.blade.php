@@ -204,11 +204,24 @@
                                             {{ $i + 1 }}
                                         @endif
                                     </td>
-                                    <td class="fw-semibold">{{ $row['name'] }}</td>
+                                    <td class="fw-semibold">
+                                        @if(!empty($row['profile_url']))
+                                            <a href="{{ $row['profile_url'] }}" class="text-decoration-none">{{ $row['name'] }}</a>
+                                        @else
+                                            {{ $row['name'] }}
+                                        @endif
+                                    </td>
                                     <td>
                                         <span class="badge bg-light text-dark border">{{ $row['role'] ?? '—' }}</span>
                                         @if(!empty($row['executive_name']) && $viewMode !== 'executives')
-                                            <div class="small text-muted">Exec: {{ $row['executive_name'] }}</div>
+                                            <div class="small text-muted">
+                                                Exec:
+                                                @if(!empty($row['executive_agent_id']))
+                                                    <a href="{{ route('staff-reports.executive-agents.show', $row['executive_agent_id']) }}" class="text-decoration-none">{{ $row['executive_name'] }}</a>
+                                                @else
+                                                    {{ $row['executive_name'] }}
+                                                @endif
+                                            </div>
                                         @endif
                                     </td>
                                     @if($viewMode === 'executives')
@@ -245,7 +258,13 @@
                                     <tbody>
                                         @forelse($tables['agents'] as $row)
                                             <tr>
-                                                <td>{{ $row['name'] }}</td>
+                                                <td>
+                                                    @if(!empty($row['profile_url']))
+                                                        <a href="{{ $row['profile_url'] }}" class="text-decoration-none fw-semibold">{{ $row['name'] }}</a>
+                                                    @else
+                                                        {{ $row['name'] }}
+                                                    @endif
+                                                </td>
                                                 <td class="text-end">{{ number_format($row['units']) }}</td>
                                                 <td class="text-end">₱{{ number_format($row['sales'], 2) }}</td>
                                             </tr>
@@ -274,7 +293,13 @@
                                     <tbody>
                                         @forelse($tables['executives'] as $row)
                                             <tr>
-                                                <td>{{ $row['name'] }}</td>
+                                                <td>
+                                                    @if(!empty($row['profile_url']))
+                                                        <a href="{{ $row['profile_url'] }}" class="text-decoration-none fw-semibold">{{ $row['name'] }}</a>
+                                                    @else
+                                                        {{ $row['name'] }}
+                                                    @endif
+                                                </td>
                                                 <td class="text-end">{{ number_format($row['units']) }}</td>
                                                 <td class="text-end">₱{{ number_format($row['sales'], 2) }}</td>
                                             </tr>
@@ -311,7 +336,13 @@
                                             <td>{{ $deal['date'] }}</td>
                                             <td>{{ $deal['plate'] }}</td>
                                             <td>{{ $deal['unit'] }}</td>
-                                            <td class="fw-semibold">{{ $deal['name'] }}</td>
+                                            <td class="fw-semibold">
+                                                @if(!empty($deal['profile_url']))
+                                                    <a href="{{ $deal['profile_url'] }}" class="text-decoration-none">{{ $deal['name'] }}</a>
+                                                @else
+                                                    {{ $deal['name'] }}
+                                                @endif
+                                            </td>
                                             <td><span class="badge bg-light text-dark border">{{ $deal['role'] }}</span></td>
                                             <td class="text-end">₱{{ number_format($deal['sales'], 2) }}</td>
                                         </tr>

@@ -191,11 +191,12 @@ class VehicleUnitsExcelImporter
             'will_create_vehicles' => 0,
             'will_update_vehicles' => 0,
             'will_skip' => 0,
+            'will_skip_existing' => 0,
         ];
 
         foreach ($parsed as $tab) {
             $create = 0;
-            $update = 0;
+            $skipExisting = 0;
             $skip = 0;
             $seen = [];
 
@@ -209,7 +210,7 @@ class VehicleUnitsExcelImporter
                 }
                 $seen[$plate] = true;
                 if (isset($vehicleByPlate[$plate])) {
-                    $update++;
+                    $skipExisting++;
                 } else {
                     $create++;
                 }
@@ -223,20 +224,21 @@ class VehicleUnitsExcelImporter
                 'excel_rows' => count($tab['rows']),
                 'unique_plates' => $unique,
                 'will_create_vehicles' => $create,
-                'will_update_vehicles' => $update,
+                'will_update_vehicles' => 0,
+                'will_skip_existing' => $skipExisting,
                 'duplicate_rows_in_sheet' => max(0, count($tab['rows']) - $unique),
                 'tables' => $tab['meta']['tables'],
                 'command' => $tab['meta']['command'],
             ];
 
             foreach ($tab['meta']['tables'] as $table) {
-                $tables[$table] = ($tables[$table] ?? 0) + $unique;
+                $tables[$table] = ($tables[$table] ?? 0) + $create;
             }
 
             $totals['excel_rows'] += count($tab['rows']);
             $totals['unique_plates'] += $unique;
             $totals['will_create_vehicles'] += $create;
-            $totals['will_update_vehicles'] += $update;
+            $totals['will_skip_existing'] += $skipExisting;
             $totals['will_skip'] += $skip;
         }
 
@@ -244,13 +246,13 @@ class VehicleUnitsExcelImporter
         foreach ($tables as $table => $approx) {
             $tableSummary[] = [
                 'table' => $table,
-                'action' => 'insert / update (upsert by plate)',
+                'action' => 'insert missing only (skip existing plates)',
                 'approx_rows_touched' => $approx,
                 'description' => match ($table) {
-                    'vehicles' => 'Unit master records (status, showroom, prices, specs)',
-                    'vehicle_expenses' => 'Repair / expense summary columns from Excel',
-                    'vehicle_status_details' => 'Sale / reservation / release / customer details',
-                    'vehicle_forfeit_details' => 'Forfeit / refund detail rows',
+                    'vehicles' => 'New unit master records only (existing plates are never overwritten)',
+                    'vehicle_expenses' => 'Expense summary for newly created plates only',
+                    'vehicle_status_details' => 'Sale / reservation / release details for newly created plates only',
+                    'vehicle_forfeit_details' => 'Missing forfeit detail rows only (existing vehicle records unchanged)',
                     default => 'Related import data',
                 },
             ];
@@ -261,12 +263,13 @@ class VehicleUnitsExcelImporter
             'tabs' => $tabs,
             'tables' => $tableSummary,
             'totals' => $totals,
-            'force' => true,
+            'force' => false,
+            'create_only' => true,
             'notes' => [
-                'Existing plates will be updated (including status changes).',
-                'Plates found on a Released sheet are set to Released and are not left as Available or Reserved.',
+                'Existing plates are skipped — database records are left unchanged.',
+                'Only plates that are not already in the system will be created.',
+                'Plates found on a Released sheet are not imported as Available or Reserved.',
                 'Released sheets keep the newest Excel release date when the same plate appears more than once.',
-                'After import, Excel reconcile snapshot should be refreshed for mismatch notes.',
             ],
         ];
     }
@@ -345,10 +348,8 @@ class VehicleUnitsExcelImporter
             $params = [
                 '--file' => $jsonPath,
                 '--branch' => $tab['meta']['branch'],
+                '--create-only' => true,
             ];
-            if (in_array($tab['meta']['command'], ['import:available-units', 'import:reserved-units', 'import:forfeited-units'], true)) {
-                $params['--force'] = true;
-            }
 
             $exit = Artisan::call($tab['meta']['command'], $params);
             $output = trim(Artisan::output());

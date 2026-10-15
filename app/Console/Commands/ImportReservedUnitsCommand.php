@@ -16,6 +16,7 @@ class ImportReservedUnitsCommand extends Command
                             {--file= : Path to JSON export}
                             {--branch= : Branch/location name (e.g. Annex, Flagship)}
                             {--force : Update plates even if currently Released}
+                            {--create-only : Only insert plates that do not exist yet; never update}
                             {--dry-run : Parse and report without writing}';
 
     protected $description = 'Import reserved units + vehicle expenses from Reserved Excel JSON export';
@@ -65,9 +66,15 @@ class ImportReservedUnitsCommand extends Command
         $created = 0;
         $updated = 0;
         $skippedReleased = 0;
+        $skippedExisting = 0;
         $expensesUpserted = 0;
         $statusUpserted = 0;
         $errors = 0;
+
+        $createOnly = (bool) $this->option('create-only');
+        if ($createOnly) {
+            $this->info('Mode: create-only (existing plates are left unchanged).');
+        }
 
         $vehicleByPlate = [];
         foreach (Vehicle::query()->get(['id', 'plate_number', 'status']) as $vehicle) {
@@ -92,12 +99,14 @@ class ImportReservedUnitsCommand extends Command
                     $row,
                     $branchId,
                     $branchName,
+                    $createOnly,
                     &$vehicleByPlate,
                     &$makeCache,
                     &$modelCache,
                     &$created,
                     &$updated,
                     &$skippedReleased,
+                    &$skippedExisting,
                     &$expensesUpserted,
                     &$statusUpserted
                 ) {
@@ -107,6 +116,11 @@ class ImportReservedUnitsCommand extends Command
                     }
 
                     $existing = $vehicleByPlate[$plate] ?? null;
+                    if ($existing && $createOnly) {
+                        $skippedExisting++;
+
+                        return;
+                    }
                     if ($existing && $existing->status === 'Released' && ! $this->option('force')) {
                         $skippedReleased++;
 
@@ -244,6 +258,7 @@ class ImportReservedUnitsCommand extends Command
                 ['Created vehicles', $created],
                 ['Updated vehicles', $updated],
                 ['Skipped (already Released)', $skippedReleased],
+                ['Skipped (already exists)', $skippedExisting],
                 ['Expenses upserted', $expensesUpserted],
                 ['Status details upserted', $statusUpserted],
                 ['Errors', $errors],
