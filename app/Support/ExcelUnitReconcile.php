@@ -48,9 +48,8 @@ class ExcelUnitReconcile
         '2026-05' => ['Flagship' => 110, 'Annex' => 21],
         '2026-06' => ['Flagship' => 100, 'Annex' => 15],
         '2026-07' => ['Flagship' => 87, 'Annex' => 11],
-        // Aug dated unique across sheets (incl. TOTAL RELEASED PROFIT + other-section
-        // rows with Aug RELEASE DATE). Location chips use DB branch (87 / 12 / 2).
-        '2026-08' => ['Flagship' => 87, 'Annex' => 12],
+        // Flagship includes TOTAL RELEASED PROFIT Aug plates; Annex includes August-section blank-date bleed.
+        '2026-08' => ['Flagship' => 87, 'Annex' => 13],
     ];
 
     /** @var array<string, array<int, \App\Models\Vehicle>>|null */
@@ -107,10 +106,11 @@ class ExcelUnitReconcile
             }
 
             $designationBranch = $designation['branch'] ?? null;
-            // Always scan every Released sheet. Location filtering is applied later using
-            // the matched vehicle's DB branch (so "No Location" can appear on All Locations).
+            if ($branchName && strcasecmp((string) $designationBranch, (string) $branchName) !== 0) {
+                continue;
+            }
 
-            $excelRows = array_values(array_filter($designation['rows'] ?? [], function ($row) use ($releaseFrom, $releaseTo) {
+            $excelRows = array_values(array_filter($designation['rows'] ?? [], function ($row) use ($releaseFrom, $releaseTo, $filterYear, $filterMonth) {
                 $d = $row['release_date'] ?? null;
                 if (! $d) {
                     return false;
@@ -121,9 +121,14 @@ class ExcelUnitReconcile
                 if ($releaseTo !== '' && $d > $releaseTo) {
                     return false;
                 }
-                // Calendar-month filters follow RELEASE DATE (any section), matching Car Sales
-                // on live: July-section rows with an August date still count in August, and
-                // TOTAL RELEASED PROFIT rows with an in-range date are included.
+                // Compiled monthly sales follow the Excel month-section heading, not a later
+                // RELEASE DATE or a totals row (e.g. "TOTAL RELEASED PROFIT").
+                if ($filterYear !== null) {
+                    $section = strtoupper(trim((string) ($row['section'] ?? '')));
+                    if ($section !== '' && ! self::sectionMatchesMonth($section, $filterYear, $filterMonth)) {
+                        return false;
+                    }
+                }
 
                 return true;
             }));
@@ -152,17 +157,14 @@ class ExcelUnitReconcile
             }
 
             $expectedCount = self::expectedReleasedSales($monthKey, (string) $designationBranch);
-            // Date-in-range rows are already counted above. Only force-add section bleeds /
-            // post-totals blanks when this sheet is still short of the compiled sales total.
-            if ($filterYear !== null && $expectedCount !== null && count($byPlate) < $expectedCount) {
-                $earlyBleeds = self::sectionBleedRows($designation['rows'] ?? [], $releaseFrom, $releaseTo, $byPlate);
-                foreach ($earlyBleeds as $bleed) {
-                    if (count($byPlate) >= $expectedCount) {
-                        break;
-                    }
-                    self::addExcelRowToByPlate($byPlate, $bleed);
-                }
+            // Count month-section rows first (including later RELEASE DATE / blank date),
+            // then only fill remaining slots from totals-block cars.
+            $earlyBleeds = self::sectionBleedRows($designation['rows'] ?? [], $releaseFrom, $releaseTo, $byPlate);
+            foreach ($earlyBleeds as $bleed) {
+                self::addExcelRowToByPlate($byPlate, $bleed);
             }
+            // Units listed after month totals (e.g. under TOTAL RELEASED PROFIT) still count
+            // in compiled sales when the month is short of the Excel sales total.
             if ($filterYear !== null && $expectedCount !== null && count($byPlate) < $expectedCount) {
                 foreach ($designation['rows'] ?? [] as $row) {
                     if (count($byPlate) >= $expectedCount) {
@@ -192,6 +194,13 @@ class ExcelUnitReconcile
             }
 
             $branch = BranchLocation::query()->where('name', $designationBranch)->first();
+            // Excel sheet counts only (Flagship / Annex) — never invent a "No Location" chip.
+            $locationCounts[] = [
+                'id' => $branch?->id,
+                'name' => $designationBranch,
+                'count' => count($byPlate),
+                'tab' => $designation['tab'] ?? null,
+            ];
 
             $dupByPlate = [];
             foreach ($designation['duplicates'] ?? [] as $dup) {
@@ -298,6 +307,12 @@ class ExcelUnitReconcile
                         ];
                         if ($excludeRereleasesFromList) {
                             unset($platesMeta[$plateKey]);
+                            foreach ($locationCounts as $i => $loc) {
+                                if (strcasecmp((string) ($loc['name'] ?? ''), (string) $designationBranch) === 0) {
+                                    $locationCounts[$i]['count'] = max(0, (int) ($loc['count'] ?? 0) - 1);
+                                    break;
+                                }
+                            }
                         } elseif (isset($platesMeta[$plateKey])) {
                             $platesMeta[$plateKey]['forced_rerelease_add'] = true;
                         }
@@ -481,14 +496,7 @@ class ExcelUnitReconcile
                 if (isset($byPlate[$plate]) || isset($platesMeta[$plate])) {
                     continue;
                 }
-                // Calendar-month filters already include every in-range RELEASE DATE (any section).
-                // Do not pull outside-date section rows just because SALE DATE falls in-range
-                // (e.g. Aug section / Sept release / Aug sale) — that inflates past live totals.
-                if ($monthKey !== null) {
-                    if (! $belowExpected) {
-                        continue;
-                    }
-                } elseif (! $belowExpected && ! $saleInFilter) {
+                if (! $belowExpected && ! $saleInFilter) {
                     continue;
                 }
 
@@ -520,6 +528,12 @@ class ExcelUnitReconcile
                         ]]
                         : [],
                 ]);
+                foreach ($locationCounts as $i => $loc) {
+                    if (strcasecmp((string) ($loc['name'] ?? ''), (string) $designationBranch) === 0) {
+                        $locationCounts[$i]['count'] = (int) ($loc['count'] ?? 0) + 1;
+                        break;
+                    }
+                }
             }
 
             // Database plates in this branch/date range that Excel does not list for the period.
@@ -578,8 +592,6 @@ class ExcelUnitReconcile
         $excelOnlyPlates = [];
         foreach ($platesMeta as $plateKey => $row) {
             $vehicle = self::matchVehicleForExcelRow($row, $allVehicles);
-            $dbName = trim((string) ($vehicle?->branchLocation?->name ?? ''));
-            $platesMeta[$plateKey]['db_location'] = $dbName !== '' ? $dbName : 'No Location';
             // Include Excel-matched plates even when DB status is no longer Released (e.g. Forfeited).
             if ($vehicle && ($vehicle->status ?? null) !== 'Archived') {
                 $vehicleIds[] = $vehicle->id;
@@ -587,27 +599,7 @@ class ExcelUnitReconcile
                 $excelOnlyPlates[] = $plateKey;
             }
         }
-
-        // Showroom filter uses DB branch (incl. No Location), not Excel sheet name.
-        if ($branchName) {
-            $platesMeta = array_filter(
-                $platesMeta,
-                static fn ($meta) => strcasecmp((string) ($meta['db_location'] ?? ''), (string) $branchName) === 0
-            );
-            $vehicleIds = [];
-            $excelOnlyPlates = [];
-            foreach ($platesMeta as $plateKey => $row) {
-                $vehicle = self::matchVehicleForExcelRow($row, $allVehicles);
-                if ($vehicle && ($vehicle->status ?? null) !== 'Archived') {
-                    $vehicleIds[] = $vehicle->id;
-                } else {
-                    $excelOnlyPlates[] = $plateKey;
-                }
-            }
-        }
         $vehicleIds = array_values(array_unique($vehicleIds));
-
-        $locationCounts = self::buildDbLocationCounts($platesMeta);
 
         $dateLabel = sprintf(
             '%s to %s',
@@ -1556,52 +1548,6 @@ class ExcelUnitReconcile
     }
 
     /**
-     * Location chips for a release-date filter: use each plate's DB branch
-     * (No Location when branch_location_id is null).
-     *
-     * @param  array<string, array<string, mixed>>  $platesMeta
-     * @return array<int, array{id: mixed, name: string, count: int, tab: null}>
-     */
-    protected static function buildDbLocationCounts(array $platesMeta): array
-    {
-        $buckets = [];
-        foreach ($platesMeta as $meta) {
-            $name = trim((string) ($meta['db_location'] ?? ''));
-            if ($name === '') {
-                $name = 'No Location';
-            }
-            $buckets[$name] = ($buckets[$name] ?? 0) + 1;
-        }
-
-        $branches = BranchLocation::ordered()->get()->keyBy(
-            static fn ($b) => strtolower((string) $b->name)
-        );
-        $priority = ['flagship' => 0, 'annex' => 1, 'no location' => 2];
-        uksort($buckets, static function ($a, $b) use ($priority) {
-            $pa = $priority[strtolower((string) $a)] ?? 50;
-            $pb = $priority[strtolower((string) $b)] ?? 50;
-            if ($pa !== $pb) {
-                return $pa <=> $pb;
-            }
-
-            return strcasecmp((string) $a, (string) $b);
-        });
-
-        $out = [];
-        foreach ($buckets as $name => $count) {
-            $branch = $branches->get(strtolower((string) $name));
-            $out[] = [
-                'id' => $branch?->id,
-                'name' => (string) $name,
-                'count' => (int) $count,
-                'tab' => null,
-            ];
-        }
-
-        return $out;
-    }
-
-    /**
      * Sum Excel TOTAL REVENUE / TOTAL COSTS for rows listed under each Released sheet's
      * month section heading (the same block Excel uses for monthly unit-revenue totals).
      *
@@ -1740,14 +1686,11 @@ class ExcelUnitReconcile
         $vehicle->setAttribute('excel_period_release_date', $meta['release_date'] ?? null);
         $vehicle->setAttribute('excel_period_row', $meta['excel_row'] ?? null);
         $vehicle->setAttribute('excel_source_tab', $meta['tab'] ?? null);
-        $dbLocation = trim((string) ($meta['db_location'] ?? ''));
-        if ($dbLocation === '') {
-            $dbLocation = trim((string) ($meta['branch'] ?? '')) !== ''
-                ? (string) $meta['branch']
-                : 'No Location';
-        }
-        $vehicle->setAttribute('excel_period_branch', $dbLocation);
-        $vehicle->setAttribute('excel_period_branches', [$dbLocation]);
+        $vehicle->setAttribute('excel_period_branch', $meta['branch'] ?? null);
+        $vehicle->setAttribute(
+            'excel_period_branches',
+            $meta['branches'] ?? array_values(array_filter([$meta['branch'] ?? null]))
+        );
         $vehicle->setAttribute('excel_period_total_revenue', $meta['total_revenue'] ?? null);
         $vehicle->setAttribute('excel_period_total_costs', $meta['total_costs'] ?? null);
         $vehicle->setAttribute('excel_period_total_profit', $meta['total_profit'] ?? null);
