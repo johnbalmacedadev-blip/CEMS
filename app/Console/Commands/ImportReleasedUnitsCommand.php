@@ -430,10 +430,13 @@ class ImportReleasedUnitsCommand extends Command
             ->first();
 
         if (! $make) {
-            $make = Make::create([
+            $make = new Make([
                 'name' => ucwords(strtolower($name)),
                 'is_active' => true,
             ]);
+            $make->id = ((int) Make::query()->max('id')) + 1;
+            $make->incrementing = false;
+            $make->save();
         }
 
         $cache[$key] = [$make->id, $make->name];
@@ -462,11 +465,14 @@ class ImportReleasedUnitsCommand extends Command
             ->first();
 
         if (! $model) {
-            $model = VehicleModel::create([
+            $model = new VehicleModel([
                 'make_id' => $makeId,
                 'name' => ucwords(strtolower($name)),
                 'is_active' => true,
             ]);
+            $model->id = ((int) VehicleModel::query()->max('id')) + 1;
+            $model->incrementing = false;
+            $model->save();
         }
 
         $cache[$key] = [$model->id, $model->name];

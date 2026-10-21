@@ -470,6 +470,19 @@
                                     <span class="badge bg-dark ms-1">{{ number_format($excelReleaseWarning['issue_count'] ?? 0) }}</span>
                                 </button>
                             @endif
+                            @if(!empty($excelReconcileNotes))
+                                <button type="button"
+                                        class="btn btn-sm btn-outline-warning ms-2 align-middle position-relative"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#excelReconcileNotesModal"
+                                        title="Excel vs database mismatch notes">
+                                    <i class="fas fa-bell"></i>
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                        {{ count($excelReconcileNotes) }}
+                                        <span class="visually-hidden">mismatch notes</span>
+                                    </span>
+                                </button>
+                            @endif
                         </h5>
 
                         @if($status === 'Released' && $vehicles->count() > 0)
@@ -697,52 +710,66 @@
                     @endif
 
                     @if(!empty($excelReconcileNotes))
-                        @foreach($excelReconcileNotes as $note)
-                            <div class="alert alert-warning border-warning mb-3" role="alert">
-                                <div class="d-flex align-items-start gap-2">
-                                    <i class="fas fa-exclamation-triangle mt-1"></i>
-                                    <div class="flex-grow-1">
-                                        <div class="fw-semibold mb-1">
-                                            Excel vs database count mismatch
-                                            @if(!empty($note['label']))
-                                                — {{ $note['label'] }}
-                                            @endif
-                                        </div>
-                                        <div class="mb-2">{{ $note['summary'] }}</div>
-                                        <div class="row g-2 mb-2 small">
-                                            <div class="col-auto">
-                                                <span class="badge bg-secondary">Excel rows: {{ number_format($note['excel_row_count'] ?? 0) }}</span>
-                                            </div>
-                                            <div class="col-auto">
-                                                <span class="badge bg-secondary">Excel unique plates: {{ number_format($note['excel_unique_plates'] ?? 0) }}</span>
-                                            </div>
-                                            <div class="col-auto">
-                                                <span class="badge bg-dark">Database: {{ number_format($note['db_count'] ?? 0) }}</span>
-                                            </div>
-                                            @if(!empty($note['tab']))
-                                                <div class="col-auto">
-                                                    <span class="badge bg-light text-dark border">Tab: {{ $note['tab'] }}</span>
+                        <div class="modal fade" id="excelReconcileNotesModal" tabindex="-1" aria-labelledby="excelReconcileNotesModalLabel" aria-hidden="true">
+                            <div class="modal-dialog modal-lg modal-dialog-scrollable">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="excelReconcileNotesModalLabel">
+                                            <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                                            Excel vs database mismatch
+                                            <span class="badge bg-warning text-dark ms-1">{{ count($excelReconcileNotes) }}</span>
+                                        </h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="accordion" id="excelReconcileNotesAccordion">
+                                            @foreach($excelReconcileNotes as $i => $note)
+                                                <div class="accordion-item">
+                                                    <h2 class="accordion-header" id="excelReconcileHeading{{ $i }}">
+                                                        <button class="accordion-button {{ $i === 0 ? '' : 'collapsed' }}" type="button" data-bs-toggle="collapse" data-bs-target="#excelReconcileCollapse{{ $i }}" aria-expanded="{{ $i === 0 ? 'true' : 'false' }}" aria-controls="excelReconcileCollapse{{ $i }}">
+                                                            Excel vs database count mismatch
+                                                            @if(!empty($note['label']))
+                                                                — {{ $note['label'] }}
+                                                            @endif
+                                                        </button>
+                                                    </h2>
+                                                    <div id="excelReconcileCollapse{{ $i }}" class="accordion-collapse collapse {{ $i === 0 ? 'show' : '' }}" aria-labelledby="excelReconcileHeading{{ $i }}" data-bs-parent="#excelReconcileNotesAccordion">
+                                                        <div class="accordion-body">
+                                                            <div class="mb-2">{{ $note['summary'] }}</div>
+                                                            <div class="d-flex flex-wrap gap-2 mb-3 small">
+                                                                <span class="badge bg-secondary">Excel rows: {{ number_format($note['excel_row_count'] ?? 0) }}</span>
+                                                                <span class="badge bg-secondary">Excel unique plates: {{ number_format($note['excel_unique_plates'] ?? 0) }}</span>
+                                                                <span class="badge bg-dark">Database: {{ number_format($note['db_count'] ?? 0) }}</span>
+                                                                @if(!empty($note['tab']))
+                                                                    <span class="badge bg-light text-dark border">Tab: {{ $note['tab'] }}</span>
+                                                                @endif
+                                                            </div>
+                                                            @if(!empty($note['reasons']))
+                                                                <div class="small mb-1 fw-semibold">Why it doesn’t match:</div>
+                                                                <ul class="mb-0 small ps-3">
+                                                                    @foreach($note['reasons'] as $reason)
+                                                                        <li class="mb-1">{{ $reason['message'] }}</li>
+                                                                    @endforeach
+                                                                </ul>
+                                                                @if(($note['hidden_reason_count'] ?? 0) > 0)
+                                                                    <div class="small text-muted mt-1">…and {{ $note['hidden_reason_count'] }} more reason(s).</div>
+                                                                @endif
+                                                            @endif
+                                                            @if(!empty($note['source_name']))
+                                                                <div class="small text-muted mt-2">Source: {{ $note['source_name'] }}</div>
+                                                            @endif
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                            @endif
+                                            @endforeach
                                         </div>
-                                        @if(!empty($note['reasons']))
-                                            <div class="small mb-1 fw-semibold">Why it doesn’t match:</div>
-                                            <ul class="mb-0 small ps-3">
-                                                @foreach($note['reasons'] as $reason)
-                                                    <li class="mb-1">{{ $reason['message'] }}</li>
-                                                @endforeach
-                                            </ul>
-                                            @if(($note['hidden_reason_count'] ?? 0) > 0)
-                                                <div class="small text-muted mt-1">…and {{ $note['hidden_reason_count'] }} more reason(s).</div>
-                                            @endif
-                                        @endif
-                                        @if(!empty($note['source_name']))
-                                            <div class="small text-muted mt-2">Source: {{ $note['source_name'] }}</div>
-                                        @endif
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                                     </div>
                                 </div>
                             </div>
-                        @endforeach
+                        </div>
                     @endif
 
                     @if($vehicles->count() > 0)
