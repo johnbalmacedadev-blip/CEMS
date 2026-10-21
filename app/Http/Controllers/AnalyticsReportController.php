@@ -5635,11 +5635,14 @@ class AnalyticsReportController extends Controller
             } else {
                 $usedVehicleIds[$vehicle->id] = true;
                 $vehicle->setAttribute('excel_period_release_date', $meta['release_date'] ?? null);
-                $vehicle->setAttribute('excel_period_branch', $meta['branch'] ?? null);
-                $vehicle->setAttribute(
-                    'excel_period_branches',
-                    $meta['branches'] ?? array_values(array_filter([$meta['branch'] ?? null]))
-                );
+                // Location chips / filters follow DB branch (No Location when unassigned),
+                // while Excel sheet names stay on branch_financials for revenue splits.
+                $dbLocation = trim((string) ($meta['db_location'] ?? $vehicle->branchLocation?->name ?? ''));
+                if ($dbLocation === '') {
+                    $dbLocation = 'No Location';
+                }
+                $vehicle->setAttribute('excel_period_branch', $dbLocation);
+                $vehicle->setAttribute('excel_period_branches', [$dbLocation]);
                 $vehicle->setAttribute('excel_period_total_revenue', $meta['total_revenue'] ?? null);
                 $vehicle->setAttribute('excel_period_total_costs', $meta['total_costs'] ?? null);
                 $vehicle->setAttribute('excel_period_total_profit', $meta['total_profit'] ?? null);
