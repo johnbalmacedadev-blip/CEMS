@@ -284,7 +284,7 @@ class AnalyticsReportController extends Controller
             default => ['title' => 'Sales and Releases by Make', 'label' => 'Make'],
         };
 
-        $releaseVehicles = $this->soldVehiclesBase($window)
+        $releaseVehicles = $this->soldVehiclesBase($window, $locationFilter)
             ->filter(fn (Vehicle $v) => $this->vehicleMatchesSalesLocation($v, $locationFilter))
             ->values();
 
@@ -369,7 +369,7 @@ class AnalyticsReportController extends Controller
      */
     protected function buildExcelCarSalesTabs(array $window, string $locationFilter = '', string $search = ''): array
     {
-        $releaseVehicles = $this->soldVehiclesBase($window)
+        $releaseVehicles = $this->soldVehiclesBase($window, $locationFilter)
             ->filter(fn (Vehicle $v) => $this->vehicleMatchesSalesLocation($v, $locationFilter))
             ->values();
 
@@ -4004,7 +4004,10 @@ class AnalyticsReportController extends Controller
      */
     protected function buildSalesAnalytics(array $window, string $locationFilter = ''): array
     {
-        $vehicles = $this->soldVehiclesBase($window);
+        // Scope Excel release history to the selected location (same as Unit Report showroom filter).
+        $vehicles = $this->soldVehiclesBase($window, $locationFilter)
+            ->filter(fn (Vehicle $v) => $this->vehicleMatchesSalesLocation($v, $locationFilter))
+            ->values();
         $excelAligned = $vehicles->contains(fn (Vehicle $v) => (bool) $v->getAttribute('excel_aligned'));
 
         $rows = $vehicles->map(function (Vehicle $v) use ($locationFilter) {
@@ -4063,15 +4066,28 @@ class AnalyticsReportController extends Controller
             $daysToSell = ($purchase && $event)
                 ? Carbon::parse($purchase)->diffInDays(Carbon::parse($event))
                 : null;
-            $location = trim((string) ($v->getAttribute('excel_period_branch') ?? $v->branchLocation?->name ?? ''));
-            if ($locationFilter !== '') {
-                $location = $locationFilter;
-            } elseif ($location === '') {
-                $location = 'No Location';
-            }
+
+            // Resolve true Excel/DB location first — never overwrite with the filter value
+            // before building the locations list (that incorrectly pulls Annex into Flagship).
             $locations = $v->getAttribute('excel_period_branches');
             if (! is_array($locations) || $locations === []) {
-                $locations = [$location];
+                $fallbackLoc = trim((string) ($v->getAttribute('excel_period_branch') ?? $v->branchLocation?->name ?? ''));
+                $locations = $fallbackLoc !== '' ? [$fallbackLoc] : ['No Location'];
+            }
+            $locations = array_values(array_unique(array_map(
+                static fn ($name) => trim((string) $name) !== '' ? (string) $name : 'No Location',
+                $locations
+            )));
+
+            $location = trim((string) ($v->getAttribute('excel_period_branch') ?? ''));
+            if ($location === '') {
+                $location = trim((string) ($v->branchLocation?->name ?? ''));
+            }
+            if ($locationFilter !== '') {
+                // Display the selected location when this unit belongs to it (incl. dual-sheet).
+                $location = $locationFilter;
+            } elseif ($location === '') {
+                $location = $locations[0] ?? 'No Location';
             }
 
             return [
@@ -4081,7 +4097,7 @@ class AnalyticsReportController extends Controller
                 'make_model' => trim(($make !== '' ? $make : 'Unknown').' '.($model !== '' ? $model : 'Unknown')),
                 'body_type' => $bodyType !== '' ? $bodyType : 'Unspecified',
                 'location' => $location,
-                'locations' => array_values(array_unique(array_map('strval', $locations))),
+                'locations' => $locations,
                 'branch_financials' => is_array($branchFinancials) ? $branchFinancials : [],
                 'sold_price' => $soldPrice,
                 'finance_revenue_1' => $financeRevenue1,
@@ -4144,8 +4160,9 @@ class AnalyticsReportController extends Controller
 
         $locationPriority = ['Flagship' => 0, 'Annex' => 1];
         // Prefer Excel Unit Report location chips (per-sheet) so Flagship/Annex match /vehicles.
+        // When a location is selected, counts are already scoped via soldVehiclesBase + row filter.
         $excelLocationCounts = $excelAligned
-            ? $this->excelAlignedLocationCounts($window)
+            ? $this->excelAlignedLocationCounts($window, $locationFilter)
             : [];
         if ($excelAligned && $excelLocationCounts !== [] && $locationFilter === '') {
             $locationBreakdown = collect($excelLocationCounts)
@@ -4162,15 +4179,22 @@ class AnalyticsReportController extends Controller
                 ->values()
                 ->all();
             $unitCount = (int) collect($locationBreakdown)->sum('count');
-        } elseif ($excelAligned && $excelLocationCounts !== [] && $locationFilter !== '') {
+        } elseif ($locationFilter !== '') {
+            // Always use the filtered unit list when a location is selected — never fall back
+            // to an unscoped Excel total (that was summing Flagship + Annex + No Location).
             $matched = collect($excelLocationCounts)->first(
                 fn ($loc) => strcasecmp((string) ($loc['name'] ?? ''), $locationFilter) === 0
             );
+            $scopedCount = $rows->count();
+            if ($matched !== null && (int) ($matched['count'] ?? 0) > 0) {
+                // Prefer Excel sheet count for this location when it matches Unit Report.
+                $scopedCount = (int) $matched['count'];
+            }
             $locationBreakdown = [[
                 'label' => $locationFilter,
-                'count' => (int) ($matched['count'] ?? $rows->count()),
+                'count' => $scopedCount,
             ]];
-            $unitCount = (int) ($matched['count'] ?? $rows->count());
+            $unitCount = $scopedCount;
         } else {
             $locationBreakdown = $rows
                 ->groupBy('location')
@@ -5536,9 +5560,9 @@ class AnalyticsReportController extends Controller
         };
     }
 
-    protected function soldVehiclesBase(array $window): Collection
+    protected function soldVehiclesBase(array $window, string $locationFilter = ''): Collection
     {
-        $excelAligned = $this->excelAlignedReleasedVehicles($window);
+        $excelAligned = $this->excelAlignedReleasedVehicles($window, $locationFilter);
         if ($excelAligned !== null) {
             return $excelAligned;
         }
@@ -5551,6 +5575,7 @@ class AnalyticsReportController extends Controller
 
                 return $this->inWindow($eventDate, $window);
             })
+            ->filter(fn (Vehicle $v) => $this->vehicleMatchesSalesLocation($v, $locationFilter))
             ->values();
     }
 
@@ -5558,7 +5583,7 @@ class AnalyticsReportController extends Controller
      * Match Unit Report Released date-filter counts using Excel release history
      * (includes plates later re-released / currently Forfeited that still appear in Excel for the period).
      */
-    protected function excelAlignedReleasedVehicles(array $window): ?Collection
+    protected function excelAlignedReleasedVehicles(array $window, string $locationFilter = ''): ?Collection
     {
         $from = ! empty($window['from']) ? Carbon::parse($window['from'])->format('Y-m-d') : '';
         $to = ! empty($window['to']) ? Carbon::parse($window['to'])->format('Y-m-d') : '';
@@ -5566,11 +5591,22 @@ class AnalyticsReportController extends Controller
             return null;
         }
 
-        $context = ExcelUnitReconcile::releasedDateFilterContext(Request::create('/vehicles', 'GET', [
+        $params = [
             'status' => 'Released',
             'release_date_from' => $from,
             'release_date_to' => $to,
-        ]));
+        ];
+        // Mirror Unit Report showroom filter so Flagship does not include Annex / No Location.
+        if ($locationFilter !== '' && strcasecmp($locationFilter, 'No Location') !== 0) {
+            $branchId = \App\Models\BranchLocation::query()
+                ->whereRaw('LOWER(name) = ?', [strtolower($locationFilter)])
+                ->value('id');
+            if ($branchId) {
+                $params['branch_location_id'] = $branchId;
+            }
+        }
+
+        $context = ExcelUnitReconcile::releasedDateFilterContext(Request::create('/vehicles', 'GET', $params));
         if ($context === null) {
             return null;
         }
@@ -5623,7 +5659,7 @@ class AnalyticsReportController extends Controller
     /**
      * @return array<int, array{id?: mixed, name?: string, count?: int}>
      */
-    protected function excelAlignedLocationCounts(array $window): array
+    protected function excelAlignedLocationCounts(array $window, string $locationFilter = ''): array
     {
         $from = ! empty($window['from']) ? Carbon::parse($window['from'])->format('Y-m-d') : '';
         $to = ! empty($window['to']) ? Carbon::parse($window['to'])->format('Y-m-d') : '';
@@ -5631,11 +5667,21 @@ class AnalyticsReportController extends Controller
             return [];
         }
 
-        $context = ExcelUnitReconcile::releasedDateFilterContext(Request::create('/vehicles', 'GET', [
+        $params = [
             'status' => 'Released',
             'release_date_from' => $from,
             'release_date_to' => $to,
-        ]));
+        ];
+        if ($locationFilter !== '' && strcasecmp($locationFilter, 'No Location') !== 0) {
+            $branchId = \App\Models\BranchLocation::query()
+                ->whereRaw('LOWER(name) = ?', [strtolower($locationFilter)])
+                ->value('id');
+            if ($branchId) {
+                $params['branch_location_id'] = $branchId;
+            }
+        }
+
+        $context = ExcelUnitReconcile::releasedDateFilterContext(Request::create('/vehicles', 'GET', $params));
 
         return is_array($context['location_counts'] ?? null) ? $context['location_counts'] : [];
     }
