@@ -46,11 +46,11 @@ class Handler extends ExceptionHandler
             return parent::render($request, $e);
         }
 
-        // Show real exceptions whenever APP_DEBUG=true (needed for staging).
-        // Only hide details in production with debug off.
+        // Never expose Ignition/stack traces on production — even if APP_DEBUG was left on.
+        // Local/staging (APP_ENV=local|staging) still show details when APP_DEBUG=true.
         $shouldSuppressDetails = false;
         try {
-            $shouldSuppressDetails = app()->environment('production') && ! config('app.debug');
+            $shouldSuppressDetails = app()->environment('production') || ! (bool) config('app.debug');
         } catch (Throwable $envCheckFailure) {
             // Container may be half-booted (e.g. interrupted composer); show the real error locally.
         }
@@ -58,17 +58,25 @@ class Handler extends ExceptionHandler
             return parent::render($request, $e);
         }
 
-        // Always log the exception server-side for debugging.
+        // Always log the full exception server-side for debugging (error_id correlates the page).
         try {
             $errorId = (string) \Illuminate\Support\Str::uuid();
             Log::error('App exception (suppressed in browser)', [
                 'error_id' => $errorId,
                 'exception_class' => get_class($e),
                 'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => $request instanceof Request ? $request->fullUrl() : null,
+                'trace' => collect($e->getTrace())->take(40)->all(),
             ]);
         } catch (Throwable $logFailure) {
             $errorId = null;
-            Log::error('App exception (suppressed in browser) - logging failed');
+            try {
+                Log::error('App exception (suppressed in browser) - structured logging failed: '.$e->getMessage());
+            } catch (Throwable $ignored) {
+                //
+            }
         }
 
         // If the client expects JSON, return a minimal payload.
