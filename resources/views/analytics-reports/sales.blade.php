@@ -147,6 +147,12 @@
                     <div id="salesExportStatus" class="small text-muted d-flex align-items-center gap-2" aria-live="polite"></div>
                 </div>
             </form>
+            @if($showResults && $isPeriodMode && !empty($excelSnapshotMissing))
+                <div class="alert alert-warning py-2 px-3 small mt-2 mb-0">
+                    Excel units snapshot is missing on this server, so unit counts fall back to database releases (not Unit Report Excel history).
+                    Deploy <code>resources/data/excel_units_snapshot.json</code> or run <code>php artisan units:reconcile-excel</code> after uploading the units workbook.
+                </div>
+            @endif
             <p class="small text-muted mt-2 mb-0" id="carSalesFilterHint" data-loaded-mode="{{ $filterMode }}">
                 @if($showResults && $isPeriodMode)
                     Released units only for unit counts. Gross Sales is Excel unit TOTAL REVENUE. Miscellaneous (including Total Forfeit Profit) is shown in its own column and is included in Total Net: <strong>{{ $activeRangeLabel }}</strong>

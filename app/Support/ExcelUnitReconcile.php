@@ -766,14 +766,23 @@ class ExcelUnitReconcile
      */
     public static function loadSnapshot(): ?array
     {
-        $path = storage_path('app/'.self::SNAPSHOT_PATH);
-        if (! File::exists($path)) {
-            return null;
+        // Prefer the working snapshot under storage/app (refreshed by units:reconcile-excel).
+        // Fall back to the tracked copy in resources/data so production git pulls still align
+        // Car Sales / Unit Report to Excel without a manual upload.
+        foreach ([
+            storage_path('app/'.self::SNAPSHOT_PATH),
+            base_path('resources/data/'.self::SNAPSHOT_PATH),
+        ] as $path) {
+            if (! File::exists($path)) {
+                continue;
+            }
+            $data = json_decode(File::get($path), true);
+            if (is_array($data)) {
+                return $data;
+            }
         }
 
-        $data = json_decode(File::get($path), true);
-
-        return is_array($data) ? $data : null;
+        return null;
     }
 
     /**

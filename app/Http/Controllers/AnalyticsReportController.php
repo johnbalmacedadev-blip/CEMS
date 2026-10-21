@@ -243,6 +243,7 @@ class AnalyticsReportController extends Controller
             'tables' => $analytics['tables'],
             'hasData' => (bool) ($analytics['has_data'] ?? false),
             'excelAlignedCounts' => (bool) ($analytics['excel_aligned'] ?? false),
+            'excelSnapshotMissing' => ExcelUnitReconcile::loadSnapshot() === null,
         ];
     }
 
