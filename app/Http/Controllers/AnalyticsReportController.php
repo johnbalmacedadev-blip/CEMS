@@ -483,12 +483,17 @@ class AnalyticsReportController extends Controller
         }
 
         $releaseBuckets = [];
+        $releaseUnitBuckets = [];
         foreach ($releaseVehicles as $vehicle) {
             $key = $this->carTypeDimensionKey($vehicle, $carType);
             if ($key === '') {
                 continue;
             }
+            $event = $vehicle->getAttribute('excel_period_release_date')
+                ?? $vehicle->statusDetail?->release_date
+                ?? $vehicle->statusDetail?->sale_date;
             $releaseBuckets[$key] = ($releaseBuckets[$key] ?? 0) + 1;
+            $releaseUnitBuckets[$key][] = $this->salesReportsUnitPayload($vehicle, 'release', $event);
         }
 
         $labels = collect(array_unique(array_merge(
@@ -512,11 +517,16 @@ class AnalyticsReportController extends Controller
         $pctReleaseBase = max($totalReleases, 0);
 
         $rows = $labels
-            ->map(function ($label) use ($salesBuckets, $salesUnitBuckets, $releaseBuckets, $pctSalesBase, $pctReleaseBase) {
+            ->map(function ($label) use ($salesBuckets, $salesUnitBuckets, $releaseBuckets, $releaseUnitBuckets, $pctSalesBase, $pctReleaseBase) {
                 $salesCount = (int) ($this->bucketValueForLabel($salesBuckets, $label));
                 $releaseCount = (int) ($this->bucketValueForLabel($releaseBuckets, $label));
                 $salesUnits = array_values($this->bucketListForLabel($salesUnitBuckets, $label));
+                $releaseUnits = array_values($this->bucketListForLabel($releaseUnitBuckets, $label));
                 usort($salesUnits, static function ($a, $b) {
+                    return strcmp((string) ($b['event_date'] ?? ''), (string) ($a['event_date'] ?? ''))
+                        ?: strcasecmp((string) ($a['plate'] ?? ''), (string) ($b['plate'] ?? ''));
+                });
+                usort($releaseUnits, static function ($a, $b) {
                     return strcmp((string) ($b['event_date'] ?? ''), (string) ($a['event_date'] ?? ''))
                         ?: strcasecmp((string) ($a['plate'] ?? ''), (string) ($b['plate'] ?? ''));
                 });
@@ -528,6 +538,7 @@ class AnalyticsReportController extends Controller
                     'release_count' => $releaseCount,
                     'release_pct' => $pctReleaseBase > 0 ? round(($releaseCount / $pctReleaseBase) * 100, 1) : 0.0,
                     'sales_units' => array_values($salesUnits),
+                    'release_units' => array_values($releaseUnits),
                 ];
             })
             ->filter(fn (array $row) => ((int) $row['sales_count'] + (int) $row['release_count']) > 0)
@@ -546,12 +557,20 @@ class AnalyticsReportController extends Controller
         $visibleSales = (int) $rows->sum('sales_count');
         $visibleReleases = (int) $rows->sum('release_count');
         $allSalesUnits = [];
+        $allReleaseUnits = [];
         foreach ($rows as $row) {
             foreach (($row['sales_units'] ?? []) as $unit) {
                 $allSalesUnits[] = $unit;
             }
+            foreach (($row['release_units'] ?? []) as $unit) {
+                $allReleaseUnits[] = $unit;
+            }
         }
         usort($allSalesUnits, static function ($a, $b) {
+            return strcmp((string) ($b['event_date'] ?? ''), (string) ($a['event_date'] ?? ''))
+                ?: strcasecmp((string) ($a['plate'] ?? ''), (string) ($b['plate'] ?? ''));
+        });
+        usort($allReleaseUnits, static function ($a, $b) {
             return strcmp((string) ($b['event_date'] ?? ''), (string) ($a['event_date'] ?? ''))
                 ?: strcasecmp((string) ($a['plate'] ?? ''), (string) ($b['plate'] ?? ''));
         });
@@ -564,6 +583,7 @@ class AnalyticsReportController extends Controller
                 'sales_count' => $search !== '' ? $visibleSales : $totalSales,
                 'release_count' => $search !== '' ? $visibleReleases : $totalReleases,
                 'sales_units' => array_values($allSalesUnits),
+                'release_units' => array_values($allReleaseUnits),
             ],
             'has_data' => $rows->isNotEmpty(),
             'columns' => 'sales_releases',

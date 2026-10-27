@@ -266,7 +266,9 @@
                                         @foreach($report['rows'] as $i => $row)
                                             @php
                                                 $salesUnits = $row['sales_units'] ?? [];
+                                                $releaseUnits = $row['release_units'] ?? [];
                                                 $canOpenSales = count($salesUnits) > 0;
+                                                $canOpenReleases = count($releaseUnits) > 0;
                                                 $dimensionTitle = ($report['dimension_label'] ?? 'Group').': '.$row['label'];
                                             @endphp
                                             <tr>
@@ -278,6 +280,7 @@
                                                                 data-bs-toggle="modal"
                                                                 data-bs-target="#carSalesUnitsModal"
                                                                 data-title="{{ $dimensionTitle }}"
+                                                                data-kind="sales"
                                                                 data-units='@json($salesUnits)'>
                                                             {{ $row['label'] }}
                                                         </button>
@@ -293,6 +296,7 @@
                                                                     data-bs-toggle="modal"
                                                                     data-bs-target="#carSalesUnitsModal"
                                                                     data-title="{{ $dimensionTitle }}"
+                                                                    data-kind="sales"
                                                                     data-units='@json($salesUnits)'>
                                                                 {{ number_format((int) ($row['sales_count'] ?? 0)) }}
                                                             </button>
@@ -309,6 +313,7 @@
                                                                     data-bs-toggle="modal"
                                                                     data-bs-target="#carSalesUnitsModal"
                                                                     data-title="{{ $dimensionTitle }}"
+                                                                    data-kind="sales"
                                                                     data-units='@json($salesUnits)'>
                                                                 {{ number_format((int) ($row['sales_count'] ?? 0)) }}
                                                             </button>
@@ -317,7 +322,21 @@
                                                         @endif
                                                     </td>
                                                     <td class="text-end">{{ number_format((float) ($row['sales_pct'] ?? 0), 1) }}%</td>
-                                                    <td class="text-end">{{ number_format((int) ($row['release_count'] ?? 0)) }}</td>
+                                                    <td class="text-end">
+                                                        @if($canOpenReleases)
+                                                            <button type="button"
+                                                                    class="btn btn-link text-decoration-none p-0 car-sales-units-open"
+                                                                    data-bs-toggle="modal"
+                                                                    data-bs-target="#carSalesUnitsModal"
+                                                                    data-title="{{ $dimensionTitle }}"
+                                                                    data-kind="releases"
+                                                                    data-units='@json($releaseUnits)'>
+                                                                {{ number_format((int) ($row['release_count'] ?? 0)) }}
+                                                            </button>
+                                                        @else
+                                                            {{ number_format((int) ($row['release_count'] ?? 0)) }}
+                                                        @endif
+                                                    </td>
                                                     <td class="text-end">{{ number_format((float) ($row['release_pct'] ?? 0), 1) }}%</td>
                                                 @endif
                                             </tr>
@@ -326,7 +345,9 @@
                                     <tfoot class="table-light">
                                         @php
                                             $totalSalesUnits = $report['totals']['sales_units'] ?? [];
+                                            $totalReleaseUnits = $report['totals']['release_units'] ?? [];
                                             $canOpenTotalSales = count($totalSalesUnits) > 0;
+                                            $canOpenTotalReleases = count($totalReleaseUnits) > 0;
                                         @endphp
                                         @if(($report['columns'] ?? '') === 'speed')
                                             <tr>
@@ -339,6 +360,7 @@
                                                                 data-bs-toggle="modal"
                                                                 data-bs-target="#carSalesUnitsModal"
                                                                 data-title="TOTAL — {{ $report['dimension_label'] ?? 'Model' }}"
+                                                                data-kind="sales"
                                                                 data-units='@json($totalSalesUnits)'>
                                                             {{ number_format((int) ($report['totals']['sales_count'] ?? 0)) }}
                                                         </button>
@@ -359,6 +381,7 @@
                                                                 data-bs-toggle="modal"
                                                                 data-bs-target="#carSalesUnitsModal"
                                                                 data-title="TOTAL — {{ $report['dimension_label'] ?? 'Group' }}"
+                                                                data-kind="sales"
                                                                 data-units='@json($totalSalesUnits)'>
                                                             {{ number_format((int) ($report['totals']['sales_count'] ?? 0)) }}
                                                         </button>
@@ -367,7 +390,21 @@
                                                     @endif
                                                 </th>
                                                 <th class="text-end">—</th>
-                                                <th class="text-end">{{ number_format((int) ($report['totals']['release_count'] ?? 0)) }}</th>
+                                                <th class="text-end">
+                                                    @if($canOpenTotalReleases)
+                                                        <button type="button"
+                                                                class="btn btn-link text-decoration-none p-0 fw-bold car-sales-units-open"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#carSalesUnitsModal"
+                                                                data-title="TOTAL — {{ $report['dimension_label'] ?? 'Group' }}"
+                                                                data-kind="releases"
+                                                                data-units='@json($totalReleaseUnits)'>
+                                                            {{ number_format((int) ($report['totals']['release_count'] ?? 0)) }}
+                                                        </button>
+                                                    @else
+                                                        {{ number_format((int) ($report['totals']['release_count'] ?? 0)) }}
+                                                    @endif
+                                                </th>
                                                 <th class="text-end">—</th>
                                             </tr>
                                         @endif
@@ -824,7 +861,7 @@
                                 <th>Year</th>
                                 <th>Status</th>
                                 <th>Location</th>
-                                <th>Sale Date</th>
+                                <th id="carSalesUnitsEventHeader">Sale Date</th>
                                 <th class="text-end">Sold Price</th>
                             </tr>
                         </thead>
@@ -992,6 +1029,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (!trigger) return;
 
             const title = trigger.getAttribute('data-title') || 'Sales';
+            const kind = trigger.getAttribute('data-kind') || 'sales';
+            const isReleases = kind === 'releases';
             let units = [];
             try {
                 units = JSON.parse(trigger.getAttribute('data-units') || '[]');
@@ -1002,11 +1041,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const labelEl = document.getElementById('carSalesUnitsModalLabel');
             const subtitleEl = document.getElementById('carSalesUnitsModalSubtitle');
+            const eventHeaderEl = document.getElementById('carSalesUnitsEventHeader');
             const bodyEl = document.getElementById('carSalesUnitsModalBody');
-            if (labelEl) labelEl.textContent = title + ' — sales';
+            if (labelEl) labelEl.textContent = title + (isReleases ? ' — releases' : ' — sales');
             if (subtitleEl) {
-                subtitleEl.textContent = units.length + ' sale unit(s) in the selected range.';
+                subtitleEl.textContent = units.length + (isReleases
+                    ? ' release unit(s) in the selected range.'
+                    : ' sale unit(s) in the selected range.');
             }
+            if (eventHeaderEl) eventHeaderEl.textContent = isReleases ? 'Release Date' : 'Sale Date';
             if (!bodyEl) return;
 
             const esc = function (value) {
@@ -1033,7 +1076,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const year = esc(unit.year || '—');
                 const status = esc(unit.status || '—');
                 const location = esc(unit.location || '—');
-                const saleDate = esc(unit.event_date_label || unit.event_date || '—');
+                const eventDate = esc(unit.event_date_label || unit.event_date || '—');
                 const plateCell = unit.url
                     ? '<a href="' + esc(unit.url) + '" class="fw-semibold text-decoration-none">' + plate + '</a>'
                     : plate;
@@ -1045,7 +1088,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     + '<td>' + year + '</td>'
                     + '<td>' + status + '</td>'
                     + '<td>' + location + '</td>'
-                    + '<td>' + saleDate + '</td>'
+                    + '<td>' + eventDate + '</td>'
                     + '<td class="text-end">' + money(unit.sold_price) + '</td>'
                     + '</tr>';
             }).join('');
