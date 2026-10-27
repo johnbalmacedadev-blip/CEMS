@@ -133,10 +133,43 @@
                                 </thead>
                                 <tbody>
                                     @foreach($report['rows'] as $row)
+                                        @php
+                                            $stockCount = (int) ($row['stock_count'] ?? 0);
+                                            $stockUnits = $row['stock_units'] ?? [];
+                                            $canOpenStock = $stockCount > 0 && is_array($stockUnits) && count($stockUnits) > 0;
+                                        @endphp
                                         <tr>
                                             <td>{{ $row['rank'] }}</td>
-                                            <td class="fw-semibold">{{ $row['label'] }}</td>
-                                            <td class="text-end">{{ number_format((int) $row['stock_count']) }}</td>
+                                            <td class="fw-semibold">
+                                                @if($canOpenStock)
+                                                    <button type="button"
+                                                            class="btn btn-link text-decoration-none p-0 fw-semibold inventory-stock-open"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#inventoryStockModal"
+                                                            data-title="{{ $row['label'] }}"
+                                                            data-dimension="{{ $report['dimension_label'] ?? 'Group' }}"
+                                                            data-units='@json($stockUnits)'>
+                                                        {{ $row['label'] }}
+                                                    </button>
+                                                @else
+                                                    {{ $row['label'] }}
+                                                @endif
+                                            </td>
+                                            <td class="text-end">
+                                                @if($canOpenStock)
+                                                    <button type="button"
+                                                            class="btn btn-link text-decoration-none p-0 inventory-stock-open"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#inventoryStockModal"
+                                                            data-title="{{ $row['label'] }}"
+                                                            data-dimension="{{ $report['dimension_label'] ?? 'Group' }}"
+                                                            data-units='@json($stockUnits)'>
+                                                        {{ number_format($stockCount) }}
+                                                    </button>
+                                                @else
+                                                    {{ number_format($stockCount) }}
+                                                @endif
+                                            </td>
                                             <td class="text-end">{{ number_format((float) $row['stock_pct'], 1) }}%</td>
                                             <td class="text-end">{{ number_format((int) $row['sold_last_3_months']) }}</td>
                                             <td class="text-end">{{ number_format((float) $row['avg_speed_days'], 1) }}</td>
@@ -165,6 +198,41 @@
         </div>
     @endif
 </div>
+
+<div class="modal fade" id="inventoryStockModal" tabindex="-1" aria-labelledby="inventoryStockModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="inventoryStockModalLabel">Current stock units</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted mb-3" id="inventoryStockModalSubtitle"></p>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:3rem;">#</th>
+                                <th>Plate</th>
+                                <th>Unit</th>
+                                <th>Year</th>
+                                <th>Status</th>
+                                <th>Location</th>
+                                <th>Purchase</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventoryStockModalBody">
+                            <tr><td colspan="7" class="text-muted">No units.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
@@ -177,6 +245,72 @@ document.addEventListener('DOMContentLoaded', function () {
                 excelTabInput.value = btn.getAttribute('data-excel-tab') || 'by_model';
             }
         });
+    });
+
+    const modalEl = document.getElementById('inventoryStockModal');
+    if (!modalEl) return;
+
+    modalEl.addEventListener('show.bs.modal', function (event) {
+        const trigger = event.relatedTarget;
+        if (!trigger) return;
+
+        const title = trigger.getAttribute('data-title') || 'Group';
+        const dimension = trigger.getAttribute('data-dimension') || 'Group';
+        let units = [];
+        try {
+            units = JSON.parse(trigger.getAttribute('data-units') || '[]');
+        } catch (e) {
+            units = [];
+        }
+        if (!Array.isArray(units)) units = [];
+
+        const labelEl = document.getElementById('inventoryStockModalLabel');
+        const subtitleEl = document.getElementById('inventoryStockModalSubtitle');
+        const bodyEl = document.getElementById('inventoryStockModalBody');
+        if (labelEl) {
+            labelEl.textContent = title + ' — current stock';
+        }
+        if (subtitleEl) {
+            subtitleEl.textContent = units.length + ' unit(s) in stock for this ' + dimension.toLowerCase() + '.';
+        }
+        if (!bodyEl) return;
+
+        if (units.length === 0) {
+            bodyEl.innerHTML = '<tr><td colspan="7" class="text-muted">No units found.</td></tr>';
+            return;
+        }
+
+        const esc = function (value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        };
+
+        bodyEl.innerHTML = units.map(function (unit, index) {
+            const plate = esc(unit.plate || '—');
+            const name = esc(unit.name || 'Unknown unit');
+            const year = esc(unit.year || '—');
+            const status = esc(unit.status || '—');
+            const location = esc(unit.location || '—');
+            const purchase = esc(unit.purchase_date || '—');
+            const url = esc(unit.url || '#');
+            const plateCell = unit.url
+                ? '<a href="' + url + '" class="fw-semibold text-decoration-none">' + plate + '</a>'
+                : plate;
+
+            return '<tr>'
+                + '<td>' + (index + 1) + '</td>'
+                + '<td>' + plateCell + '</td>'
+                + '<td>' + name + '</td>'
+                + '<td>' + year + '</td>'
+                + '<td>' + status + '</td>'
+                + '<td>' + location + '</td>'
+                + '<td>' + purchase + '</td>'
+                + '</tr>';
+        }).join('');
     });
 });
 </script>

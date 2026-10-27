@@ -1258,6 +1258,7 @@ class AnalyticsReportController extends Controller
         ?array $fixedLabels = null
     ): array {
         $stockBuckets = [];
+        $stockUnitBuckets = [];
         $profitBuckets = [];
         foreach ($stockVehicles as $vehicle) {
             $key = $this->inventoryDimensionKey($vehicle, $dimension, $asOf, false);
@@ -1265,6 +1266,7 @@ class AnalyticsReportController extends Controller
                 continue;
             }
             $stockBuckets[$key] = ($stockBuckets[$key] ?? 0) + 1;
+            $stockUnitBuckets[$key][] = $this->inventoryStockUnitPayload($vehicle);
             $profitBuckets[$key][] = $this->inventoryPotentialProfit($vehicle);
         }
 
@@ -1301,11 +1303,15 @@ class AnalyticsReportController extends Controller
         $allProfit = [];
 
         $rows = $labels
-            ->map(function ($label) use ($stockBuckets, $soldBuckets, $speedBuckets, $profitBuckets, $totalStock, &$allSpeed, &$allProfit) {
+            ->map(function ($label) use ($stockBuckets, $stockUnitBuckets, $soldBuckets, $speedBuckets, $profitBuckets, $totalStock, &$allSpeed, &$allProfit) {
                 $stock = (int) ($this->bucketValueForLabel($stockBuckets, $label));
                 $sold = (int) ($this->bucketValueForLabel($soldBuckets, $label));
                 $speeds = $this->bucketListForLabel($speedBuckets, $label);
                 $profits = $this->bucketListForLabel($profitBuckets, $label);
+                $units = $this->bucketListForLabel($stockUnitBuckets, $label);
+                usort($units, static function ($a, $b) {
+                    return strcasecmp((string) ($a['plate'] ?? ''), (string) ($b['plate'] ?? ''));
+                });
                 foreach ($speeds as $day) {
                     $allSpeed[] = $day;
                 }
@@ -1320,6 +1326,7 @@ class AnalyticsReportController extends Controller
                     'sold_last_3_months' => $sold,
                     'avg_speed_days' => count($speeds) > 0 ? round(array_sum($speeds) / count($speeds), 1) : 0.0,
                     'avg_potential_profit' => count($profits) > 0 ? array_sum($profits) / count($profits) : 0.0,
+                    'stock_units' => array_values($units),
                 ];
             })
             ->filter(fn (array $row) => ((int) $row['stock_count'] + (int) $row['sold_last_3_months']) > 0);
@@ -1376,6 +1383,29 @@ class AnalyticsReportController extends Controller
             'inventory_age' => $this->inventoryAgeBucketForVehicle($v, $asOf, $forSold),
             default => 'Unknown',
         };
+    }
+
+    /**
+     * Compact unit payload for Current Inventory stock drill-down modal.
+     *
+     * @return array{id:int,plate:string,name:string,year:string,status:string,location:string,purchase_date:?string,url:string}
+     */
+    protected function inventoryStockUnitPayload(Vehicle $v): array
+    {
+        $plate = trim((string) ($v->plate_number ?? ''));
+        $location = trim((string) ($v->branchLocation?->name ?? ''));
+        $purchase = $v->purchase_date ?? null;
+
+        return [
+            'id' => (int) $v->id,
+            'plate' => $plate !== '' ? $plate : '—',
+            'name' => trim((string) ($v->full_name ?? '')) ?: 'Unknown unit',
+            'year' => trim((string) ($v->year ?? '')) ?: '—',
+            'status' => trim((string) ($v->status ?? '')) ?: '—',
+            'location' => $location !== '' ? $location : 'No Location',
+            'purchase_date' => $purchase ? Carbon::parse($purchase)->format('Y-m-d') : null,
+            'url' => route('vehicles.show', $v),
+        ];
     }
 
     protected function inventoryPotentialProfit(Vehicle $v): float
