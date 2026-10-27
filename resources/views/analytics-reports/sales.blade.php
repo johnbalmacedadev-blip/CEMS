@@ -264,14 +264,58 @@
                                     </thead>
                                     <tbody>
                                         @foreach($report['rows'] as $i => $row)
+                                            @php
+                                                $salesUnits = $row['sales_units'] ?? [];
+                                                $canOpenSales = count($salesUnits) > 0;
+                                                $dimensionTitle = ($report['dimension_label'] ?? 'Group').': '.$row['label'];
+                                            @endphp
                                             <tr>
                                                 <td>{{ $i + 1 }}</td>
-                                                <td class="fw-semibold">{{ $row['label'] }}</td>
+                                                <td class="fw-semibold">
+                                                    @if($canOpenSales)
+                                                        <button type="button"
+                                                                class="btn btn-link text-decoration-none p-0 fw-semibold car-sales-units-open"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#carSalesUnitsModal"
+                                                                data-title="{{ $dimensionTitle }}"
+                                                                data-units='@json($salesUnits)'>
+                                                            {{ $row['label'] }}
+                                                        </button>
+                                                    @else
+                                                        {{ $row['label'] }}
+                                                    @endif
+                                                </td>
                                                 @if(($report['columns'] ?? '') === 'speed')
-                                                    <td class="text-end">{{ number_format((int) ($row['sales_count'] ?? 0)) }}</td>
+                                                    <td class="text-end">
+                                                        @if($canOpenSales)
+                                                            <button type="button"
+                                                                    class="btn btn-link text-decoration-none p-0 car-sales-units-open"
+                                                                    data-bs-toggle="modal"
+                                                                    data-bs-target="#carSalesUnitsModal"
+                                                                    data-title="{{ $dimensionTitle }}"
+                                                                    data-units='@json($salesUnits)'>
+                                                                {{ number_format((int) ($row['sales_count'] ?? 0)) }}
+                                                            </button>
+                                                        @else
+                                                            {{ number_format((int) ($row['sales_count'] ?? 0)) }}
+                                                        @endif
+                                                    </td>
                                                     <td class="text-end">{{ number_format((float) ($row['avg_days_to_sell'] ?? 0), 1) }}</td>
                                                 @else
-                                                    <td class="text-end">{{ number_format((int) ($row['sales_count'] ?? 0)) }}</td>
+                                                    <td class="text-end">
+                                                        @if($canOpenSales)
+                                                            <button type="button"
+                                                                    class="btn btn-link text-decoration-none p-0 car-sales-units-open"
+                                                                    data-bs-toggle="modal"
+                                                                    data-bs-target="#carSalesUnitsModal"
+                                                                    data-title="{{ $dimensionTitle }}"
+                                                                    data-units='@json($salesUnits)'>
+                                                                {{ number_format((int) ($row['sales_count'] ?? 0)) }}
+                                                            </button>
+                                                        @else
+                                                            {{ number_format((int) ($row['sales_count'] ?? 0)) }}
+                                                        @endif
+                                                    </td>
                                                     <td class="text-end">{{ number_format((float) ($row['sales_pct'] ?? 0), 1) }}%</td>
                                                     <td class="text-end">{{ number_format((int) ($row['release_count'] ?? 0)) }}</td>
                                                     <td class="text-end">{{ number_format((float) ($row['release_pct'] ?? 0), 1) }}%</td>
@@ -280,18 +324,48 @@
                                         @endforeach
                                     </tbody>
                                     <tfoot class="table-light">
+                                        @php
+                                            $totalSalesUnits = $report['totals']['sales_units'] ?? [];
+                                            $canOpenTotalSales = count($totalSalesUnits) > 0;
+                                        @endphp
                                         @if(($report['columns'] ?? '') === 'speed')
                                             <tr>
                                                 <th>—</th>
                                                 <th>TOTAL</th>
-                                                <th class="text-end">{{ number_format((int) ($report['totals']['sales_count'] ?? 0)) }}</th>
+                                                <th class="text-end">
+                                                    @if($canOpenTotalSales)
+                                                        <button type="button"
+                                                                class="btn btn-link text-decoration-none p-0 fw-bold car-sales-units-open"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#carSalesUnitsModal"
+                                                                data-title="TOTAL — {{ $report['dimension_label'] ?? 'Model' }}"
+                                                                data-units='@json($totalSalesUnits)'>
+                                                            {{ number_format((int) ($report['totals']['sales_count'] ?? 0)) }}
+                                                        </button>
+                                                    @else
+                                                        {{ number_format((int) ($report['totals']['sales_count'] ?? 0)) }}
+                                                    @endif
+                                                </th>
                                                 <th class="text-end">{{ number_format((float) ($report['totals']['avg_days_to_sell'] ?? 0), 1) }}</th>
                                             </tr>
                                         @else
                                             <tr>
                                                 <th>—</th>
                                                 <th>TOTAL</th>
-                                                <th class="text-end">{{ number_format((int) ($report['totals']['sales_count'] ?? 0)) }}</th>
+                                                <th class="text-end">
+                                                    @if($canOpenTotalSales)
+                                                        <button type="button"
+                                                                class="btn btn-link text-decoration-none p-0 fw-bold car-sales-units-open"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#carSalesUnitsModal"
+                                                                data-title="TOTAL — {{ $report['dimension_label'] ?? 'Group' }}"
+                                                                data-units='@json($totalSalesUnits)'>
+                                                            {{ number_format((int) ($report['totals']['sales_count'] ?? 0)) }}
+                                                        </button>
+                                                    @else
+                                                        {{ number_format((int) ($report['totals']['sales_count'] ?? 0)) }}
+                                                    @endif
+                                                </th>
                                                 <th class="text-end">—</th>
                                                 <th class="text-end">{{ number_format((int) ($report['totals']['release_count'] ?? 0)) }}</th>
                                                 <th class="text-end">—</th>
@@ -730,6 +804,42 @@
     @endif
     </div>
 </div>
+
+<div class="modal fade" id="carSalesUnitsModal" tabindex="-1" aria-labelledby="carSalesUnitsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="carSalesUnitsModalLabel">Sales units</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted mb-3" id="carSalesUnitsModalSubtitle"></p>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:3rem;">#</th>
+                                <th>Plate</th>
+                                <th>Unit</th>
+                                <th>Year</th>
+                                <th>Status</th>
+                                <th>Location</th>
+                                <th>Sale Date</th>
+                                <th class="text-end">Sold Price</th>
+                            </tr>
+                        </thead>
+                        <tbody id="carSalesUnitsModalBody">
+                            <tr><td colspan="8" class="text-muted">No units.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('styles')
@@ -875,6 +985,73 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const carSalesUnitsModal = document.getElementById('carSalesUnitsModal');
+    if (carSalesUnitsModal) {
+        carSalesUnitsModal.addEventListener('show.bs.modal', function (event) {
+            const trigger = event.relatedTarget;
+            if (!trigger) return;
+
+            const title = trigger.getAttribute('data-title') || 'Sales';
+            let units = [];
+            try {
+                units = JSON.parse(trigger.getAttribute('data-units') || '[]');
+            } catch (e) {
+                units = [];
+            }
+            if (!Array.isArray(units)) units = [];
+
+            const labelEl = document.getElementById('carSalesUnitsModalLabel');
+            const subtitleEl = document.getElementById('carSalesUnitsModalSubtitle');
+            const bodyEl = document.getElementById('carSalesUnitsModalBody');
+            if (labelEl) labelEl.textContent = title + ' — sales';
+            if (subtitleEl) {
+                subtitleEl.textContent = units.length + ' sale unit(s) in the selected range.';
+            }
+            if (!bodyEl) return;
+
+            const esc = function (value) {
+                return String(value == null ? '' : value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            };
+            const money = function (value) {
+                const n = Number(value || 0);
+                return '₱' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            };
+
+            if (units.length === 0) {
+                bodyEl.innerHTML = '<tr><td colspan="8" class="text-muted">No units found.</td></tr>';
+                return;
+            }
+
+            bodyEl.innerHTML = units.map(function (unit, index) {
+                const plate = esc(unit.plate || '—');
+                const name = esc(unit.name || 'Unknown unit');
+                const year = esc(unit.year || '—');
+                const status = esc(unit.status || '—');
+                const location = esc(unit.location || '—');
+                const saleDate = esc(unit.event_date_label || unit.event_date || '—');
+                const plateCell = unit.url
+                    ? '<a href="' + esc(unit.url) + '" class="fw-semibold text-decoration-none">' + plate + '</a>'
+                    : plate;
+
+                return '<tr>'
+                    + '<td>' + (index + 1) + '</td>'
+                    + '<td>' + plateCell + '</td>'
+                    + '<td>' + name + '</td>'
+                    + '<td>' + year + '</td>'
+                    + '<td>' + status + '</td>'
+                    + '<td>' + location + '</td>'
+                    + '<td>' + saleDate + '</td>'
+                    + '<td class="text-end">' + money(unit.sold_price) + '</td>'
+                    + '</tr>';
+            }).join('');
+        });
+    }
+
     const period = document.getElementById('period');
     const customRangeOnlyFields = document.querySelectorAll('.custom-range-only-field');
     const yearFilterFields = document.querySelectorAll('.year-filter-field');

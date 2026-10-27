@@ -471,12 +471,15 @@ class AnalyticsReportController extends Controller
         string $search = ''
     ): array {
         $salesBuckets = [];
+        $salesUnitBuckets = [];
         foreach ($saleVehicles as $vehicle) {
             $key = $this->carTypeDimensionKey($vehicle, $carType);
             if ($key === '') {
                 continue;
             }
+            $saleDate = $vehicle->statusDetail?->sale_date;
             $salesBuckets[$key] = ($salesBuckets[$key] ?? 0) + 1;
+            $salesUnitBuckets[$key][] = $this->salesReportsUnitPayload($vehicle, 'sale', $saleDate);
         }
 
         $releaseBuckets = [];
@@ -509,9 +512,14 @@ class AnalyticsReportController extends Controller
         $pctReleaseBase = max($totalReleases, 0);
 
         $rows = $labels
-            ->map(function ($label) use ($salesBuckets, $releaseBuckets, $pctSalesBase, $pctReleaseBase) {
+            ->map(function ($label) use ($salesBuckets, $salesUnitBuckets, $releaseBuckets, $pctSalesBase, $pctReleaseBase) {
                 $salesCount = (int) ($this->bucketValueForLabel($salesBuckets, $label));
                 $releaseCount = (int) ($this->bucketValueForLabel($releaseBuckets, $label));
+                $salesUnits = array_values($this->bucketListForLabel($salesUnitBuckets, $label));
+                usort($salesUnits, static function ($a, $b) {
+                    return strcmp((string) ($b['event_date'] ?? ''), (string) ($a['event_date'] ?? ''))
+                        ?: strcasecmp((string) ($a['plate'] ?? ''), (string) ($b['plate'] ?? ''));
+                });
 
                 return [
                     'label' => $label,
@@ -519,6 +527,7 @@ class AnalyticsReportController extends Controller
                     'sales_pct' => $pctSalesBase > 0 ? round(($salesCount / $pctSalesBase) * 100, 1) : 0.0,
                     'release_count' => $releaseCount,
                     'release_pct' => $pctReleaseBase > 0 ? round(($releaseCount / $pctReleaseBase) * 100, 1) : 0.0,
+                    'sales_units' => array_values($salesUnits),
                 ];
             })
             ->filter(fn (array $row) => ((int) $row['sales_count'] + (int) $row['release_count']) > 0)
@@ -536,6 +545,16 @@ class AnalyticsReportController extends Controller
 
         $visibleSales = (int) $rows->sum('sales_count');
         $visibleReleases = (int) $rows->sum('release_count');
+        $allSalesUnits = [];
+        foreach ($rows as $row) {
+            foreach (($row['sales_units'] ?? []) as $unit) {
+                $allSalesUnits[] = $unit;
+            }
+        }
+        usort($allSalesUnits, static function ($a, $b) {
+            return strcmp((string) ($b['event_date'] ?? ''), (string) ($a['event_date'] ?? ''))
+                ?: strcasecmp((string) ($a['plate'] ?? ''), (string) ($b['plate'] ?? ''));
+        });
 
         return [
             'title' => $title,
@@ -544,6 +563,7 @@ class AnalyticsReportController extends Controller
             'totals' => [
                 'sales_count' => $search !== '' ? $visibleSales : $totalSales,
                 'release_count' => $search !== '' ? $visibleReleases : $totalReleases,
+                'sales_units' => array_values($allSalesUnits),
             ],
             'has_data' => $rows->isNotEmpty(),
             'columns' => 'sales_releases',
@@ -559,6 +579,7 @@ class AnalyticsReportController extends Controller
     protected function buildModelsBySpeedToSellTable(Collection $saleVehicles, string $search = ''): array
     {
         $salesBuckets = [];
+        $salesUnitBuckets = [];
         $daysBuckets = [];
 
         foreach ($saleVehicles as $vehicle) {
@@ -571,6 +592,7 @@ class AnalyticsReportController extends Controller
             $saleDate = $vehicle->statusDetail?->sale_date
                 ?? $vehicle->statusDetail?->release_date
                 ?? $vehicle->getAttribute('excel_period_release_date');
+            $salesUnitBuckets[$label][] = $this->salesReportsUnitPayload($vehicle, 'sale', $saleDate);
             $purchase = $vehicle->purchase_date ?? $vehicle->created_at;
             if ($saleDate && $purchase) {
                 $daysBuckets[$label][] = (float) Carbon::parse($purchase)->diffInDays(Carbon::parse($saleDate));
@@ -591,18 +613,24 @@ class AnalyticsReportController extends Controller
 
         $allDays = [];
         $rows = $labels
-            ->map(function ($label) use ($salesBuckets, $daysBuckets, &$allDays) {
+            ->map(function ($label) use ($salesBuckets, $salesUnitBuckets, $daysBuckets, &$allDays) {
                 $salesCount = (int) ($this->bucketValueForLabel($salesBuckets, $label));
                 $days = $this->bucketListForLabel($daysBuckets, $label);
                 foreach ($days as $day) {
                     $allDays[] = $day;
                 }
                 $avgDays = count($days) > 0 ? round(array_sum($days) / count($days), 1) : 0.0;
+                $salesUnits = array_values($this->bucketListForLabel($salesUnitBuckets, $label));
+                usort($salesUnits, static function ($a, $b) {
+                    return strcmp((string) ($b['event_date'] ?? ''), (string) ($a['event_date'] ?? ''))
+                        ?: strcasecmp((string) ($a['plate'] ?? ''), (string) ($b['plate'] ?? ''));
+                });
 
                 return [
                     'label' => $label,
                     'sales_count' => $salesCount,
                     'avg_days_to_sell' => $avgDays,
+                    'sales_units' => array_values($salesUnits),
                 ];
             })
             ->filter(fn ($row) => (int) $row['sales_count'] > 0)
@@ -616,6 +644,16 @@ class AnalyticsReportController extends Controller
             ->values();
 
         $totalSales = (int) $rows->sum('sales_count');
+        $allSalesUnits = [];
+        foreach ($rows as $row) {
+            foreach (($row['sales_units'] ?? []) as $unit) {
+                $allSalesUnits[] = $unit;
+            }
+        }
+        usort($allSalesUnits, static function ($a, $b) {
+            return strcmp((string) ($b['event_date'] ?? ''), (string) ($a['event_date'] ?? ''))
+                ?: strcasecmp((string) ($a['plate'] ?? ''), (string) ($b['plate'] ?? ''));
+        });
 
         return [
             'title' => 'Models by Speed to Sell',
@@ -624,6 +662,7 @@ class AnalyticsReportController extends Controller
             'totals' => [
                 'sales_count' => $totalSales,
                 'avg_days_to_sell' => count($allDays) > 0 ? round(array_sum($allDays) / count($allDays), 1) : 0.0,
+                'sales_units' => array_values($allSalesUnits),
             ],
             'has_data' => $rows->isNotEmpty(),
             'columns' => 'speed',
