@@ -3126,6 +3126,7 @@ class AnalyticsReportController extends Controller
         $leader = $activeRanking->first();
 
         $monthlyByLeader = collect();
+        $leaderUnits = [];
         if ($leader) {
             $leaderKey = $leader['name_key'] ?? $this->normalizePersonName($leader['name']);
             $leaderRows = $viewMode === 'executives'
@@ -3153,6 +3154,28 @@ class AnalyticsReportController extends Controller
                     ];
                 })
                 ->values();
+
+            $leaderUnits = $leaderRows
+                ->sortByDesc('release_date_raw')
+                ->values()
+                ->map(function ($r) {
+                    $vehicleId = (int) ($r['vehicle_id'] ?? 0);
+                    $plate = trim((string) ($r['plate'] ?? ''));
+
+                    return [
+                        'plate' => $plate !== '' ? $plate : '—',
+                        'unit' => trim((string) ($r['unit'] ?? '')) ?: '—',
+                        'release_date' => ! empty($r['release_date_raw'])
+                            ? Carbon::parse($r['release_date_raw'])->format('M d, Y')
+                            : '—',
+                        'credited_to' => trim((string) ($r['name'] ?? '')) ?: '—',
+                        'role' => trim((string) ($r['role'] ?? '')) ?: '—',
+                        'sales' => (float) ($r['sold_price'] ?? 0),
+                        'source' => trim((string) ($r['source'] ?? '')) ?: '—',
+                        'url' => $vehicleId > 0 ? route('vehicles.show', $vehicleId) : null,
+                    ];
+                })
+                ->all();
         }
 
         return [
@@ -3168,6 +3191,11 @@ class AnalyticsReportController extends Controller
                         ? ($leader['name'].' · '.number_format($leader['units']).' units')
                         : '—',
                     'is_text' => true,
+                    'is_clickable' => $leader && count($leaderUnits) > 0,
+                    'units' => $leaderUnits,
+                    'modal_title' => $leader
+                        ? ($leader['name'].' — released units')
+                        : 'Top Performer — released units',
                 ],
             ],
             'charts' => [

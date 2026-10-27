@@ -114,7 +114,17 @@
                         <div class="card-body py-3">
                             <div class="text-muted small mb-1">{{ $card['label'] }}</div>
                             <div class="h5 mb-0">
-                                @if(!empty($card['is_text']))
+                                @if(!empty($card['is_clickable']) && !empty($card['units']))
+                                    <button type="button"
+                                            class="btn btn-link text-decoration-none p-0 h5 mb-0 text-start sales-exec-top-performer-open"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#salesExecTopPerformerModal"
+                                            data-title="{{ $card['modal_title'] ?? ($card['value'] ?? 'Top Performer') }}"
+                                            data-units='@json($card['units'])'>
+                                        {{ $card['value'] }}
+                                        <span class="d-block small fw-normal text-muted mt-1">Click to view released units</span>
+                                    </button>
+                                @elseif(!empty($card['is_text']))
                                     {{ $card['value'] }}
                                 @elseif(!empty($card['is_currency']))
                                     ₱{{ number_format((float) $card['value'], 2) }}
@@ -420,6 +430,41 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="salesExecTopPerformerModal" tabindex="-1" aria-labelledby="salesExecTopPerformerModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="salesExecTopPerformerModalLabel">Top Performer — released units</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted mb-3" id="salesExecTopPerformerModalSubtitle"></p>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:3rem;">#</th>
+                                <th>Plate</th>
+                                <th>Unit</th>
+                                <th>Release Date</th>
+                                <th>Credited To</th>
+                                <th>Role</th>
+                                <th class="text-end">Sales</th>
+                            </tr>
+                        </thead>
+                        <tbody id="salesExecTopPerformerModalBody">
+                            <tr><td colspan="7" class="text-muted">No units.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('styles')
@@ -438,6 +483,72 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const topModal = document.getElementById('salesExecTopPerformerModal');
+    if (topModal) {
+        topModal.addEventListener('show.bs.modal', function (event) {
+            const trigger = event.relatedTarget;
+            if (!trigger) return;
+
+            const title = trigger.getAttribute('data-title') || 'Top Performer — released units';
+            let units = [];
+            try {
+                units = JSON.parse(trigger.getAttribute('data-units') || '[]');
+            } catch (e) {
+                units = [];
+            }
+            if (!Array.isArray(units)) units = [];
+
+            const labelEl = document.getElementById('salesExecTopPerformerModalLabel');
+            const subtitleEl = document.getElementById('salesExecTopPerformerModalSubtitle');
+            const bodyEl = document.getElementById('salesExecTopPerformerModalBody');
+            if (labelEl) labelEl.textContent = title;
+            if (subtitleEl) {
+                subtitleEl.textContent = units.length + ' released unit(s) credited to this top performer in the selected range.';
+            }
+            if (!bodyEl) return;
+
+            const esc = function (value) {
+                return String(value == null ? '' : value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            };
+            const money = function (value) {
+                const n = Number(value || 0);
+                return '₱' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            };
+
+            if (units.length === 0) {
+                bodyEl.innerHTML = '<tr><td colspan="7" class="text-muted">No units found.</td></tr>';
+                return;
+            }
+
+            bodyEl.innerHTML = units.map(function (unit, index) {
+                const plate = esc(unit.plate || '—');
+                const unitName = esc(unit.unit || '—');
+                const releaseDate = esc(unit.release_date || '—');
+                const credited = esc(unit.credited_to || '—');
+                const role = esc(unit.role || '—');
+                const sales = money(unit.sales);
+                const plateCell = unit.url
+                    ? '<a href="' + esc(unit.url) + '" class="fw-semibold text-decoration-none">' + plate + '</a>'
+                    : plate;
+
+                return '<tr>'
+                    + '<td>' + (index + 1) + '</td>'
+                    + '<td>' + plateCell + '</td>'
+                    + '<td>' + unitName + '</td>'
+                    + '<td>' + releaseDate + '</td>'
+                    + '<td>' + credited + '</td>'
+                    + '<td>' + role + '</td>'
+                    + '<td class="text-end">' + sales + '</td>'
+                    + '</tr>';
+            }).join('');
+        });
+    }
+
     const period = document.getElementById('period');
     const customRangeOnlyFields = document.querySelectorAll('.custom-range-only-field');
     const yearFilterFields = document.querySelectorAll('.year-filter-field');
