@@ -136,7 +136,11 @@
                                 @foreach($speed['rows'] as $i => $row)
                                     @php
                                         $suppliedUnits = $row['supplied_units'] ?? [];
+                                        $salesUnits = $row['sales_units'] ?? [];
+                                        $releaseUnits = $row['release_units'] ?? [];
                                         $canOpenSupplied = count($suppliedUnits) > 0;
+                                        $canOpenSales = count($salesUnits) > 0;
+                                        $canOpenReleases = count($releaseUnits) > 0;
                                     @endphp
                                     <tr>
                                         <td>{{ $i + 1 }}</td>
@@ -144,10 +148,11 @@
                                         <td class="text-end">
                                             @if($canOpenSupplied)
                                                 <button type="button"
-                                                        class="btn btn-link text-decoration-none p-0 supplier-supplied-open"
+                                                        class="btn btn-link text-decoration-none p-0 supplier-units-open"
                                                         data-bs-toggle="modal"
-                                                        data-bs-target="#supplierSuppliedModal"
+                                                        data-bs-target="#supplierUnitsModal"
                                                         data-title="{{ $row['supplier'] }}"
+                                                        data-kind="supplied"
                                                         data-units='@json($suppliedUnits)'>
                                                     {{ number_format((int) ($row['supplied_count'] ?? 0)) }}
                                                 </button>
@@ -156,9 +161,37 @@
                                             @endif
                                         </td>
                                         <td class="text-end">{{ number_format((float) ($row['supplied_pct'] ?? 0), 1) }}%</td>
-                                        <td class="text-end">{{ number_format((int) $row['sales_count']) }}</td>
+                                        <td class="text-end">
+                                            @if($canOpenSales)
+                                                <button type="button"
+                                                        class="btn btn-link text-decoration-none p-0 supplier-units-open"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#supplierUnitsModal"
+                                                        data-title="{{ $row['supplier'] }}"
+                                                        data-kind="sales"
+                                                        data-units='@json($salesUnits)'>
+                                                    {{ number_format((int) $row['sales_count']) }}
+                                                </button>
+                                            @else
+                                                {{ number_format((int) $row['sales_count']) }}
+                                            @endif
+                                        </td>
                                         <td class="text-end">{{ number_format((float) $row['sales_pct'], 1) }}%</td>
-                                        <td class="text-end">{{ number_format((int) $row['release_count']) }}</td>
+                                        <td class="text-end">
+                                            @if($canOpenReleases)
+                                                <button type="button"
+                                                        class="btn btn-link text-decoration-none p-0 supplier-units-open"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#supplierUnitsModal"
+                                                        data-title="{{ $row['supplier'] }}"
+                                                        data-kind="releases"
+                                                        data-units='@json($releaseUnits)'>
+                                                    {{ number_format((int) $row['release_count']) }}
+                                                </button>
+                                            @else
+                                                {{ number_format((int) $row['release_count']) }}
+                                            @endif
+                                        </td>
                                         <td class="text-end">{{ number_format((float) $row['release_pct'], 1) }}%</td>
                                         <td class="text-end">{{ number_format((float) $row['avg_days_to_sell'], 1) }}</td>
                                     </tr>
@@ -167,7 +200,11 @@
                             <tfoot class="table-light">
                                 @php
                                     $totalSuppliedUnits = $speed['totals']['supplied_units'] ?? [];
+                                    $totalSalesUnits = $speed['totals']['sales_units'] ?? [];
+                                    $totalReleaseUnits = $speed['totals']['release_units'] ?? [];
                                     $canOpenTotalSupplied = count($totalSuppliedUnits) > 0;
+                                    $canOpenTotalSales = count($totalSalesUnits) > 0;
+                                    $canOpenTotalReleases = count($totalReleaseUnits) > 0;
                                 @endphp
                                 <tr>
                                     <th>—</th>
@@ -175,10 +212,11 @@
                                     <th class="text-end">
                                         @if($canOpenTotalSupplied)
                                             <button type="button"
-                                                    class="btn btn-link text-decoration-none p-0 fw-bold supplier-supplied-open"
+                                                    class="btn btn-link text-decoration-none p-0 fw-bold supplier-units-open"
                                                     data-bs-toggle="modal"
-                                                    data-bs-target="#supplierSuppliedModal"
+                                                    data-bs-target="#supplierUnitsModal"
                                                     data-title="TOTAL"
+                                                    data-kind="supplied"
                                                     data-units='@json($totalSuppliedUnits)'>
                                                 {{ number_format((int) ($speed['totals']['supplied_count'] ?? 0)) }}
                                             </button>
@@ -187,9 +225,37 @@
                                         @endif
                                     </th>
                                     <th class="text-end">—</th>
-                                    <th class="text-end">{{ number_format((int) ($speed['totals']['sales_count'] ?? 0)) }}</th>
+                                    <th class="text-end">
+                                        @if($canOpenTotalSales)
+                                            <button type="button"
+                                                    class="btn btn-link text-decoration-none p-0 fw-bold supplier-units-open"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#supplierUnitsModal"
+                                                    data-title="TOTAL"
+                                                    data-kind="sales"
+                                                    data-units='@json($totalSalesUnits)'>
+                                                {{ number_format((int) ($speed['totals']['sales_count'] ?? 0)) }}
+                                            </button>
+                                        @else
+                                            {{ number_format((int) ($speed['totals']['sales_count'] ?? 0)) }}
+                                        @endif
+                                    </th>
                                     <th class="text-end">—</th>
-                                    <th class="text-end">{{ number_format((int) ($speed['totals']['release_count'] ?? 0)) }}</th>
+                                    <th class="text-end">
+                                        @if($canOpenTotalReleases)
+                                            <button type="button"
+                                                    class="btn btn-link text-decoration-none p-0 fw-bold supplier-units-open"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#supplierUnitsModal"
+                                                    data-title="TOTAL"
+                                                    data-kind="releases"
+                                                    data-units='@json($totalReleaseUnits)'>
+                                                {{ number_format((int) ($speed['totals']['release_count'] ?? 0)) }}
+                                            </button>
+                                        @else
+                                            {{ number_format((int) ($speed['totals']['release_count'] ?? 0)) }}
+                                        @endif
+                                    </th>
                                     <th class="text-end">—</th>
                                     <th class="text-end">{{ number_format((float) ($speed['totals']['avg_days_to_sell'] ?? 0), 1) }}</th>
                                 </tr>
@@ -256,15 +322,15 @@
     @endif
 </div>
 
-<div class="modal fade" id="supplierSuppliedModal" tabindex="-1" aria-labelledby="supplierSuppliedModalLabel" aria-hidden="true">
+<div class="modal fade" id="supplierUnitsModal" tabindex="-1" aria-labelledby="supplierUnitsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="supplierSuppliedModalLabel">Units Supplied</h5>
+                <h5 class="modal-title" id="supplierUnitsModalLabel">Supplier units</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p class="small text-muted mb-3" id="supplierSuppliedModalSubtitle"></p>
+                <p class="small text-muted mb-3" id="supplierUnitsModalSubtitle"></p>
                 <div class="table-responsive">
                     <table class="table table-sm table-striped align-middle mb-0">
                         <thead class="table-light">
@@ -275,11 +341,12 @@
                                 <th>Year</th>
                                 <th>Status</th>
                                 <th>Location</th>
-                                <th>Purchase</th>
+                                <th id="supplierUnitsEventHeader">Date</th>
+                                <th class="text-end" id="supplierUnitsPriceHeader">Sold Price</th>
                             </tr>
                         </thead>
-                        <tbody id="supplierSuppliedModalBody">
-                            <tr><td colspan="7" class="text-muted">No units.</td></tr>
+                        <tbody id="supplierUnitsModalBody">
+                            <tr><td colspan="8" class="text-muted">No units.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -328,7 +395,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (period) period.addEventListener('change', toggleRangeFields);
     toggleRangeFields();
 
-    const modalEl = document.getElementById('supplierSuppliedModal');
+    const modalEl = document.getElementById('supplierUnitsModal');
     if (!modalEl) return;
 
     modalEl.addEventListener('show.bs.modal', function (event) {
@@ -336,6 +403,7 @@ document.addEventListener('DOMContentLoaded', function () {
         if (!trigger) return;
 
         const title = trigger.getAttribute('data-title') || 'Supplier';
+        const kind = trigger.getAttribute('data-kind') || 'supplied';
         let units = [];
         try {
             units = JSON.parse(trigger.getAttribute('data-units') || '[]');
@@ -344,13 +412,38 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         if (!Array.isArray(units)) units = [];
 
-        const labelEl = document.getElementById('supplierSuppliedModalLabel');
-        const subtitleEl = document.getElementById('supplierSuppliedModalSubtitle');
-        const bodyEl = document.getElementById('supplierSuppliedModalBody');
-        if (labelEl) labelEl.textContent = title + ' — units supplied';
-        if (subtitleEl) {
-            subtitleEl.textContent = units.length + ' unit(s) purchased/acquired from this supplier in the selected range.';
-        }
+        const labelEl = document.getElementById('supplierUnitsModalLabel');
+        const subtitleEl = document.getElementById('supplierUnitsModalSubtitle');
+        const eventHeaderEl = document.getElementById('supplierUnitsEventHeader');
+        const priceHeaderEl = document.getElementById('supplierUnitsPriceHeader');
+        const bodyEl = document.getElementById('supplierUnitsModalBody');
+
+        const kindMeta = {
+            supplied: {
+                label: 'units supplied',
+                subtitle: 'unit(s) purchased/acquired from this supplier in the selected range.',
+                eventHeader: 'Purchase',
+                showPrice: false
+            },
+            sales: {
+                label: 'sales',
+                subtitle: 'sale(s) from this supplier in the selected range.',
+                eventHeader: 'Sale Date',
+                showPrice: true
+            },
+            releases: {
+                label: 'releases',
+                subtitle: 'release(s) from this supplier in the selected range.',
+                eventHeader: 'Release Date',
+                showPrice: true
+            }
+        };
+        const meta = kindMeta[kind] || kindMeta.supplied;
+
+        if (labelEl) labelEl.textContent = title + ' — ' + meta.label;
+        if (subtitleEl) subtitleEl.textContent = units.length + ' ' + meta.subtitle;
+        if (eventHeaderEl) eventHeaderEl.textContent = meta.eventHeader;
+        if (priceHeaderEl) priceHeaderEl.style.display = meta.showPrice ? '' : 'none';
         if (!bodyEl) return;
 
         const esc = function (value) {
@@ -361,9 +454,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#39;');
         };
+        const money = function (value) {
+            const n = Number(value || 0);
+            return '₱' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
 
         if (units.length === 0) {
-            bodyEl.innerHTML = '<tr><td colspan="7" class="text-muted">No units found.</td></tr>';
+            bodyEl.innerHTML = '<tr><td colspan="8" class="text-muted">No units found.</td></tr>';
             return;
         }
 
@@ -373,10 +470,18 @@ document.addEventListener('DOMContentLoaded', function () {
             const year = esc(unit.year || '—');
             const status = esc(unit.status || '—');
             const location = esc(unit.location || '—');
-            const purchase = esc(unit.purchase_date || '—');
+            const eventDate = esc(
+                unit.event_date_label
+                || unit.event_date
+                || unit.purchase_date
+                || '—'
+            );
             const plateCell = unit.url
                 ? '<a href="' + esc(unit.url) + '" class="fw-semibold text-decoration-none">' + plate + '</a>'
                 : plate;
+            const priceCell = meta.showPrice
+                ? '<td class="text-end">' + money(unit.sold_price) + '</td>'
+                : '';
 
             return '<tr>'
                 + '<td>' + (index + 1) + '</td>'
@@ -385,7 +490,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 + '<td>' + year + '</td>'
                 + '<td>' + status + '</td>'
                 + '<td>' + location + '</td>'
-                + '<td>' + purchase + '</td>'
+                + '<td>' + eventDate + '</td>'
+                + priceCell
                 + '</tr>';
         }).join('');
     });
