@@ -2839,9 +2839,18 @@ class AnalyticsReportController extends Controller
             ->values();
 
         $suppliedBuckets = [];
+        $suppliedUnitBuckets = [];
         foreach ($suppliedVehicles as $vehicle) {
             $key = $this->vehicleSupplierLabel($vehicle);
             $suppliedBuckets[$key] = ($suppliedBuckets[$key] ?? 0) + 1;
+            $suppliedUnitBuckets[$key][] = $this->inventoryStockUnitPayload($vehicle);
+        }
+        foreach ($suppliedUnitBuckets as $key => $units) {
+            usort($units, static function ($a, $b) {
+                return strcmp((string) ($b['purchase_date'] ?? ''), (string) ($a['purchase_date'] ?? ''))
+                    ?: strcasecmp((string) ($a['plate'] ?? ''), (string) ($b['plate'] ?? ''));
+            });
+            $suppliedUnitBuckets[$key] = array_values($units);
         }
 
         $salesBuckets = [];
@@ -2883,6 +2892,7 @@ class AnalyticsReportController extends Controller
         $speedRows = $labels
             ->map(function ($label) use (
                 $suppliedBuckets,
+                $suppliedUnitBuckets,
                 $salesBuckets,
                 $releaseBuckets,
                 $daysBuckets,
@@ -2895,6 +2905,7 @@ class AnalyticsReportController extends Controller
                 $releaseCount = (int) ($releaseBuckets[$label] ?? 0);
                 $days = $daysBuckets[$label] ?? [];
                 $avgDays = count($days) > 0 ? round(array_sum($days) / count($days), 1) : 0.0;
+                $suppliedUnits = array_values($suppliedUnitBuckets[$label] ?? []);
 
                 return [
                     'supplier' => $label,
@@ -2905,6 +2916,7 @@ class AnalyticsReportController extends Controller
                     'release_count' => $releaseCount,
                     'release_pct' => $pctReleaseBase > 0 ? round(($releaseCount / $pctReleaseBase) * 100, 1) : 0.0,
                     'avg_days_to_sell' => $avgDays,
+                    'supplied_units' => $suppliedUnits,
                 ];
             })
             ->filter(function (array $row) {
@@ -2928,17 +2940,26 @@ class AnalyticsReportController extends Controller
             ->values();
 
         $visibleDays = [];
+        $allSuppliedUnits = [];
         foreach ($speedRows as $row) {
             $days = $daysBuckets[$row['supplier']] ?? [];
             foreach ($days as $day) {
                 $visibleDays[] = $day;
             }
+            foreach (($row['supplied_units'] ?? []) as $unit) {
+                $allSuppliedUnits[] = $unit;
+            }
         }
+        usort($allSuppliedUnits, static function ($a, $b) {
+            return strcmp((string) ($b['purchase_date'] ?? ''), (string) ($a['purchase_date'] ?? ''))
+                ?: strcasecmp((string) ($a['plate'] ?? ''), (string) ($b['plate'] ?? ''));
+        });
         $speedTotals = [
             'supplied_count' => (int) $speedRows->sum('supplied_count'),
             'sales_count' => (int) $speedRows->sum('sales_count'),
             'release_count' => (int) $speedRows->sum('release_count'),
             'avg_days_to_sell' => count($visibleDays) > 0 ? round(array_sum($visibleDays) / count($visibleDays), 1) : 0.0,
+            'supplied_units' => array_values($allSuppliedUnits),
         ];
 
         $grossNetRows = $labels

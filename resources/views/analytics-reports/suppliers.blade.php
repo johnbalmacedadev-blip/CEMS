@@ -134,10 +134,27 @@
                             </thead>
                             <tbody>
                                 @foreach($speed['rows'] as $i => $row)
+                                    @php
+                                        $suppliedUnits = $row['supplied_units'] ?? [];
+                                        $canOpenSupplied = count($suppliedUnits) > 0;
+                                    @endphp
                                     <tr>
                                         <td>{{ $i + 1 }}</td>
                                         <td class="fw-semibold">{{ $row['supplier'] }}</td>
-                                        <td class="text-end">{{ number_format((int) ($row['supplied_count'] ?? 0)) }}</td>
+                                        <td class="text-end">
+                                            @if($canOpenSupplied)
+                                                <button type="button"
+                                                        class="btn btn-link text-decoration-none p-0 supplier-supplied-open"
+                                                        data-bs-toggle="modal"
+                                                        data-bs-target="#supplierSuppliedModal"
+                                                        data-title="{{ $row['supplier'] }}"
+                                                        data-units='@json($suppliedUnits)'>
+                                                    {{ number_format((int) ($row['supplied_count'] ?? 0)) }}
+                                                </button>
+                                            @else
+                                                {{ number_format((int) ($row['supplied_count'] ?? 0)) }}
+                                            @endif
+                                        </td>
                                         <td class="text-end">{{ number_format((float) ($row['supplied_pct'] ?? 0), 1) }}%</td>
                                         <td class="text-end">{{ number_format((int) $row['sales_count']) }}</td>
                                         <td class="text-end">{{ number_format((float) $row['sales_pct'], 1) }}%</td>
@@ -148,10 +165,27 @@
                                 @endforeach
                             </tbody>
                             <tfoot class="table-light">
+                                @php
+                                    $totalSuppliedUnits = $speed['totals']['supplied_units'] ?? [];
+                                    $canOpenTotalSupplied = count($totalSuppliedUnits) > 0;
+                                @endphp
                                 <tr>
                                     <th>—</th>
                                     <th>TOTAL</th>
-                                    <th class="text-end">{{ number_format((int) ($speed['totals']['supplied_count'] ?? 0)) }}</th>
+                                    <th class="text-end">
+                                        @if($canOpenTotalSupplied)
+                                            <button type="button"
+                                                    class="btn btn-link text-decoration-none p-0 fw-bold supplier-supplied-open"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#supplierSuppliedModal"
+                                                    data-title="TOTAL"
+                                                    data-units='@json($totalSuppliedUnits)'>
+                                                {{ number_format((int) ($speed['totals']['supplied_count'] ?? 0)) }}
+                                            </button>
+                                        @else
+                                            {{ number_format((int) ($speed['totals']['supplied_count'] ?? 0)) }}
+                                        @endif
+                                    </th>
                                     <th class="text-end">—</th>
                                     <th class="text-end">{{ number_format((int) ($speed['totals']['sales_count'] ?? 0)) }}</th>
                                     <th class="text-end">—</th>
@@ -221,6 +255,41 @@
         </div>
     @endif
 </div>
+
+<div class="modal fade" id="supplierSuppliedModal" tabindex="-1" aria-labelledby="supplierSuppliedModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="supplierSuppliedModalLabel">Units Supplied</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted mb-3" id="supplierSuppliedModalSubtitle"></p>
+                <div class="table-responsive">
+                    <table class="table table-sm table-striped align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:3rem;">#</th>
+                                <th>Plate</th>
+                                <th>Unit</th>
+                                <th>Year</th>
+                                <th>Status</th>
+                                <th>Location</th>
+                                <th>Purchase</th>
+                            </tr>
+                        </thead>
+                        <tbody id="supplierSuppliedModalBody">
+                            <tr><td colspan="7" class="text-muted">No units.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @section('scripts')
@@ -258,6 +327,68 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (period) period.addEventListener('change', toggleRangeFields);
     toggleRangeFields();
+
+    const modalEl = document.getElementById('supplierSuppliedModal');
+    if (!modalEl) return;
+
+    modalEl.addEventListener('show.bs.modal', function (event) {
+        const trigger = event.relatedTarget;
+        if (!trigger) return;
+
+        const title = trigger.getAttribute('data-title') || 'Supplier';
+        let units = [];
+        try {
+            units = JSON.parse(trigger.getAttribute('data-units') || '[]');
+        } catch (e) {
+            units = [];
+        }
+        if (!Array.isArray(units)) units = [];
+
+        const labelEl = document.getElementById('supplierSuppliedModalLabel');
+        const subtitleEl = document.getElementById('supplierSuppliedModalSubtitle');
+        const bodyEl = document.getElementById('supplierSuppliedModalBody');
+        if (labelEl) labelEl.textContent = title + ' — units supplied';
+        if (subtitleEl) {
+            subtitleEl.textContent = units.length + ' unit(s) purchased/acquired from this supplier in the selected range.';
+        }
+        if (!bodyEl) return;
+
+        const esc = function (value) {
+            return String(value == null ? '' : value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        };
+
+        if (units.length === 0) {
+            bodyEl.innerHTML = '<tr><td colspan="7" class="text-muted">No units found.</td></tr>';
+            return;
+        }
+
+        bodyEl.innerHTML = units.map(function (unit, index) {
+            const plate = esc(unit.plate || '—');
+            const name = esc(unit.name || 'Unknown unit');
+            const year = esc(unit.year || '—');
+            const status = esc(unit.status || '—');
+            const location = esc(unit.location || '—');
+            const purchase = esc(unit.purchase_date || '—');
+            const plateCell = unit.url
+                ? '<a href="' + esc(unit.url) + '" class="fw-semibold text-decoration-none">' + plate + '</a>'
+                : plate;
+
+            return '<tr>'
+                + '<td>' + (index + 1) + '</td>'
+                + '<td>' + plateCell + '</td>'
+                + '<td>' + name + '</td>'
+                + '<td>' + year + '</td>'
+                + '<td>' + status + '</td>'
+                + '<td>' + location + '</td>'
+                + '<td>' + purchase + '</td>'
+                + '</tr>';
+        }).join('');
+    });
 });
 </script>
 @endsection
