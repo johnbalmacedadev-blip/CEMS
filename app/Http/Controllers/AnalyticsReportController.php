@@ -1408,6 +1408,32 @@ class AnalyticsReportController extends Controller
         ];
     }
 
+    /**
+     * Compact unit payload for Sales Reports day-of-week drill-down modal.
+     *
+     * @return array{id:int,plate:string,name:string,year:string,status:string,location:string,event_date:string,event_date_label:string,sold_price:float,url:string}
+     */
+    protected function salesReportsUnitPayload(Vehicle $v, string $eventType, mixed $eventDate): array
+    {
+        $plate = trim((string) ($v->plate_number ?? ''));
+        $location = trim((string) ($v->branchLocation?->name ?? ''));
+        $parsed = $eventDate ? Carbon::parse($eventDate) : null;
+
+        return [
+            'id' => (int) $v->id,
+            'plate' => $plate !== '' ? $plate : '—',
+            'name' => trim((string) ($v->full_name ?? '')) ?: 'Unknown unit',
+            'year' => trim((string) ($v->year ?? '')) ?: '—',
+            'status' => trim((string) ($v->status ?? '')) ?: '—',
+            'location' => $location !== '' ? $location : 'No Location',
+            'event_type' => $eventType,
+            'event_date' => $parsed ? $parsed->format('Y-m-d') : '',
+            'event_date_label' => $parsed ? $parsed->format('M d, Y') : '—',
+            'sold_price' => (float) ($v->sold_price ?? 0),
+            'url' => route('vehicles.show', $v),
+        ];
+    }
+
     protected function inventoryPotentialProfit(Vehicle $v): float
     {
         $posted = (float) ($v->posted_price ?? 0);
@@ -2037,11 +2063,18 @@ class AnalyticsReportController extends Controller
 
         $dowSales = array_fill(1, 7, 0);
         $dowReleases = array_fill(1, 7, 0);
+        $dowSalesUnits = array_fill(1, 7, []);
+        $dowReleaseUnits = array_fill(1, 7, []);
 
         foreach ($saleVehicles as $vehicle) {
-            $dow = (int) Carbon::parse($vehicle->statusDetail?->sale_date)->dayOfWeekIso;
+            $saleDate = $vehicle->statusDetail?->sale_date;
+            if (! $saleDate) {
+                continue;
+            }
+            $dow = (int) Carbon::parse($saleDate)->dayOfWeekIso;
             if ($dow >= 1 && $dow <= 7) {
                 $dowSales[$dow]++;
+                $dowSalesUnits[$dow][] = $this->salesReportsUnitPayload($vehicle, 'sale', $saleDate);
             }
         }
 
@@ -2055,14 +2088,32 @@ class AnalyticsReportController extends Controller
             $dow = (int) Carbon::parse($event)->dayOfWeekIso;
             if ($dow >= 1 && $dow <= 7) {
                 $dowReleases[$dow]++;
+                $dowReleaseUnits[$dow][] = $this->salesReportsUnitPayload($vehicle, 'release', $event);
             }
+        }
+
+        foreach ($dowSalesUnits as $dow => $units) {
+            usort($units, static function ($a, $b) {
+                return strcmp((string) ($b['event_date'] ?? ''), (string) ($a['event_date'] ?? ''))
+                    ?: strcasecmp((string) ($a['plate'] ?? ''), (string) ($b['plate'] ?? ''));
+            });
+            $dowSalesUnits[$dow] = array_values($units);
+        }
+        foreach ($dowReleaseUnits as $dow => $units) {
+            usort($units, static function ($a, $b) {
+                return strcmp((string) ($b['event_date'] ?? ''), (string) ($a['event_date'] ?? ''))
+                    ?: strcasecmp((string) ($a['plate'] ?? ''), (string) ($b['plate'] ?? ''));
+            });
+            $dowReleaseUnits[$dow] = array_values($units);
         }
 
         $totalSalesDow = array_sum($dowSales);
         $totalReleasesDow = array_sum($dowReleases);
+        $allSalesUnits = collect($dowSalesUnits)->flatten(1)->values()->all();
+        $allReleaseUnits = collect($dowReleaseUnits)->flatten(1)->values()->all();
 
         $dowRows = collect($dayNames)
-            ->map(function ($label, $dow) use ($dowSales, $dowReleases, $totalSalesDow, $totalReleasesDow) {
+            ->map(function ($label, $dow) use ($dowSales, $dowReleases, $dowSalesUnits, $dowReleaseUnits, $totalSalesDow, $totalReleasesDow) {
                 $sales = (int) ($dowSales[$dow] ?? 0);
                 $releases = (int) ($dowReleases[$dow] ?? 0);
 
@@ -2073,6 +2124,8 @@ class AnalyticsReportController extends Controller
                     'sales_pct' => $totalSalesDow > 0 ? round(($sales / $totalSalesDow) * 100, 1) : 0.0,
                     'release_count' => $releases,
                     'release_pct' => $totalReleasesDow > 0 ? round(($releases / $totalReleasesDow) * 100, 1) : 0.0,
+                    'sales_units' => array_values($dowSalesUnits[$dow] ?? []),
+                    'release_units' => array_values($dowReleaseUnits[$dow] ?? []),
                 ];
             })
             ->filter(fn (array $row) => ((int) $row['sales_count'] + (int) $row['release_count']) > 0)
@@ -2161,6 +2214,8 @@ class AnalyticsReportController extends Controller
                     'sales_pct' => $totalSalesDow > 0 ? 100.0 : 0.0,
                     'release_count' => $totalReleasesDow,
                     'release_pct' => $totalReleasesDow > 0 ? 100.0 : 0.0,
+                    'sales_units' => $allSalesUnits,
+                    'release_units' => $allReleaseUnits,
                 ],
                 'has_data' => $dowRows->isNotEmpty(),
             ],
