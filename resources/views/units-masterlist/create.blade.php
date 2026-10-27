@@ -2,6 +2,10 @@
 
 @section('title', 'Add Unit - Units Masterlist - Car Empire Management System')
 
+@section('styles')
+@include('units-masterlist._vehicle-link-select-assets', ['assetMode' => 'styles'])
+@endsection
+
 @section('content')
 <div class="container-fluid">
     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -31,3 +35,7 @@
 
 @include('units-masterlist._financing-recompute')
 @endsection
+
+@push('scripts')
+@include('units-masterlist._vehicle-link-select-assets', ['assetMode' => 'scripts'])
+@endpush

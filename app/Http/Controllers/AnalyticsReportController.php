@@ -158,7 +158,9 @@ class AnalyticsReportController extends Controller
             $activeExcelTab = 'by_model';
         }
 
-        $selectedYear = $this->resolveSelectedYear($request);
+        // Empty year (submitted as "") means All years; missing year falls back to current year.
+        $allYears = $request->exists('year') && trim((string) $request->input('year')) === '';
+        $selectedYear = $allYears ? null : $this->resolveSelectedYear($request);
         $monthRaw = $request->input('month', null);
         $selectedMonth = is_string($monthRaw) ? trim($monthRaw) : '';
         if ($selectedMonth !== '' && ! preg_match('/^(0?[1-9]|1[0-2])$/', $selectedMonth)) {
@@ -171,18 +173,24 @@ class AnalyticsReportController extends Controller
         }
 
         $window = $this->resolveDateWindow($request, $period);
-        if ($period === 'monthly' && $selectedMonth !== '') {
+        if ($allYears) {
+            $nowYear = (int) Carbon::now()->year;
+            $window = [
+                'from' => Carbon::create(2020, 1, 1)->startOfDay(),
+                'to' => Carbon::create($nowYear, 12, 31)->endOfDay(),
+            ];
+        } elseif ($period === 'monthly' && $selectedMonth !== '') {
             $monthNum = (int) $selectedMonth;
             $selectedMonth = sprintf('%02d', $monthNum);
             $window = [
-                'from' => Carbon::create($selectedYear, $monthNum, 1)->startOfDay(),
-                'to' => Carbon::create($selectedYear, $monthNum, 1)->endOfMonth()->endOfDay(),
+                'from' => Carbon::create((int) $selectedYear, $monthNum, 1)->startOfDay(),
+                'to' => Carbon::create((int) $selectedYear, $monthNum, 1)->endOfMonth()->endOfDay(),
             ];
         } elseif ($filterMode === 'car_type' && $period === 'monthly' && $selectedMonth === '') {
             // Whole selected year when month is "All months"
             $window = [
-                'from' => Carbon::create($selectedYear, 1, 1)->startOfDay(),
-                'to' => Carbon::create($selectedYear, 12, 31)->endOfDay(),
+                'from' => Carbon::create((int) $selectedYear, 1, 1)->startOfDay(),
+                'to' => Carbon::create((int) $selectedYear, 12, 31)->endOfDay(),
             ];
         }
 
@@ -208,7 +216,7 @@ class AnalyticsReportController extends Controller
             'periodOptions' => $this->periodOptions,
             'selectedPeriod' => $period,
             'yearOptions' => $this->salesYearFilterOptions(),
-            'selectedYear' => $selectedYear,
+            'selectedYear' => $allYears ? '' : $selectedYear,
             'monthOptions' => [
                 '' => 'All months in year',
                 '01' => 'January',
@@ -808,12 +816,12 @@ class AnalyticsReportController extends Controller
     /**
      * Calendar years available on the Sales Report year filter (newest first).
      *
-     * @return array<int, string>
+     * @return array<string|int, string>
      */
     protected function salesYearFilterOptions(): array
     {
         $nowYear = (int) Carbon::now()->year;
-        $years = [];
+        $years = ['' => 'All years'];
         for ($year = $nowYear; $year >= 2020; $year--) {
             $years[$year] = (string) $year;
         }

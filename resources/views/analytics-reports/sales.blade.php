@@ -52,7 +52,7 @@
                             <label for="year" class="form-label">Year</label>
                             <select name="year" id="year" class="form-select" {{ ($isPeriodMode && $showYearFilter) ? '' : 'disabled' }}>
                                 @foreach(($yearOptions ?? []) as $value => $label)
-                                    <option value="{{ $value }}" {{ (int) ($selectedYear ?? date('Y')) === (int) $value ? 'selected' : '' }}>{{ $label }}</option>
+                                    <option value="{{ $value }}" {{ (string) ($selectedYear ?? date('Y')) === (string) $value ? 'selected' : '' }}>{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -91,7 +91,7 @@
                             <label for="car_year" class="form-label">Year</label>
                             <select name="year" id="car_year" class="form-select" {{ $isCarTypeMode ? '' : 'disabled' }}>
                                 @foreach(($yearOptions ?? []) as $value => $label)
-                                    <option value="{{ $value }}" {{ (int) ($selectedYear ?? date('Y')) === (int) $value ? 'selected' : '' }}>{{ $label }}</option>
+                                    <option value="{{ $value }}" {{ (string) ($selectedYear ?? date('Y')) === (string) $value ? 'selected' : '' }}>{{ $label }}</option>
                                 @endforeach
                             </select>
                         </div>

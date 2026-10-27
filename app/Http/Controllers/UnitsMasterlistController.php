@@ -47,13 +47,16 @@ class UnitsMasterlistController extends Controller
 
     public function create()
     {
-        return view('units-masterlist.create', $this->formData());
+        return view('units-masterlist.create', $this->formData(
+            old('vehicle_id') ? (int) old('vehicle_id') : null
+        ));
     }
 
     public function store(Request $request)
     {
         $validated = $this->validated($request);
         $validated = $this->resolveVehicleLink($validated);
+        $validated['list_number'] = ((int) UnitMasterlist::query()->max('list_number')) + 1;
 
         UnitMasterlist::create($validated);
 
@@ -68,8 +71,10 @@ class UnitsMasterlistController extends Controller
 
     public function edit(UnitMasterlist $units_masterlist)
     {
+        $linkedId = old('vehicle_id', $units_masterlist->vehicle_id);
+
         return view('units-masterlist.edit', array_merge(
-            $this->formData(),
+            $this->formData($linkedId ? (int) $linkedId : null),
             ['unit' => $units_masterlist]
         ));
     }
@@ -78,6 +83,8 @@ class UnitsMasterlistController extends Controller
     {
         $validated = $this->validated($request);
         $validated = $this->resolveVehicleLink($validated);
+        // Keep the existing list # — it is assigned automatically on create.
+        unset($validated['list_number']);
 
         $units_masterlist->update($validated);
 
@@ -96,7 +103,6 @@ class UnitsMasterlistController extends Controller
     private function validated(Request $request): array
     {
         $data = $request->validate([
-            'list_number' => 'nullable|integer|min:0',
             'make_model' => 'required|string|max:255',
             'plate_number' => 'nullable|string|max:50',
             'variant' => 'nullable|string|max:500',
@@ -142,13 +148,22 @@ class UnitsMasterlistController extends Controller
         return $data;
     }
 
-    private function formData(): array
+    private function formData(?int $ensureVehicleId = null): array
     {
         $vehicles = Vehicle::with(['make', 'vehicleModel'])
             ->whereNull('archived_at')
             ->orderBy('created_at', 'desc')
             ->limit(800)
             ->get();
+
+        // Keep the currently linked / previously selected vehicle in the list even if
+        // it falls outside the newest-800 window.
+        if ($ensureVehicleId && ! $vehicles->contains('id', $ensureVehicleId)) {
+            $extra = Vehicle::with(['make', 'vehicleModel'])->find($ensureVehicleId);
+            if ($extra) {
+                $vehicles = $vehicles->prepend($extra)->unique('id')->values();
+            }
+        }
 
         $financingSchemes = \App\Models\FinancingScheme::query()
             ->with(['carFinancingSettings' => function ($q) {

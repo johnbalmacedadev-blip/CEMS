@@ -2,17 +2,12 @@
     $unit = $unit ?? null;
 @endphp
 <div class="row g-3">
-    <div class="col-md-2">
-        <label for="list_number" class="form-label">#</label>
-        <input type="number" class="form-control @error('list_number') is-invalid @enderror" id="list_number" name="list_number" value="{{ old('list_number', $unit->list_number ?? '') }}" min="0">
-        @error('list_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
-    </div>
-    <div class="col-md-5">
+    <div class="col-md-6">
         <label for="make_model" class="form-label">Make / Model <span class="text-danger">*</span></label>
         <input type="text" class="form-control @error('make_model') is-invalid @enderror" id="make_model" name="make_model" value="{{ old('make_model', $unit->make_model ?? '') }}" required>
         @error('make_model')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
-    <div class="col-md-5">
+    <div class="col-md-6">
         <label for="plate_number" class="form-label">Plate Number</label>
         <input type="text" class="form-control @error('plate_number') is-invalid @enderror" id="plate_number" name="plate_number" value="{{ old('plate_number', $unit->plate_number ?? '') }}" placeholder="Links to vehicle profile when matched">
         @error('plate_number')<div class="invalid-feedback">{{ $message }}</div>@enderror
@@ -56,17 +51,27 @@
         <input type="number" step="0.01" class="form-control @error('price') is-invalid @enderror" id="price" name="price" value="{{ old('price', $unit->price ?? '') }}" min="0">
         @error('price')<div class="invalid-feedback">{{ $message }}</div>@enderror
     </div>
-    <div class="col-md-3">
+    <div class="col-md-6">
         <label for="vehicle_id" class="form-label">Link Vehicle Profile</label>
-        <select class="form-select @error('vehicle_id') is-invalid @enderror" id="vehicle_id" name="vehicle_id">
+        <select class="form-select @error('vehicle_id') is-invalid @enderror" id="vehicle_id" name="vehicle_id" placeholder="Search plate, make, or model…">
             <option value="">— Auto by plate / none —</option>
             @foreach($vehicles as $v)
+                @php
+                    $vehicleLabel = trim((string) $v->full_name);
+                    if (! empty($v->plate_number)) {
+                        $vehicleLabel .= ' ('.$v->plate_number.')';
+                    }
+                    if (! empty($v->status)) {
+                        $vehicleLabel .= ' · '.$v->status;
+                    }
+                @endphp
                 <option value="{{ $v->id }}" {{ (string) old('vehicle_id', $unit->vehicle_id ?? '') === (string) $v->id ? 'selected' : '' }}>
-                    {{ $v->full_name }} @if($v->plate_number)({{ $v->plate_number }})@endif
+                    {{ $vehicleLabel }}
                 </option>
             @endforeach
         </select>
-        @error('vehicle_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
+        <div class="form-text">Type to search by plate, make, or model.</div>
+        @error('vehicle_id')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
     </div>
     <div class="col-md-6">
         <label for="low_down_payment_option" class="form-label">Low Down Payment Option</label>
