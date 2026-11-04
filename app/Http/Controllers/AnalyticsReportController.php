@@ -3236,33 +3236,34 @@ class AnalyticsReportController extends Controller
             return $this->mapVehicleToExecRow($v, $agentNameMap, $execNameMap);
         })->filter(fn ($r) => ! empty($r['release_date_raw']))->values();
 
-        // Prefer commission credit when a plate/vehicle already has a commission in-range.
-        $coveredKeys = $commissionRows
-            ->flatMap(function ($r) {
-                $keys = [];
-                if (! empty($r['vehicle_id'])) {
-                    $keys[] = 'vid:'.$r['vehicle_id'];
-                }
-                $plate = $this->normalizePlateKey($r['plate'] ?? '');
-                if ($plate !== '') {
-                    $keys[] = 'plate:'.$plate;
-                }
-
-                return $keys;
-            })
-            ->unique()
-            ->all();
-
-        $vehicleOnly = $vehicleRows->reject(function ($r) use ($coveredKeys) {
-            if (! empty($r['vehicle_id']) && in_array('vid:'.$r['vehicle_id'], $coveredKeys, true)) {
-                return true;
+        // One row per released vehicle, the same list as Car Sales. A commission only changes who
+        // gets credit for its vehicle; it never adds units or changes the car's price and date.
+        $commissionByVehicle = [];
+        $commissionByPlate = [];
+        foreach ($commissionRows as $commission) {
+            if (! empty($commission['vehicle_id'])) {
+                $commissionByVehicle[$commission['vehicle_id']] ??= $commission;
             }
-            $plate = $this->normalizePlateKey($r['plate'] ?? '');
+            $plate = $this->normalizePlateKey($commission['plate'] ?? '');
+            if ($plate !== '') {
+                $commissionByPlate[$plate] ??= $commission;
+            }
+        }
 
-            return $plate !== '' && in_array('plate:'.$plate, $coveredKeys, true);
+        $rows = $vehicleRows->map(function ($row) use ($commissionByVehicle, $commissionByPlate) {
+            $commission = $commissionByVehicle[$row['vehicle_id'] ?? 0]
+                ?? $commissionByPlate[$this->normalizePlateKey($row['plate'] ?? '')]
+                ?? null;
+            if (! $commission) {
+                return $row;
+            }
+
+            return array_merge($row, array_intersect_key($commission, array_flip([
+                'name', 'name_key', 'role', 'reserved_by', 'released_by', 'agent_name', 'sale_origin',
+                'executive_name', 'executive_agent_id', 'sales_agent_id', 'sales_agent_record',
+                'commission_amount', 'exec_commission_amount', 'source',
+            ])));
         })->values();
-
-        $rows = $commissionRows->concat($vehicleOnly)->values();
         $saleRows = $this->reservationCreditRows($window, $agentNameMap, $execNameMap);
 
         $teamRanking = $this->aggregatePerformerRanking($rows);
@@ -3653,21 +3654,6 @@ class AnalyticsReportController extends Controller
         $now = Carbon::now();
 
         try {
-            $comm = SalesAgentCommission::query()->whereNotNull('release_date')->max('release_date');
-            if ($comm) {
-                // Prefer commission timeline so the report matches /sales-agent-commissions.
-                $latest = Carbon::parse($comm);
-
-                return [
-                    'year' => (int) $latest->year,
-                    'month' => $latest->format('m'),
-                ];
-            }
-        } catch (\Throwable) {
-            // table may be missing on fresh installs
-        }
-
-        try {
             $veh = \App\Models\VehicleStatusDetail::query()->whereNotNull('release_date')->max('release_date');
             if ($veh) {
                 $latest = Carbon::parse($veh);
@@ -3695,6 +3681,11 @@ class AnalyticsReportController extends Controller
         $release = trim((string) ($detail?->sales_person_release ?? ''));
         $agentName = trim((string) ($detail?->sales_agent_name ?? ''));
         $saleOrigin = trim((string) ($detail?->sale_origin ?? ''));
+        // A plate sold more than once is credited to the sales person of the sale in this period.
+        $periodPerson = trim((string) $v->getAttribute('excel_period_sales_person'));
+        if ($periodPerson !== '') {
+            $reserved = $periodPerson;
+        }
 
         $creditName = $reserved !== '' ? $reserved
             : ($release !== '' ? $release
@@ -3707,11 +3698,10 @@ class AnalyticsReportController extends Controller
             $matchedExec = $matchedAgent->executiveAgent;
         }
 
-        $event = $detail?->release_date ?? $detail?->sale_date ?? $v->updated_at;
-        $soldPrice = (float) ($v->sold_price ?? 0);
-        if ($soldPrice <= 0) {
-            $soldPrice = (float) ($detail?->sales_price ?? 0);
-        }
+        $event = $v->getAttribute('excel_period_release_date')
+            ?? $detail?->release_date
+            ?? $detail?->sale_date
+            ?? $v->updated_at;
 
         $role = 'Sales Team';
         if ($matchedExec && $this->normalizePersonName($matchedExec->name) === $norm) {
@@ -3853,6 +3843,11 @@ class AnalyticsReportController extends Controller
         $soldPrice = (float) ($v->sold_price ?? 0);
         if ($soldPrice <= 0) {
             $soldPrice = (float) ($detail?->sales_price ?? 0);
+        }
+        // A plate sold more than once keeps the price of the sale in the selected period.
+        $periodPrice = $v->getAttribute('excel_period_sales_price');
+        if (is_numeric($periodPrice) && (float) $periodPrice > 0) {
+            $soldPrice = (float) $periodPrice;
         }
         $reservationAmount = (float) ($detail?->sale_reservation_amount ?? 0);
         $postedPrice = (float) ($v->posted_price ?? 0);
@@ -5893,6 +5888,7 @@ class AnalyticsReportController extends Controller
                 $vehicle->setAttribute('excel_period_total_costs', $meta['total_costs'] ?? null);
                 $vehicle->setAttribute('excel_period_total_profit', $meta['total_profit'] ?? null);
                 $vehicle->setAttribute('excel_period_sales_price', $meta['sales_price'] ?? null);
+                $vehicle->setAttribute('excel_period_sales_person', $meta['sales_person_reserved'] ?? $meta['sales_person_release'] ?? null);
                 $vehicle->setAttribute('excel_period_branch_financials', $meta['branch_financials'] ?? []);
                 $vehicle->setAttribute('excel_aligned', true);
                 if (isset($meta['purchase_price']) && $meta['purchase_price'] !== null && $meta['purchase_price'] !== '') {

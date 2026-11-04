@@ -69,11 +69,7 @@
                 </div>
             </form>
             <p class="small text-muted mt-2 mb-0">
-                Rankings follow <strong>Sales Agent Commission release dates</strong> (same as
-                <a href="{{ route('sales-agent-commissions.index') }}">Sales Agent Commissions</a>),
-                plus any Released units in the range that have no commission row yet.
-                Credit uses the commission agent / linked executive when available.
-                Active date filter: <strong>{{ $activeRangeLabel }}</strong>.
+                Rankings use the same released vehicles as the <strong>Car Sales Report</strong>. Each car is credited to its sales agent when it has a commission in this range, otherwise to the sales person on the unit. Active date filter: <strong>{{ $activeRangeLabel }}</strong>.
             </p>
         </div>
     </div>
@@ -104,7 +100,7 @@
         <div class="alert alert-info mb-0">
             <i class="fas fa-info-circle me-2"></i>
             No performance data found for <strong>{{ $viewLabel }}</strong> in this date range.
-            Try another month (commissions currently peak earlier in the year), switch view, or choose <em>All months in year</em>.
+            Try another month, switch view, or choose <em>All months in year</em>.
         </div>
     @else
         <div class="row g-3 mb-3">

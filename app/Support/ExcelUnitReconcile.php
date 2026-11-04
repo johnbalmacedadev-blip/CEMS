@@ -93,6 +93,7 @@ class ExcelUnitReconcile
         $matchedVehicleIds = [];
         $locationCounts = [];
         $sourceName = $snapshot['source_name'] ?? null;
+        $snapshotReleaseKeys = self::snapshotReleaseKeys($snapshot);
         $monthKey = self::filterMonthKey($releaseFrom, $releaseTo);
         $filterYear = null;
         $filterMonth = null;
@@ -559,6 +560,10 @@ class ExcelUnitReconcile
                     }
                     $dbRelease = optional($extraVehicle->statusDetail)->release_date;
                     $dbReleaseStr = $dbRelease ? $dbRelease->format('Y-m-d') : null;
+                    // Releases Excel does not know about at all are added below, not excluded.
+                    if (! isset($snapshotReleaseKeys[$plate.'|'.$dbReleaseStr])) {
+                        continue;
+                    }
                     $issues[] = [
                         'type' => 'extra_in_database',
                         'plate' => $plate,
@@ -573,13 +578,28 @@ class ExcelUnitReconcile
                         'model' => $extraVehicle->model,
                         'year' => $extraVehicle->year,
                         'message' => sprintf(
-                            '%s is Released in the database for %s (release %s) but has no matching Excel RELEASE DATE row in this period for %s. Excluded from displayed count so totals follow Excel.',
+                            '%s is Released in the database for %s (release %s) but is listed under a different period on %s. Counted in that period so totals follow Excel.',
                             $plate,
                             $designationBranch,
                             $dbReleaseStr ?: 'n/a',
                             $designation['tab'] ?? 'sheet'
                         ),
                     ];
+                }
+            }
+        }
+
+        // Every release must reach the reports: add Released units the snapshot has no row for
+        // (e.g. released in the app after the last workbook import).
+        foreach (self::databaseOnlyReleases($snapshotReleaseKeys, $releaseFrom, $releaseTo, $branchName) as $plate => $row) {
+            if (isset($platesMeta[$plate])) {
+                continue;
+            }
+            $platesMeta[$plate] = $row;
+            foreach ($locationCounts as $i => $loc) {
+                if (strcasecmp((string) ($loc['name'] ?? ''), (string) ($row['branch'] ?? '')) === 0) {
+                    $locationCounts[$i]['count'] = (int) ($loc['count'] ?? 0) + 1;
+                    break;
                 }
             }
         }
@@ -669,6 +689,102 @@ class ExcelUnitReconcile
             'source_name' => $sourceName,
             'date_label' => $dateLabel,
         ];
+    }
+
+    /**
+     * Every plate + release date on a Released sheet of the snapshot.
+     *
+     * @param  array<string, mixed>  $snapshot
+     * @return array<string, true>
+     */
+    protected static function snapshotReleaseKeys(array $snapshot): array
+    {
+        $keys = [];
+        foreach ($snapshot['designations'] ?? [] as $designation) {
+            if (($designation['status'] ?? null) !== 'Released') {
+                continue;
+            }
+            foreach ($designation['rows'] ?? [] as $row) {
+                $keys[self::normalizePlate($row['plate'] ?? '').'|'.($row['release_date'] ?? '')] = true;
+            }
+        }
+
+        return $keys;
+    }
+
+    /**
+     * Released units in the date range whose plate + release date is not in the snapshot,
+     * shaped like a snapshot row. Totals use the same formula as the unit quick view.
+     *
+     * @param  array<string, true>  $snapshotKeys
+     * @return array<string, array<string, mixed>>
+     */
+    protected static function databaseOnlyReleases(array $snapshotKeys, string $releaseFrom, string $releaseTo, ?string $branchName = null): array
+    {
+        $vehicles = Vehicle::query()
+            ->with(['statusDetail', 'expense', 'branchLocation'])
+            ->where('status', 'Released')
+            ->whereHas('statusDetail', function ($q) use ($releaseFrom, $releaseTo) {
+                $q->whereNotNull('release_date');
+                if ($releaseFrom !== '') {
+                    $q->whereDate('release_date', '>=', $releaseFrom);
+                }
+                if ($releaseTo !== '') {
+                    $q->whereDate('release_date', '<=', $releaseTo);
+                }
+            })
+            ->get();
+
+        $rows = [];
+        foreach ($vehicles as $vehicle) {
+            $plate = self::normalizePlate($vehicle->plate_number);
+            $detail = $vehicle->statusDetail;
+            $release = \Carbon\Carbon::parse($detail->release_date)->format('Y-m-d');
+            if ($plate === '' || isset($snapshotKeys[$plate.'|'.$release])) {
+                continue;
+            }
+            $branch = $vehicle->branchLocation?->name;
+            if ($branchName !== null && $branchName !== '' && strcasecmp((string) $branch, $branchName) !== 0) {
+                continue;
+            }
+
+            $sales = (float) ($vehicle->sold_price ?: ($detail->sales_price ?? 0));
+            $revenue = $sales + (float) ($detail->finance_revenue_1 ?? 0) + (float) ($detail->finance_revenue_2 ?? 0);
+            $expense = $vehicle->expense;
+            $capital = (float) ($expense?->total_capital_repair_capital_posted ?? 0);
+            if ($capital <= 0) {
+                $capital = (float) ($vehicle->purchase_price ?? 0)
+                    + (float) ($expense?->total_repair_cost ?? 0)
+                    + (float) ($expense?->post_reservation_repairs_cost ?? 0);
+            }
+            $costs = $capital + (float) ($detail->agent_cost ?? 0) + (float) ($detail->transfer_cost ?? 0);
+
+            $financials = [
+                'total_revenue' => $revenue,
+                'total_costs' => $costs,
+                'total_profit' => $revenue - $costs,
+                'sales_price' => $sales,
+                'release_date' => $release,
+                'excel_row' => null,
+                'branch' => $branch,
+            ];
+            $rows[$plate] = array_merge($financials, [
+                'plate' => $plate,
+                'plate_raw' => $vehicle->plate_number,
+                'missing_plate' => false,
+                'sale_date' => $detail->sale_date ? \Carbon\Carbon::parse($detail->sale_date)->format('Y-m-d') : null,
+                'year' => $vehicle->year,
+                'make' => $vehicle->getRawOriginal('make'),
+                'model' => $vehicle->getRawOriginal('model'),
+                'section' => null,
+                'branches' => array_values(array_filter([$branch])),
+                'tab' => null,
+                'from_database' => true,
+                'branch_financials' => $branch ? [$branch => $financials] : [],
+            ]);
+        }
+
+        return $rows;
     }
 
     /**
@@ -1610,6 +1726,16 @@ class ExcelUnitReconcile
             ];
         }
 
+        foreach (self::databaseOnlyReleases(self::snapshotReleaseKeys($snapshot), $releaseFrom, $releaseTo) as $row) {
+            $branch = (string) ($row['branch'] ?? '');
+            if (! isset($out[$branch])) {
+                continue;
+            }
+            $out[$branch]['units']++;
+            $out[$branch]['total_revenue'] += (float) $row['total_revenue'];
+            $out[$branch]['total_costs'] += (float) $row['total_costs'];
+        }
+
         return $out === [] ? null : $out;
     }
 
@@ -1704,6 +1830,7 @@ class ExcelUnitReconcile
         $vehicle->setAttribute('excel_period_total_costs', $meta['total_costs'] ?? null);
         $vehicle->setAttribute('excel_period_total_profit', $meta['total_profit'] ?? null);
         $vehicle->setAttribute('excel_period_sales_price', $meta['sales_price'] ?? null);
+        $vehicle->setAttribute('excel_period_sales_person', $meta['sales_person_reserved'] ?? $meta['sales_person_release'] ?? null);
         $vehicle->setAttribute('excel_period_branch_financials', $meta['branch_financials'] ?? []);
         $vehicle->setAttribute('excel_aligned', true);
         $vehicle->setAttribute('excel_forced_section_add', ! empty($meta['forced_section_add']) || ! empty($meta['forced_rerelease_add']));
