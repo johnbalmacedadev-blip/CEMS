@@ -163,7 +163,24 @@ class AnalyticsReportController extends Controller
         $selectedYear = $allYears ? null : $this->resolveSelectedYear($request);
         $monthRaw = $request->input('month', null);
         $selectedMonth = is_string($monthRaw) ? trim($monthRaw) : '';
-        if ($selectedMonth !== '' && ! preg_match('/^(0?[1-9]|1[0-2])$/', $selectedMonth)) {
+        // Car Sales Tables can pick "Custom date range" in the Month list instead of one month.
+        $carDateRange = null;
+        if ($filterMode === 'car_type' && $selectedMonth === 'range' && $request->filled('date_from') && $request->filled('date_to')) {
+            try {
+                $rangeFrom = Carbon::parse((string) $request->input('date_from'))->startOfDay();
+                $rangeTo = Carbon::parse((string) $request->input('date_to'))->endOfDay();
+                if ($rangeFrom->gt($rangeTo)) {
+                    [$rangeFrom, $rangeTo] = [$rangeTo->copy()->startOfDay(), $rangeFrom->copy()->endOfDay()];
+                }
+                $carDateRange = ['from' => $rangeFrom, 'to' => $rangeTo];
+            } catch (\Throwable) {
+                $carDateRange = null;
+            }
+        }
+        if ($selectedMonth === 'range' && ! $carDateRange) {
+            $selectedMonth = '';
+        }
+        if ($selectedMonth !== '' && $selectedMonth !== 'range' && ! preg_match('/^(0?[1-9]|1[0-2])$/', $selectedMonth)) {
             $selectedMonth = '';
         }
 
@@ -173,7 +190,9 @@ class AnalyticsReportController extends Controller
         }
 
         $window = $this->resolveDateWindow($request, $period);
-        if ($allYears) {
+        if ($carDateRange) {
+            $window = $carDateRange;
+        } elseif ($allYears) {
             $nowYear = (int) Carbon::now()->year;
             $window = [
                 'from' => Carbon::create(2020, 1, 1)->startOfDay(),
@@ -976,6 +995,7 @@ class AnalyticsReportController extends Controller
             'charts' => $analytics['charts'],
             'tables' => $analytics['tables'],
             'metricReports' => $analytics['metric_reports'],
+            'personSales' => $analytics['person_sales'] ?? ['released' => [], 'sold' => [], 'people' => []],
             'hasData' => $analytics['has_data'],
             'viewLabel' => $analytics['view_label'],
         ]);
@@ -3299,6 +3319,15 @@ class AnalyticsReportController extends Controller
         $executiveRanking = $this->enrichPerformerProfileLinks($executiveRanking, 'executives', $agentNameMap, $execNameMap);
         $teamRanking = $this->enrichPerformerProfileLinks($teamRanking, 'team', $agentNameMap, $execNameMap);
 
+        // Every name opens the person popup; person_ref = "<mode>:<name key>" into person_sales.
+        $withRef = fn (Collection $c, string $mode) => $c->map(fn ($r) => $r + [
+            'person_ref' => $mode.':'.(($r['name_key'] ?? '') !== '' ? $r['name_key'] : $this->normalizePersonName($r['name'] ?? '')),
+        ])->values();
+        $activeRanking = $withRef($activeRanking, $viewMode);
+        $agentRanking = $withRef($agentRanking, 'agents');
+        $executiveRanking = $withRef($executiveRanking, 'executives');
+        $teamRanking = $withRef($teamRanking, 'team');
+
         $topByUnits = $activeRanking->take(10)->values();
         $topBySales = $activeRanking->sortByDesc('sales')->take(10)->values();
 
@@ -3306,6 +3335,35 @@ class AnalyticsReportController extends Controller
         $totalSales = (float) $rows->sum('sold_price');
         $performerCount = $activeRanking->count();
         $leader = $activeRanking->first();
+
+        $unitDetailRow = function ($r) {
+            $vehicleId = (int) ($r['vehicle_id'] ?? 0);
+            $plate = trim((string) ($r['plate'] ?? ''));
+
+            return [
+                'plate' => $plate !== '' ? $plate : '—',
+                'unit' => trim((string) ($r['unit'] ?? '')) ?: '—',
+                'release_date' => ! empty($r['release_date_raw'])
+                    ? Carbon::parse($r['release_date_raw'])->format('M d, Y')
+                    : '—',
+                'release_date_raw' => $r['release_date_raw'] ?? null,
+                'credited_to' => trim((string) ($r['name'] ?? '')) ?: '—',
+                'person_ref' => 'team:'.(($r['name_key'] ?? '') !== '' ? $r['name_key'] : 'unassigned'),
+                'role' => trim((string) ($r['role'] ?? '')) ?: '—',
+                'payment' => ! empty($r['is_financing']) ? 'Financing' : (! empty($r['is_cash']) ? 'Cash' : '—'),
+                'sales' => (float) ($r['sold_price'] ?? 0),
+                'source' => trim((string) ($r['source'] ?? '')) ?: '—',
+                'url' => $vehicleId > 0 ? route('vehicles.show', $vehicleId) : null,
+            ];
+        };
+        $allUnits = $rows->sortBy(fn ($r) => [(string) ($r['release_date_raw'] ?? ''), (string) ($r['plate'] ?? '')])
+            ->values()->map($unitDetailRow)->all();
+        $rankedUnits = (int) $activeRanking->sum('units');
+        $rankedSales = (float) $activeRanking->sum('sales');
+        $paymentSplit = collect(['Cash', 'Financing', '—'])->mapWithKeys(fn ($p) => [$p => [
+            'units' => collect($allUnits)->where('payment', $p)->count(),
+            'sales' => (float) collect($allUnits)->where('payment', $p)->sum('sales'),
+        ]])->all();
 
         $monthlyByLeader = collect();
         $leaderUnits = [];
@@ -3364,9 +3422,30 @@ class AnalyticsReportController extends Controller
             'has_data' => $unitCount > 0 && $performerCount > 0,
             'view_label' => $viewLabel,
             'summary' => [
-                ['label' => 'Released Units (range)', 'value' => $unitCount, 'is_currency' => false],
-                ['label' => 'Total Sales Amount', 'value' => $totalSales, 'is_currency' => true],
-                ['label' => $viewLabel.' in Ranking', 'value' => $performerCount, 'is_currency' => false],
+                [
+                    'label' => 'Released Units (range)', 'value' => $unitCount, 'is_currency' => false,
+                    'detail' => ['type' => 'units', 'title' => 'Released Units — '.number_format($unitCount).' cars', 'units' => $allUnits],
+                ],
+                [
+                    'label' => 'Total Sales Amount', 'value' => $totalSales, 'is_currency' => true,
+                    'detail' => [
+                        'type' => 'sales', 'title' => 'Total Sales Amount — by '.$viewLabel,
+                        'ranking' => $activeRanking->values()->all(),
+                        'unranked_units' => max(0, $unitCount - $rankedUnits),
+                        'unranked_sales' => max(0.0, $totalSales - $rankedSales),
+                        'payment_split' => $paymentSplit,
+                        'total_units' => $unitCount, 'total_sales' => $totalSales,
+                    ],
+                ],
+                [
+                    'label' => $viewLabel.' in Ranking', 'value' => $performerCount, 'is_currency' => false,
+                    'detail' => [
+                        'type' => 'ranking', 'title' => $viewLabel.' in Ranking — '.number_format($performerCount),
+                        'ranking' => $activeRanking->values()->all(),
+                        'unranked_units' => max(0, $unitCount - $rankedUnits),
+                        'unranked_sales' => max(0.0, $totalSales - $rankedSales),
+                    ],
+                ],
                 [
                     'label' => 'Top Performer',
                     'value' => $leader
@@ -3424,6 +3503,7 @@ class AnalyticsReportController extends Controller
                             'role' => $r['role'],
                             'sales' => $r['sold_price'],
                             'profile_url' => null,
+                            'person_ref' => 'team:'.(($r['name_key'] ?? '') !== '' ? $r['name_key'] : 'unassigned'),
                         ];
                         if (($r['role'] ?? '') === 'Executive' && ! empty($r['executive_agent_id'])) {
                             $deal['profile_url'] = route('staff-reports.executive-agents.show', $r['executive_agent_id']);
@@ -3439,7 +3519,67 @@ class AnalyticsReportController extends Controller
                     ->all(),
             ],
             'metric_reports' => $this->buildSalesExecMetricReports($rows, $saleRows, $viewMode, $executives, $viewLabel, $agentNameMap, $execNameMap),
+            'person_sales' => $this->buildPersonSalesPayload($rows, $saleRows, $executives, $agentNameMap, $execNameMap),
         ];
+    }
+
+    /**
+     * Cars behind every name on the Sales Executive report, for the person popup. Uses the same
+     * person matching as the metric tabs, for all three ranking views, keyed "<mode>:<name key>".
+     */
+    protected function buildPersonSalesPayload(Collection $releaseRows, Collection $saleRows, Collection $executives, array $agentNameMap, array $execNameMap): array
+    {
+        $releaseRows = $releaseRows->values()->map(fn ($r, $i) => $r + ['_i' => $i]);
+        $saleRows = $saleRows->values()->map(fn ($r, $i) => $r + ['_i' => $i]);
+        $url = fn ($r) => ! empty($r['vehicle_id']) && (int) $r['vehicle_id'] > 0 ? route('vehicles.show', (int) $r['vehicle_id']) : null;
+        $payment = fn ($r) => ! empty($r['is_financing']) ? 'Financing' : (! empty($r['is_cash']) ? 'Cash' : '—');
+        $date = fn ($d) => $d ? Carbon::parse($d)->format('M d, Y') : '—';
+
+        $released = $releaseRows->map(fn ($r) => [
+            'plate' => (string) ($r['plate'] ?? '') ?: '—',
+            'unit' => (string) ($r['unit'] ?? '') ?: '—',
+            'date' => $date($r['release_date_raw'] ?? null),
+            'payment' => $payment($r),
+            'is_cash' => ! empty($r['is_cash']),
+            'is_financing' => ! empty($r['is_financing']),
+            'posted' => (float) ($r['posted_price'] ?? 0),
+            'sold' => (float) ($r['sold_price'] ?? 0),
+            'reservation' => (float) ($r['reservation_amount'] ?? 0),
+            'discount' => (float) ($r['discount'] ?? 0),
+            'financed' => (float) ($r['amount_financed'] ?? 0),
+            'gross' => (float) ($r['gross'] ?? 0),
+            'net' => (float) ($r['net'] ?? 0),
+            'url' => $url($r),
+        ])->all();
+        $sold = $saleRows->map(fn ($r) => [
+            'plate' => (string) ($r['plate'] ?? '') ?: '—',
+            'unit' => (string) ($r['unit'] ?? '') ?: '—',
+            'date' => $date($r['sale_date_raw'] ?? null),
+            'payment' => $payment($r),
+            'reservation' => (float) ($r['reservation_amount'] ?? 0),
+            'sold' => (float) ($r['sold_price'] ?? 0),
+            'status' => (string) ($r['status'] ?? ''),
+            'url' => $url($r),
+        ])->all();
+
+        $people = [];
+        foreach (['executives', 'agents', 'team'] as $mode) {
+            foreach ($this->metricReportPeople($releaseRows, $saleRows, $mode, $executives, $agentNameMap, $execNameMap) as $person) {
+                $rel = $this->rowsForMetricPerson($releaseRows, $person)->pluck('_i')->all();
+                $sal = $this->rowsForMetricPerson($saleRows, $person)->pluck('_i')->all();
+                if ($rel === [] && $sal === []) {
+                    continue;
+                }
+                $people[$mode.':'.$person['name_key']] = [
+                    'name' => $person['name'],
+                    'profile_url' => $person['profile_url'] ?? null,
+                    'released' => $rel,
+                    'sold' => $sal,
+                ];
+            }
+        }
+
+        return ['released' => $released, 'sold' => $sold, 'people' => $people];
     }
 
     /**
@@ -3916,6 +4056,11 @@ class AnalyticsReportController extends Controller
                 $cashFinancing = strtolower(trim((string) ($detail?->cash_financing ?? '')));
 
                 return [
+                    'vehicle_id' => $v->id,
+                    'plate' => $v->plate_number,
+                    'unit' => $v->full_name,
+                    'status' => $v->status,
+                    'sold_price' => (float) ($v->sold_price ?: ($detail?->sales_price ?? 0)),
                     'name' => $creditName,
                     'name_key' => $norm !== '' ? $norm : 'unassigned',
                     'agent_name' => $agentName !== '' ? $agentName : null,
@@ -3956,7 +4101,7 @@ class AnalyticsReportController extends Controller
         $totalCashReleases = max((int) $releaseRows->where('is_cash', true)->count(), 0);
         $totalFinancingReleases = max((int) $releaseRows->where('is_financing', true)->count(), 0);
 
-        $salesReservation = $people->map(function ($person) use ($releaseRows, $saleRows, $totalSales, $totalReleases) {
+        $salesReservation = $people->map(function ($person) use ($releaseRows, $saleRows, $totalSales, $totalReleases, $viewMode) {
             $sales = $this->rowsForMetricPerson($saleRows, $person);
             $releases = $this->rowsForMetricPerson($releaseRows, $person);
             $reservationPool = $sales
@@ -3969,6 +4114,7 @@ class AnalyticsReportController extends Controller
             return [
                 'name' => $person['name'],
                 'profile_url' => $person['profile_url'] ?? null,
+                'person_ref' => $viewMode.':'.$person['name_key'],
                 'sales_count' => $salesCount,
                 'sales_pct' => $totalSales > 0 ? round(($salesCount / $totalSales) * 100, 1) : 0.0,
                 'release_count' => $releaseCount,
@@ -3980,7 +4126,7 @@ class AnalyticsReportController extends Controller
             ->sortByDesc('release_count')
             ->values();
 
-        $cashSummary = $people->map(function ($person) use ($releaseRows, $totalCashReleases) {
+        $cashSummary = $people->map(function ($person) use ($releaseRows, $totalCashReleases, $viewMode) {
             $releases = $this->rowsForMetricPerson($releaseRows, $person)->where('is_cash', true);
             $count = $releases->count();
             $discountTotal = (float) $releases->sum('discount');
@@ -3988,6 +4134,7 @@ class AnalyticsReportController extends Controller
             return [
                 'name' => $person['name'],
                 'profile_url' => $person['profile_url'] ?? null,
+                'person_ref' => $viewMode.':'.$person['name_key'],
                 'cash_releases' => $count,
                 'cash_pct' => $totalCashReleases > 0 ? round(($count / $totalCashReleases) * 100, 1) : 0.0,
                 'discount_total' => $discountTotal,
@@ -3998,7 +4145,7 @@ class AnalyticsReportController extends Controller
             ->sortByDesc('cash_releases')
             ->values();
 
-        $financingSummary = $people->map(function ($person) use ($releaseRows, $totalFinancingReleases) {
+        $financingSummary = $people->map(function ($person) use ($releaseRows, $totalFinancingReleases, $viewMode) {
             $releases = $this->rowsForMetricPerson($releaseRows, $person)->where('is_financing', true);
             $count = $releases->count();
             $financedTotal = (float) $releases->sum('amount_financed');
@@ -4006,6 +4153,7 @@ class AnalyticsReportController extends Controller
             return [
                 'name' => $person['name'],
                 'profile_url' => $person['profile_url'] ?? null,
+                'person_ref' => $viewMode.':'.$person['name_key'],
                 'financing_releases' => $count,
                 'financing_pct' => $totalFinancingReleases > 0 ? round(($count / $totalFinancingReleases) * 100, 1) : 0.0,
                 'financed_total' => $financedTotal,
@@ -4016,7 +4164,7 @@ class AnalyticsReportController extends Controller
             ->sortByDesc('financing_releases')
             ->values();
 
-        $grossNet = $people->map(function ($person) use ($releaseRows) {
+        $grossNet = $people->map(function ($person) use ($releaseRows, $viewMode) {
             $releases = $this->rowsForMetricPerson($releaseRows, $person);
             $count = $releases->count();
             $grossTotal = (float) $releases->sum('gross');
@@ -4025,6 +4173,7 @@ class AnalyticsReportController extends Controller
             return [
                 'name' => $person['name'],
                 'profile_url' => $person['profile_url'] ?? null,
+                'person_ref' => $viewMode.':'.$person['name_key'],
                 'units' => $count,
                 'gross_total' => $grossTotal,
                 'gross_avg' => $count > 0 ? $grossTotal / $count : 0.0,
@@ -4335,6 +4484,11 @@ class AnalyticsReportController extends Controller
 
             return [
                 'plate' => (string) ($v->plate_number ?? ''),
+                'vehicle_id' => $v->exists ? (int) $v->id : null,
+                'unit_label' => trim(($attrs['year'] ?? '').' '.($make !== '' ? $make : 'Unknown').' '.($model !== '' ? $model : 'Unknown')),
+                'status' => (string) ($v->status ?? ''),
+                // Only a real release date; release_date_raw falls back to the sale date for grouping.
+                'released_on' => $v->getAttribute('excel_period_release_date') ?? $v->statusDetail?->release_date,
                 'make' => $make !== '' ? $make : 'Unknown',
                 'model' => $model !== '' ? $model : 'Unknown',
                 'make_model' => trim(($make !== '' ? $make : 'Unknown').' '.($model !== '' ? $model : 'Unknown')),
@@ -4817,6 +4971,7 @@ class AnalyticsReportController extends Controller
                                 'value' => number_format((int) ($loc['count'] ?? 0)),
                             ])->all()
                         ),
+                        'units' => $rows->sortBy(fn ($r) => [(string) ($r['release_date_raw'] ?? ''), (string) ($r['plate'] ?? '')])->values()->all(),
                     ],
                 ],
                 [

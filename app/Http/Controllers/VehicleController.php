@@ -1410,7 +1410,7 @@ class VehicleController extends Controller
             ['label' => 'FINANCE REVENUE 2', 'value' => $this->qvMoney($sd?->finance_revenue_2)],
             ['label' => 'SALE STATUS', 'value' => $this->qvText($vehicle->status ?? $sd?->sale_status)],
             ['label' => 'TRANSFER COST', 'value' => $this->qvMoney($sd?->transfer_cost)],
-            ['label' => 'FORMATTED RELEASE DATE', 'value' => $this->qvDate($sd?->release_date)],
+            ['label' => 'FORMATTED RELEASE DATE', 'value' => $this->qvDate($sd?->release_date), 'highlight' => true],
             ['label' => 'DAYS FROM RESERVATION TO RELEASE', 'value' => $this->qvText($sd?->days_from_reservation_to_release)],
             ['label' => 'CUSTOMER FIRST NAME', 'value' => $this->qvText($sd?->customer_first_name)],
             ['label' => 'CUSTOMER LAST NAME', 'value' => $this->qvText($sd?->customer_last_name)],
@@ -1443,7 +1443,8 @@ class VehicleController extends Controller
         return response()->json([
             'ok' => true,
             'id' => $vehicle->id,
-            'title' => trim(($attrs['year'] ?? '').' '.($attrs['make'] ?? '').' '.($attrs['model'] ?? '').' · '.($attrs['plate_number'] ?? 'No plate')),
+            'title' => trim(($attrs['year'] ?? '').' '.($attrs['make'] ?? '').' '.($attrs['model'] ?? '').' · '.($attrs['plate_number'] ?? 'No plate'))
+                .($sd?->release_date ? ' · Released '.$this->qvDate($sd->release_date) : ''),
             'show_url' => route('vehicles.show', $vehicle, false),
             'fields' => $fields,
         ]);

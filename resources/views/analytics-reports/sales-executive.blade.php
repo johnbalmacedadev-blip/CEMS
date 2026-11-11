@@ -105,21 +105,33 @@
     @else
         <div class="row g-3 mb-3">
             @foreach($summary as $card)
+                @php
+                    $opensTopModal = !empty($card['is_clickable']) && !empty($card['units']);
+                    $opensDetail = !$opensTopModal && !empty($card['detail']);
+                @endphp
                 <div class="col-md-6 col-xl-3">
-                    <div class="card border-warning h-100">
+                    <div class="card border-warning h-100 {{ ($opensTopModal || $opensDetail) ? 'sales-exec-card' : '' }}"
+                        @if($opensDetail)
+                            role="button" tabindex="0"
+                            data-bs-toggle="modal" data-bs-target="#salesExecCardModal"
+                            data-detail-title="{{ $card['detail']['title'] ?? $card['label'] }}"
+                            data-detail-body="salesExecCardBody{{ $loop->index }}"
+                        @elseif($opensTopModal)
+                            role="button" tabindex="0"
+                            data-open-top-performer="1"
+                        @endif
+                    >
                         <div class="card-body py-3">
-                            <div class="text-muted small mb-1">{{ $card['label'] }}</div>
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="text-muted small mb-1">{{ $card['label'] }}</div>
+                                @if($opensTopModal || $opensDetail)
+                                    <span class="badge text-bg-light border text-muted small fw-normal"><i class="fas fa-info-circle me-1"></i>Details</span>
+                                @endif
+                            </div>
                             <div class="h5 mb-0">
-                                @if(!empty($card['is_clickable']) && !empty($card['units']))
-                                    <button type="button"
-                                            class="btn btn-link text-decoration-none p-0 h5 mb-0 text-start sales-exec-top-performer-open"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#salesExecTopPerformerModal"
-                                            data-title="{{ $card['modal_title'] ?? ($card['value'] ?? 'Top Performer') }}"
-                                            data-units='@json($card['units'])'>
-                                        {{ $card['value'] }}
-                                        <span class="d-block small fw-normal text-muted mt-1">Click to view released units</span>
-                                    </button>
+                                @if($opensTopModal)
+                                    {{ $card['value'] }}
+                                    <span class="d-block small fw-normal text-muted mt-1">Click to view released units</span>
                                 @elseif(!empty($card['is_text']))
                                     {{ $card['value'] }}
                                 @elseif(!empty($card['is_currency']))
@@ -130,6 +142,105 @@
                             </div>
                         </div>
                     </div>
+                    @if($opensDetail)
+                        @php $detail = $card['detail']; @endphp
+                        <div id="salesExecCardBody{{ $loop->index }}" class="d-none">
+                            @if(($detail['type'] ?? '') === 'units')
+                                <div class="sales-exec-detail-list">
+                                    <table class="table table-sm table-striped table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th class="text-end">#</th><th>Plate</th><th>Unit</th><th class="text-nowrap">Release Date</th>
+                                                <th>Credited To</th><th>Role</th><th>Payment</th><th class="text-end text-nowrap">Sold Price</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($detail['units'] as $u)
+                                                <tr class="sales-exec-detail-row">
+                                                    <td class="text-end text-muted">{{ $loop->iteration }}</td>
+                                                    <td class="text-nowrap">@if(!empty($u['url']))<a href="{{ $u['url'] }}" target="_blank" rel="noopener">{{ $u['plate'] }}</a>@else{{ $u['plate'] }}@endif</td>
+                                                    <td>{{ $u['unit'] }}</td>
+                                                    <td class="text-nowrap">{{ $u['release_date'] }}</td>
+                                                    <td><a href="#" class="sales-exec-person-link text-decoration-none" data-person="{{ $u['person_ref'] ?? '' }}">{{ $u['credited_to'] }}</a></td>
+                                                    <td><span class="badge bg-light text-dark border">{{ $u['role'] }}</span></td>
+                                                    <td>{{ $u['payment'] }}</td>
+                                                    <td class="text-end text-nowrap">₱{{ number_format((float) $u['sales'], 2) }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                        <tfoot class="table-light fw-bold">
+                                            <tr>
+                                                <td colspan="7">Total ({{ number_format(count($detail['units'])) }} cars)</td>
+                                                <td class="text-end text-nowrap">₱{{ number_format((float) collect($detail['units'])->sum('sales'), 2) }}</td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            @else
+                                @if(($detail['type'] ?? '') === 'sales')
+                                    <div class="row g-2 mb-3">
+                                        @foreach($detail['payment_split'] as $payment => $split)
+                                            @continue($payment === '—' && $split['units'] === 0)
+                                            <div class="col-sm-4">
+                                                <div class="border rounded p-2 h-100">
+                                                    <div class="small text-muted">{{ $payment === '—' ? 'Payment not recorded' : $payment }}</div>
+                                                    <div class="fw-bold">₱{{ number_format($split['sales'], 2) }}</div>
+                                                    <div class="small text-muted">{{ number_format($split['units']) }} cars</div>
+                                                </div>
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+                                <div class="sales-exec-detail-list">
+                                    <table class="table table-sm table-striped align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th class="text-end">#</th><th>Name</th><th>Role</th>
+                                                <th class="text-end">Units</th><th class="text-end">Units Share</th>
+                                                <th class="text-end text-nowrap">Sales Amount</th><th class="text-end">Sales Share</th>
+                                                <th class="text-end text-nowrap">Avg Sale</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($detail['ranking'] as $r)
+                                                <tr class="sales-exec-detail-row sales-exec-person-row" title="Click to view this person's cars">
+                                                    <td class="text-end text-muted">{{ $loop->iteration }}</td>
+                                                    <td class="fw-semibold"><a href="#" class="sales-exec-person-link text-decoration-none" data-person="{{ $r['person_ref'] ?? '' }}">{{ $r['name'] }}</a></td>
+                                                    <td><span class="badge bg-light text-dark border">{{ $r['role'] ?? '—' }}</span></td>
+                                                    <td class="text-end">{{ number_format((int) $r['units']) }}</td>
+                                                    <td class="text-end">{{ number_format((float) ($r['share_units'] ?? 0), 1) }}%</td>
+                                                    <td class="text-end text-nowrap">₱{{ number_format((float) $r['sales'], 2) }}</td>
+                                                    <td class="text-end">{{ number_format((float) ($r['share_sales'] ?? 0), 1) }}%</td>
+                                                    <td class="text-end text-nowrap">₱{{ number_format((float) ($r['avg_sale'] ?? 0), 2) }}</td>
+                                                </tr>
+                                            @endforeach
+                                            @if(($detail['unranked_units'] ?? 0) > 0)
+                                                <tr class="text-muted fst-italic">
+                                                    <td></td><td colspan="2">Not in this ranking (no linked {{ strtolower($viewLabel) }})</td>
+                                                    <td class="text-end">{{ number_format($detail['unranked_units']) }}</td><td></td>
+                                                    <td class="text-end text-nowrap">₱{{ number_format($detail['unranked_sales'], 2) }}</td><td></td><td></td>
+                                                </tr>
+                                            @endif
+                                        </tbody>
+                                        <tfoot class="table-light fw-bold">
+                                            <tr>
+                                                <td colspan="3">Total</td>
+                                                <td class="text-end">{{ number_format(collect($detail['ranking'])->sum('units') + ($detail['unranked_units'] ?? 0)) }}</td><td></td>
+                                                <td class="text-end text-nowrap">₱{{ number_format(collect($detail['ranking'])->sum('sales') + ($detail['unranked_sales'] ?? 0), 2) }}</td><td></td><td></td>
+                                            </tr>
+                                        </tfoot>
+                                    </table>
+                                </div>
+                            @endif
+                        </div>
+                    @endif
+                    @if($opensTopModal)
+                        <button type="button" class="d-none sales-exec-top-performer-open"
+                                data-bs-toggle="modal"
+                                data-bs-target="#salesExecTopPerformerModal"
+                                data-title="{{ $card['modal_title'] ?? ($card['value'] ?? 'Top Performer') }}"
+                                data-units='@json($card['units'])'></button>
+                    @endif
                 </div>
             @endforeach
         </div>
@@ -198,7 +309,7 @@
                         </thead>
                         <tbody>
                             @foreach($tables['ranking'] as $i => $row)
-                                <tr class="{{ $i < 3 ? 'table-warning' : '' }}">
+                                <tr class="sales-exec-person-row {{ $i < 3 ? 'table-warning' : '' }}" title="Click to view this person's cars">
                                     <td>
                                         @if($i === 0)
                                             <span class="badge bg-warning text-dark">1</span>
@@ -211,22 +322,16 @@
                                         @endif
                                     </td>
                                     <td class="fw-semibold">
-                                        @if(!empty($row['profile_url']))
-                                            <a href="{{ $row['profile_url'] }}" class="text-decoration-none">{{ $row['name'] }}</a>
-                                        @else
-                                            {{ $row['name'] }}
-                                        @endif
+                                        <a href="#" class="sales-exec-person-link text-decoration-none" data-person="{{ $row['person_ref'] ?? '' }}">{{ $row['name'] }}</a>
                                     </td>
                                     <td>
                                         <span class="badge bg-light text-dark border">{{ $row['role'] ?? '—' }}</span>
                                         @if(!empty($row['executive_name']) && $viewMode !== 'executives')
                                             <div class="small text-muted">
                                                 Exec:
-                                                @if(!empty($row['executive_agent_id']))
-                                                    <a href="{{ route('staff-reports.executive-agents.show', $row['executive_agent_id']) }}" class="text-decoration-none">{{ $row['executive_name'] }}</a>
-                                                @else
-                                                    {{ $row['executive_name'] }}
-                                                @endif
+                                                @foreach(array_filter(array_map('trim', explode(',', (string) $row['executive_name']))) as $execName)
+                                                    <a href="#" class="sales-exec-person-link text-decoration-none" data-person="executives:{{ preg_replace('/\s+/', ' ', strtoupper($execName)) }}">{{ $execName }}</a>@if(!$loop->last), @endif
+                                                @endforeach
                                             </div>
                                         @endif
                                     </td>
@@ -263,13 +368,9 @@
                                     </thead>
                                     <tbody>
                                         @forelse($tables['agents'] as $row)
-                                            <tr>
+                                            <tr class="sales-exec-person-row" title="Click to view this person's cars">
                                                 <td>
-                                                    @if(!empty($row['profile_url']))
-                                                        <a href="{{ $row['profile_url'] }}" class="text-decoration-none fw-semibold">{{ $row['name'] }}</a>
-                                                    @else
-                                                        {{ $row['name'] }}
-                                                    @endif
+                                                    <span class="fw-semibold"><a href="#" class="sales-exec-person-link text-decoration-none" data-person="{{ $row['person_ref'] ?? '' }}">{{ $row['name'] }}</a></span>
                                                 </td>
                                                 <td class="text-end">{{ number_format($row['units']) }}</td>
                                                 <td class="text-end">₱{{ number_format($row['sales'], 2) }}</td>
@@ -298,13 +399,9 @@
                                     </thead>
                                     <tbody>
                                         @forelse($tables['executives'] as $row)
-                                            <tr>
+                                            <tr class="sales-exec-person-row" title="Click to view this person's cars">
                                                 <td>
-                                                    @if(!empty($row['profile_url']))
-                                                        <a href="{{ $row['profile_url'] }}" class="text-decoration-none fw-semibold">{{ $row['name'] }}</a>
-                                                    @else
-                                                        {{ $row['name'] }}
-                                                    @endif
+                                                    <span class="fw-semibold"><a href="#" class="sales-exec-person-link text-decoration-none" data-person="{{ $row['person_ref'] ?? '' }}">{{ $row['name'] }}</a></span>
                                                 </td>
                                                 <td class="text-end">{{ number_format($row['units']) }}</td>
                                                 <td class="text-end">₱{{ number_format($row['sales'], 2) }}</td>
@@ -343,11 +440,7 @@
                                             <td>{{ $deal['plate'] }}</td>
                                             <td>{{ $deal['unit'] }}</td>
                                             <td class="fw-semibold">
-                                                @if(!empty($deal['profile_url']))
-                                                    <a href="{{ $deal['profile_url'] }}" class="text-decoration-none">{{ $deal['name'] }}</a>
-                                                @else
-                                                    {{ $deal['name'] }}
-                                                @endif
+                                                <a href="#" class="sales-exec-person-link text-decoration-none" data-person="{{ $deal['person_ref'] ?? '' }}">{{ $deal['name'] }}</a>
                                             </td>
                                             <td><span class="badge bg-light text-dark border">{{ $deal['role'] }}</span></td>
                                             <td class="text-end">₱{{ number_format($deal['sales'], 2) }}</td>
@@ -374,21 +467,25 @@
 
         <div class="tab-pane fade" id="salesReservationPane" role="tabpanel">
             @include('analytics-reports.partials.sales-exec-metric-table', [
-                'report' => $salesReservation,
+                'report' => $salesReservation, 'context' => 'sales',
                 'columns' => [
-                    ['key' => 'sales_count', 'label' => 'Total Sales', 'format' => 'int'],
-                    ['key' => 'sales_pct', 'label' => '% of Total Sales', 'format' => 'pct'],
-                    ['key' => 'release_count', 'label' => 'Total Releases', 'format' => 'int'],
-                    ['key' => 'release_pct', 'label' => '% of Total Releases', 'format' => 'pct'],
+                    ['key' => 'sales_count', 'label' => 'Total Sales', 'format' => 'int', 'group' => 'sales'],
+                    ['key' => 'sales_pct', 'label' => '% of Total Sales', 'format' => 'pct', 'group' => 'sales'],
+                    ['key' => 'release_count', 'label' => 'Total Releases', 'format' => 'int', 'group' => 'releases'],
+                    ['key' => 'release_pct', 'label' => '% of Total Releases', 'format' => 'pct', 'group' => 'releases'],
                     ['key' => 'avg_reservation', 'label' => 'Avg Reservation (excl. spot cash)', 'format' => 'money'],
                 ],
                 'totalKeys' => ['sales_count', 'release_count', 'avg_reservation'],
+                'groups' => [
+                    'sales' => ['label' => 'Sales', 'hint' => 'Sale is based on the date the car was initially reserved/sold.', 'tone' => 'blue'],
+                    'releases' => ['label' => 'Releases', 'hint' => 'Release is based on the date the car was released.', 'tone' => 'green'],
+                ],
             ])
         </div>
 
         <div class="tab-pane fade" id="cashSummaryPane" role="tabpanel">
             @include('analytics-reports.partials.sales-exec-metric-table', [
-                'report' => $cashSummary,
+                'report' => $cashSummary, 'context' => 'cash',
                 'columns' => [
                     ['key' => 'cash_releases', 'label' => '# of Cash Releases', 'format' => 'int'],
                     ['key' => 'cash_pct', 'label' => '% of Cash Releases', 'format' => 'pct'],
@@ -401,7 +498,7 @@
 
         <div class="tab-pane fade" id="financingSummaryPane" role="tabpanel">
             @include('analytics-reports.partials.sales-exec-metric-table', [
-                'report' => $financingSummary,
+                'report' => $financingSummary, 'context' => 'financing',
                 'columns' => [
                     ['key' => 'financing_releases', 'label' => '# of Financing Releases', 'format' => 'int'],
                     ['key' => 'financing_pct', 'label' => '% of Financing Releases', 'format' => 'pct'],
@@ -414,7 +511,7 @@
 
         <div class="tab-pane fade" id="grossNetPane" role="tabpanel">
             @include('analytics-reports.partials.sales-exec-metric-table', [
-                'report' => $grossNet,
+                'report' => $grossNet, 'context' => 'gross',
                 'columns' => [
                     ['key' => 'gross_total', 'label' => 'Total Gross Sales (₱)', 'format' => 'money'],
                     ['key' => 'gross_avg', 'label' => 'Average Gross Per Sale (₱)', 'format' => 'money'],
@@ -423,6 +520,46 @@
                 ],
                 'totalKeys' => ['gross_total', 'gross_avg', 'net_total', 'net_avg'],
             ])
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="salesExecPersonModal" tabindex="-1" aria-labelledby="salesExecPersonModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="salesExecPersonModalLabel">Sales</h5>
+                <a href="#" id="salesExecPersonProfile" class="btn btn-sm btn-outline-primary ms-auto me-2 d-none" target="_blank" rel="noopener">
+                    <i class="fas fa-user me-1"></i>View profile
+                </a>
+                <button type="button" class="btn-close ms-0" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted mb-3">Range: <strong>{{ $activeRangeLabel }}</strong> · View: <strong>{{ $viewLabel }}</strong></p>
+                <div id="salesExecPersonContent"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+<script type="application/json" id="salesExecPersonData">@json($personSales ?? ['released' => [], 'sold' => [], 'people' => []])</script>
+
+<div class="modal fade" id="salesExecCardModal" tabindex="-1" aria-labelledby="salesExecCardModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="salesExecCardModalLabel">Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted mb-3">Range: <strong>{{ $activeRangeLabel }}</strong> · View: <strong>{{ $viewLabel }}</strong></p>
+                <div id="salesExecCardModalContent"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
         </div>
     </div>
 </div>
@@ -472,6 +609,30 @@
 .exec-chart-wrap--tall {
     height: 360px;
 }
+.sales-exec-person-row {
+    cursor: pointer;
+}
+.sales-exec-person-row:hover > td {
+    --bs-table-bg-state: rgba(13, 110, 253, .08);
+}
+.sales-exec-card {
+    cursor: pointer;
+    transition: box-shadow .15s ease, transform .15s ease;
+}
+.sales-exec-card:hover,
+.sales-exec-card:focus {
+    box-shadow: 0 .25rem .75rem rgba(0, 0, 0, .12);
+    transform: translateY(-1px);
+    outline: none;
+}
+.sales-exec-detail-list {
+    max-height: 60vh;
+    overflow: auto;
+    border: 1px solid #dee2e6;
+    border-radius: .375rem;
+}
+.sales-exec-detail-list thead th { position: sticky; top: 0; z-index: 1; }
+.sales-exec-detail-list tfoot td { position: sticky; bottom: 0; z-index: 1; }
 </style>
 @endsection
 
@@ -479,6 +640,118 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    // Person popup: every salesperson name opens the cars credited to them.
+    let personData = { released: [], sold: [], people: {} };
+    try {
+        personData = JSON.parse(document.getElementById('salesExecPersonData').textContent || '{}');
+    } catch (e) { /* keep empty */ }
+    const personModalEl = document.getElementById('salesExecPersonModal');
+    const pesc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    const pmoney = v => '₱' + Number(v || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const plate = r => r.url ? '<a href="' + pesc(r.url) + '" target="_blank" rel="noopener">' + pesc(r.plate) + '</a>' : pesc(r.plate);
+    function personTable(title, hint, tone, head, rows, cells, footCells) {
+        let html = '<div class="mb-4"><div class="d-flex align-items-baseline gap-2 mb-1"><h6 class="mb-0 text-' + tone + '">' + title + ' (' + rows.length + ')</h6><span class="small text-muted">' + hint + '</span></div>';
+        if (!rows.length) return html + '<p class="text-muted small mb-0">None in this range.</p></div>';
+        html += '<div class="sales-exec-detail-list border-' + tone + '"><table class="table table-sm table-striped table-hover align-middle mb-0"><thead class="table-light"><tr><th class="text-end">#</th>' + head + '</tr></thead><tbody>';
+        rows.forEach((r, i) => { html += '<tr><td class="text-end text-muted">' + (i + 1) + '</td>' + cells(r) + '</tr>'; });
+        return html + '</tbody><tfoot class="table-light fw-bold"><tr>' + footCells + '</tr></tfoot></table></div></div>';
+    }
+    function showPerson(ref, fallbackName, context) {
+        const p = (personData.people || {})[ref];
+        const allReleased = p ? p.released.map(i => personData.released[i]).filter(Boolean) : [];
+        const sold = p ? p.sold.map(i => personData.sold[i]).filter(Boolean) : [];
+        const name = p ? p.name : fallbackName;
+        const titles = { cash: 'cash releases', financing: 'financing releases', gross: 'gross & net' };
+        document.getElementById('salesExecPersonModalLabel').textContent = name + ' — ' + (titles[context] || 'sales generated');
+        const profile = document.getElementById('salesExecPersonProfile');
+        if (p && p.profile_url) { profile.href = p.profile_url; profile.classList.remove('d-none'); } else { profile.classList.add('d-none'); }
+        const sum = (list, key) => list.reduce((t, r) => t + Number(r[key] || 0), 0);
+        const base = r => '<td class="text-nowrap">' + plate(r) + '</td><td>' + pesc(r.unit) + '</td><td class="text-nowrap">' + pesc(r.date) + '</td>';
+        const m = v => '<td class="text-end text-nowrap">' + pmoney(v) + '</td>';
+        let html = '';
+        if (context === 'cash') {
+            const list = allReleased.filter(r => r.is_cash);
+            html = personTable('Cash releases', 'Released cars paid in cash. Discount = posted price − sold price.', 'success',
+                '<th>Plate</th><th>Unit</th><th class="text-nowrap">Release Date</th><th class="text-end text-nowrap">Posted Price</th><th class="text-end text-nowrap">Sold Price</th><th class="text-end">Discount</th>',
+                list, r => base(r) + m(r.posted) + m(r.sold) + m(r.discount),
+                '<td colspan="4">Total</td>' + m(sum(list, 'posted')) + m(sum(list, 'sold')) + m(sum(list, 'discount')));
+        } else if (context === 'financing') {
+            const list = allReleased.filter(r => r.is_financing);
+            html = personTable('Financing releases', 'Released cars on financing. Amount financed = sold price − reservation.', 'success',
+                '<th>Plate</th><th>Unit</th><th class="text-nowrap">Release Date</th><th class="text-end text-nowrap">Sold Price</th><th class="text-end">Reservation</th><th class="text-end text-nowrap">Amount Financed</th>',
+                list, r => base(r) + m(r.sold) + m(r.reservation) + m(r.financed),
+                '<td colspan="4">Total</td>' + m(sum(list, 'sold')) + m(sum(list, 'reservation')) + m(sum(list, 'financed')));
+        } else if (context === 'gross') {
+            html = personTable('Released cars', 'Gross = sold price + finance revenue. Net = gross − costs.', 'success',
+                '<th>Plate</th><th>Unit</th><th class="text-nowrap">Release Date</th><th class="text-end text-nowrap">Sold Price</th><th class="text-end">Gross</th><th class="text-end">Net</th>',
+                allReleased, r => base(r) + m(r.sold) + m(r.gross) + '<td class="text-end text-nowrap' + (r.net < 0 ? ' text-danger' : '') + '">' + pmoney(r.net) + '</td>',
+                '<td colspan="4">Total</td>' + m(sum(allReleased, 'sold')) + m(sum(allReleased, 'gross')) + m(sum(allReleased, 'net')));
+        }
+        if (context === 'cash' || context === 'financing' || context === 'gross') {
+            document.getElementById('salesExecPersonContent').innerHTML = html;
+            bootstrap.Modal.getOrCreateInstance(personModalEl).show();
+            return;
+        }
+        const released = allReleased;
+        html = personTable('Released cars', 'Release is based on the date the car was released.', 'success',
+            '<th>Plate</th><th>Unit</th><th class="text-nowrap">Release Date</th><th>Payment</th><th class="text-end text-nowrap">Sold Price</th><th class="text-end">Gross</th><th class="text-end">Net</th>',
+            released, r => '<td class="text-nowrap">' + plate(r) + '</td><td>' + pesc(r.unit) + '</td><td class="text-nowrap">' + pesc(r.date) + '</td><td>' + pesc(r.payment) + '</td><td class="text-end text-nowrap">' + pmoney(r.sold) + '</td><td class="text-end text-nowrap">' + pmoney(r.gross) + '</td><td class="text-end text-nowrap' + (r.net < 0 ? ' text-danger' : '') + '">' + pmoney(r.net) + '</td>',
+            '<td colspan="5">Total</td><td class="text-end text-nowrap">' + pmoney(sum(released, 'sold')) + '</td><td class="text-end text-nowrap">' + pmoney(sum(released, 'gross')) + '</td><td class="text-end text-nowrap">' + pmoney(sum(released, 'net')) + '</td>');
+        html += personTable('Sold / Reserved cars', 'Sale is based on the date the car was initially reserved/sold.', 'primary',
+            '<th>Plate</th><th>Unit</th><th class="text-nowrap">Sale Date</th><th>Status</th><th>Payment</th><th class="text-end">Reservation</th><th class="text-end text-nowrap">Sold Price</th>',
+            sold, r => '<td class="text-nowrap">' + plate(r) + '</td><td>' + pesc(r.unit) + '</td><td class="text-nowrap">' + pesc(r.date) + '</td><td><span class="badge bg-light text-dark border">' + pesc(r.status) + '</span></td><td>' + pesc(r.payment) + '</td><td class="text-end text-nowrap">' + pmoney(r.reservation) + '</td><td class="text-end text-nowrap">' + pmoney(r.sold) + '</td>',
+            '<td colspan="6">Total</td><td class="text-end text-nowrap">' + pmoney(sum(sold, 'reservation')) + '</td><td class="text-end text-nowrap">' + pmoney(sum(sold, 'sold')) + '</td>');
+        document.getElementById('salesExecPersonContent').innerHTML = html;
+        bootstrap.Modal.getOrCreateInstance(personModalEl).show();
+    }
+    document.addEventListener('click', function (event) {
+        let link = event.target.closest('.sales-exec-person-link');
+        if (!link) {
+            // Anywhere else on a person row opens that row's person, unless another link was clicked.
+            if (event.target.closest('a, button, input, select, textarea')) return;
+            const row = event.target.closest('.sales-exec-person-row');
+            link = row ? row.querySelector('.sales-exec-person-link') : null;
+            if (!link) return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        const ref = link.getAttribute('data-person') || '';
+        const context = link.getAttribute('data-context') || '';
+        const name = link.textContent.trim();
+        const open = document.querySelector('.modal.show');
+        if (open && open !== personModalEl) {
+            open.addEventListener('hidden.bs.modal', () => showPerson(ref, name, context), { once: true });
+            bootstrap.Modal.getInstance(open).hide();
+        } else {
+            showPerson(ref, name, context);
+        }
+    });
+
+    const cardModal = document.getElementById('salesExecCardModal');
+    if (cardModal) {
+        cardModal.addEventListener('show.bs.modal', function (event) {
+            const trigger = event.relatedTarget ? event.relatedTarget.closest('.sales-exec-card') : null;
+            if (!trigger) return;
+            const source = document.getElementById(trigger.getAttribute('data-detail-body') || '');
+            document.getElementById('salesExecCardModalLabel').textContent = trigger.getAttribute('data-detail-title') || 'Details';
+            document.getElementById('salesExecCardModalContent').innerHTML = source ? source.innerHTML : '<p class="text-muted mb-0">No details available.</p>';
+        });
+    }
+    document.querySelectorAll('.sales-exec-card').forEach(function (card) {
+        if (card.getAttribute('data-open-top-performer')) {
+            card.addEventListener('click', function () {
+                const hidden = card.parentElement.querySelector('.sales-exec-top-performer-open');
+                if (hidden) hidden.click();
+            });
+        }
+        card.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                card.click();
+            }
+        });
+    });
+
     const topModal = document.getElementById('salesExecTopPerformerModal');
     if (topModal) {
         topModal.addEventListener('show.bs.modal', function (event) {

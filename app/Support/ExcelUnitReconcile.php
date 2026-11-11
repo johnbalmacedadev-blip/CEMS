@@ -692,6 +692,59 @@ class ExcelUnitReconcile
     }
 
     /**
+     * Move a release row in the snapshot after its date is edited in the app, so reports list the
+     * vehicle in the new month only. Units with no snapshot row are found from the database anyway.
+     */
+    public static function moveSnapshotRelease(string $plate, ?string $oldDate, string $newDate): bool
+    {
+        $snapshot = self::loadSnapshot();
+        if (! $snapshot) {
+            return false;
+        }
+
+        $plate = self::normalizePlate($plate);
+        $year = (int) substr($newDate, 0, 4);
+        $month = (int) substr($newDate, 5, 2);
+        $moved = false;
+
+        foreach ($snapshot['designations'] ?? [] as $i => $designation) {
+            if (($designation['status'] ?? null) !== 'Released') {
+                continue;
+            }
+            foreach ($designation['rows'] ?? [] as $j => $row) {
+                if (self::normalizePlate($row['plate'] ?? '') !== $plate || ($row['release_date'] ?? null) !== $oldDate) {
+                    continue;
+                }
+                $snapshot['designations'][$i]['rows'][$j]['release_date'] = $newDate;
+                if (! self::sectionMatchesMonth((string) ($row['section'] ?? ''), $year, $month)) {
+                    $snapshot['designations'][$i]['rows'][$j]['section'] = strtoupper(date('F Y', strtotime($newDate))).' RELEASED UNITS';
+                }
+                foreach ($designation['duplicates'] ?? [] as $d => $dup) {
+                    if (self::normalizePlate($dup['plate'] ?? '') !== $plate) {
+                        continue;
+                    }
+                    foreach ($dup['occurrences'] ?? [] as $o => $occurrence) {
+                        if (($occurrence['release_date'] ?? null) === $oldDate) {
+                            $snapshot['designations'][$i]['duplicates'][$d]['occurrences'][$o]['release_date'] = $newDate;
+                        }
+                    }
+                    $dates = array_filter(array_column($snapshot['designations'][$i]['duplicates'][$d]['occurrences'], 'release_date'));
+                    $snapshot['designations'][$i]['duplicates'][$d]['oldest_release'] = $dates ? min($dates) : null;
+                    $snapshot['designations'][$i]['duplicates'][$d]['newest_release'] = $dates ? max($dates) : null;
+                }
+                $moved = true;
+                break 2;
+            }
+        }
+
+        if ($moved) {
+            File::put(storage_path('app/'.self::SNAPSHOT_PATH), json_encode($snapshot), true);
+        }
+
+        return $moved;
+    }
+
+    /**
      * Every plate + release date on a Released sheet of the snapshot.
      *
      * @param  array<string, mixed>  $snapshot

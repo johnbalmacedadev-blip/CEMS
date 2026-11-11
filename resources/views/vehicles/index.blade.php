@@ -1492,6 +1492,14 @@
         background: #f8f9fa;
     }
 }
+.vehicle-quick-view-grid .vehicle-quick-view-row.vehicle-quick-view-row--highlight {
+    background: #ffeb3b;
+}
+.vehicle-quick-view-row--highlight .vehicle-quick-view-label,
+.vehicle-quick-view-row--highlight .vehicle-quick-view-value {
+    color: #212529;
+    font-weight: 700;
+}
 
 #statusTabs .nav-link {
     color: #212529;
@@ -1622,7 +1630,7 @@
             fieldsEl.innerHTML = (fields || []).map(function (row) {
                 const label = escapeHtml(row.label || '');
                 const value = escapeHtml(row.value || '');
-                return '<div class="vehicle-quick-view-row">' +
+                return '<div class="vehicle-quick-view-row' + (row.highlight ? ' vehicle-quick-view-row--highlight' : '') + '">' +
                     '<div class="vehicle-quick-view-label">' + label + '</div>' +
                     '<div class="vehicle-quick-view-value">' + (value || '<span class="text-muted">—</span>') + '</div>' +
                     '</div>';

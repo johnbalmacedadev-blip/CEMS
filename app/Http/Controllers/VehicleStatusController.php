@@ -43,10 +43,17 @@ class VehicleStatusController extends Controller
         $vehicle->update(['status' => $request->status]);
 
         // Also update the sale_status in vehicle_status_details (create if doesn't exist)
-        VehicleStatusDetail::updateOrCreate(
+        $statusDetail = VehicleStatusDetail::updateOrCreate(
             ['plate_number' => $vehicle->plate_number],
             ['sale_status' => $request->status]
         );
+
+        // A released unit always needs a release date, or it appears in no report month.
+        if ($request->status === 'Released' && ! $statusDetail->release_date) {
+            $today = now()->toDateString();
+            $statusDetail->update(['release_date' => $today]);
+            $this->recordReleaseDateChange($vehicle, null, $today);
+        }
 
         $vehicle->load('statusDetail', 'make', 'vehicleModel');
         $this->syncSalesAgentCommission($vehicle, $vehicle->statusDetail);
@@ -66,6 +73,8 @@ class VehicleStatusController extends Controller
      */
     public function storeStatusDetails(Request $request, Vehicle $vehicle)
     {
+        $previousRelease = $this->dateString($vehicle->statusDetail?->release_date);
+
         if ($request->input('financing_company') === '') {
             $request->merge(['financing_company' => null]);
         }
@@ -151,7 +160,24 @@ class VehicleStatusController extends Controller
 
         $statusDetailData = $request->all();
         $statusDetailData['plate_number'] = $vehicle->plate_number;
-        $statusDetailData['days_from_reservation_to_release'] = $daysFromReservationToRelease;
+        $statusDetailData['days_from_reservation_to_release'] = $daysFromReservationToRelease
+            ?? $vehicle->statusDetail?->days_from_reservation_to_release;
+
+        // A released unit always needs a release date, or it appears in no report month.
+        if ($request->sale_status === 'Released') {
+            $finalRelease = $this->dateString($request->release_date) ?? $previousRelease ?? now()->toDateString();
+            $saleForRelease = $this->dateString($request->sale_date ?: $vehicle->statusDetail?->sale_date);
+            if ($finalRelease !== $previousRelease && $saleForRelease && $finalRelease < $saleForRelease) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Release date cannot be before the sale date ('.$saleForRelease.').',
+                ], 422);
+            }
+            $statusDetailData['release_date'] = $finalRelease;
+            if ($finalRelease !== $previousRelease && $saleForRelease) {
+                $statusDetailData['days_from_reservation_to_release'] = \Carbon\Carbon::parse($saleForRelease)->diffInDays(\Carbon\Carbon::parse($finalRelease));
+            }
+        }
         $statusDetailData['days_from_acquisition_to_reservation'] = $daysFromAcquisitionToReservation;
         
         // Handle checkbox values - ensure they're boolean
@@ -201,6 +227,10 @@ class VehicleStatusController extends Controller
         // Update the vehicle status to match the sale_status
         $vehicle->update(['status' => $statusDetailData['sale_status']]);
 
+        if ($this->dateString($statusDetail->release_date) !== $previousRelease && $statusDetail->release_date) {
+            $this->recordReleaseDateChange($vehicle, $previousRelease, $this->dateString($statusDetail->release_date));
+        }
+
         $vehicle->load('make', 'vehicleModel');
         $this->syncSalesAgentCommission($vehicle, $statusDetail);
 
@@ -212,6 +242,84 @@ class VehicleStatusController extends Controller
             'message' => 'Vehicle status details saved successfully!',
             'statusDetail' => $statusDetail
         ]);
+    }
+
+    /**
+     * Change only the release date of a released vehicle.
+     */
+    public function updateReleaseDate(Request $request, Vehicle $vehicle)
+    {
+        $request->validate([
+            'release_date' => 'required|date',
+            'note' => 'nullable|string|max:1000',
+        ]);
+        $userNote = trim((string) preg_replace('/\s+/', ' ', (string) $request->input('note')));
+
+        $statusDetail = $vehicle->statusDetail;
+        if ($vehicle->status !== 'Released' || ! $statusDetail) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only released vehicles have a release date to edit.',
+            ], 422);
+        }
+
+        $new = $this->dateString($request->release_date);
+        $old = $this->dateString($statusDetail->release_date);
+        $sale = $this->dateString($statusDetail->sale_date);
+        if ($sale && $new < $sale) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Release date cannot be before the sale date ('.$sale.').',
+            ], 422);
+        }
+
+        if ($new !== $old) {
+            $statusDetail->update([
+                'release_date' => $new,
+                'days_from_reservation_to_release' => $sale
+                    ? \Carbon\Carbon::parse($sale)->diffInDays(\Carbon\Carbon::parse($new))
+                    : $statusDetail->days_from_reservation_to_release,
+            ]);
+            $this->recordReleaseDateChange($vehicle, $old, $new, $userNote);
+            $vehicle->load('make', 'vehicleModel');
+            $this->syncSalesAgentCommission($vehicle, $statusDetail->fresh());
+            Cache::flush();
+        } elseif ($userNote !== '') {
+            $vehicle->update(['notes' => trim(((string) $vehicle->notes)."\nRelease date note: ".$userNote)]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Release date saved.',
+            'release_date' => $new,
+        ]);
+    }
+
+    private function dateString(mixed $value): ?string
+    {
+        return $value ? \Carbon\Carbon::parse($value)->toDateString() : null;
+    }
+
+    /**
+     * Note an edited date on the vehicle and move its row in the reports' Excel snapshot.
+     */
+    private function recordReleaseDateChange(Vehicle $vehicle, ?string $old, string $new, string $userNote = ''): void
+    {
+        if ($old) {
+            $note = sprintf(
+                'Release date changed from %s to %s on %s.',
+                \Carbon\Carbon::parse($old)->format('F j, Y'),
+                \Carbon\Carbon::parse($new)->format('F j, Y'),
+                now()->format('F j, Y')
+            ).($userNote !== '' ? ' Note: '.$userNote : '');
+            $vehicle->update(['notes' => trim(((string) $vehicle->notes)."\n".$note)]);
+        }
+
+        try {
+            \App\Support\ExcelUnitReconcile::moveSnapshotRelease((string) $vehicle->plate_number, $old, $new);
+        } catch (\Throwable $e) {
+            report($e);
+        }
     }
 
     /**

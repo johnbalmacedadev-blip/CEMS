@@ -341,6 +341,7 @@ Route::middleware(['auth', 'page.permission', 'log.activity'])->group(function (
         // Vehicle status routes
         Route::put('vehicles/{vehicle}/status', [App\Http\Controllers\VehicleStatusController::class, 'updateStatus'])->name('vehicles.status.update');
         Route::post('vehicles/{vehicle}/status-details', [App\Http\Controllers\VehicleStatusController::class, 'storeStatusDetails'])->name('vehicles.status-details.store');
+        Route::post('vehicles/{vehicle}/release-date', [App\Http\Controllers\VehicleStatusController::class, 'updateReleaseDate'])->name('vehicles.release-date.update');
         Route::get('vehicles/{vehicle}/status-details', [App\Http\Controllers\VehicleStatusController::class, 'getStatusDetails'])->name('vehicles.status-details.get');
         Route::get('vehicles/{vehicle}/reservation-details', [App\Http\Controllers\VehicleStatusController::class, 'showReservationDetails'])->name('vehicles.reservation-details.show');
         Route::delete('vehicles/{vehicle}/status-details', [App\Http\Controllers\VehicleStatusController::class, 'deleteStatusDetails'])->name('vehicles.status-details.delete');

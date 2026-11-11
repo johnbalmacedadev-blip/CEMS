@@ -101,7 +101,17 @@
                                 @foreach(($monthOptions ?? ['' => 'All months in year']) as $value => $label)
                                     <option value="{{ $value }}" {{ (string) ($selectedMonth ?? '') === (string) $value ? 'selected' : '' }}>{{ $label }}</option>
                                 @endforeach
+                                <option value="range" {{ ($selectedMonth ?? '') === 'range' ? 'selected' : '' }}>Custom date range…</option>
                             </select>
+                        </div>
+                        @php $carRangeOn = $isCarTypeMode && ($selectedMonth ?? '') === 'range'; @endphp
+                        <div class="col-md-3 col-lg-2 car-range-field" style="{{ $carRangeOn ? '' : 'display:none;' }}">
+                            <label for="car_date_from" class="form-label">From</label>
+                            <input type="date" name="date_from" id="car_date_from" class="form-control" value="{{ $carRangeOn ? $dateFrom : '' }}" {{ $carRangeOn ? '' : 'disabled' }}>
+                        </div>
+                        <div class="col-md-3 col-lg-2 car-range-field" style="{{ $carRangeOn ? '' : 'display:none;' }}">
+                            <label for="car_date_to" class="form-label">To</label>
+                            <input type="date" name="date_to" id="car_date_to" class="form-control" value="{{ $carRangeOn ? $dateTo : '' }}" {{ $carRangeOn ? '' : 'disabled' }}>
                         </div>
                         <div class="col-md-4 col-lg-2">
                             <label for="car_location" class="form-label">Location</label>
@@ -242,7 +252,7 @@
                                 <span class="badge text-bg-light border">{{ number_format(count($report['rows'])) }} rows</span>
                             </div>
                             <div class="table-responsive mt-2">
-                                <table class="table table-sm table-striped table-hover mb-0 align-middle">
+                                <table class="table table-sm table-striped table-hover mb-0 align-middle {{ ($report['columns'] ?? '') === 'speed' ? '' : 'car-sales-grouped' }}">
                                     <thead class="table-light">
                                         @if(($report['columns'] ?? '') === 'speed')
                                             <tr>
@@ -252,6 +262,17 @@
                                                 <th class="text-end">Average Speed to Sell (Days)</th>
                                             </tr>
                                         @else
+                                            <tr class="car-sales-group-head">
+                                                <th colspan="2"></th>
+                                                <th colspan="2" class="text-center car-sales-group-head--sales">
+                                                    Sales
+                                                    <span class="car-sales-group-hint d-block fw-normal">Sale is based on the date the car was initially reserved/sold.</span>
+                                                </th>
+                                                <th colspan="2" class="text-center car-sales-group-head--releases">
+                                                    Releases
+                                                    <span class="car-sales-group-hint d-block fw-normal">Release is based on the date the car was released.</span>
+                                                </th>
+                                            </tr>
                                             <tr>
                                                 <th style="width:3rem;">Rank</th>
                                                 <th>{{ $report['dimension_label'] ?? 'Label' }}</th>
@@ -271,7 +292,7 @@
                                                 $canOpenReleases = count($releaseUnits) > 0;
                                                 $dimensionTitle = ($report['dimension_label'] ?? 'Group').': '.$row['label'];
                                             @endphp
-                                            <tr>
+                                            <tr class="{{ ($canOpenSales || $canOpenReleases) ? 'car-sales-row' : '' }}" @if($canOpenSales || $canOpenReleases) title="Click to view the cars in this row" @endif data-sales-units='@json($salesUnits)' data-release-units='@json($releaseUnits)'>
                                                 <td>{{ $i + 1 }}</td>
                                                 <td class="fw-semibold">
                                                     @if($canOpenSales)
@@ -350,7 +371,7 @@
                                             $canOpenTotalReleases = count($totalReleaseUnits) > 0;
                                         @endphp
                                         @if(($report['columns'] ?? '') === 'speed')
-                                            <tr>
+                                            <tr data-sales-units='@json($totalSalesUnits)' data-release-units='@json($totalReleaseUnits)'>
                                                 <th>—</th>
                                                 <th>TOTAL</th>
                                                 <th class="text-end">
@@ -371,7 +392,7 @@
                                                 <th class="text-end">{{ number_format((float) ($report['totals']['avg_days_to_sell'] ?? 0), 1) }}</th>
                                             </tr>
                                         @else
-                                            <tr>
+                                            <tr data-sales-units='@json($totalSalesUnits)' data-release-units='@json($totalReleaseUnits)'>
                                                 <th>—</th>
                                                 <th>TOTAL</th>
                                                 <th class="text-end">
@@ -533,6 +554,71 @@
                                     @endforeach
                                 </tbody>
                             </table>
+                        @endif
+
+                        @if(!empty($card['detail']['units']))
+                            @php
+                                $releasedUnits = collect($card['detail']['units']);
+                                $releasedRevenue = (float) $releasedUnits->sum('gross_revenue');
+                                $releasedCosts = (float) $releasedUnits->sum('unit_cost');
+                            @endphp
+                            <h6 class="mt-4 mb-2">Released cars ({{ number_format($releasedUnits->count()) }})</h6>
+                            <div class="sales-units-list">
+                                <table class="table table-sm table-striped table-hover align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="text-end">#</th>
+                                            <th>Plate</th>
+                                            <th>Car</th>
+                                            <th>Location</th>
+                                            <th class="text-nowrap">Released Date</th>
+                                            <th class="text-end text-nowrap">Sold Price</th>
+                                            <th class="text-end text-nowrap">Total Cost</th>
+                                            <th class="text-end text-nowrap">Total Revenue</th>
+                                            <th class="text-end text-nowrap">Total Profit</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($releasedUnits as $unit)
+                                            @php
+                                                $unitProfit = (float) ($unit['gross_revenue'] ?? 0) - (float) ($unit['unit_cost'] ?? 0);
+                                            @endphp
+                                            <tr class="sales-units-list__row">
+                                                <td class="text-end text-muted">{{ $loop->iteration }}</td>
+                                                <td class="text-nowrap">
+                                                    @if(!empty($unit['vehicle_id']))
+                                                        <a href="{{ route('vehicles.show', $unit['vehicle_id']) }}" target="_blank" rel="noopener">{{ $unit['plate'] }}</a>
+                                                    @else
+                                                        {{ $unit['plate'] !== '' ? $unit['plate'] : 'No plate' }}
+                                                    @endif
+                                                </td>
+                                                <td>{{ $unit['unit_label'] ?? '' }}</td>
+                                                <td>{{ $unit['location'] ?? '' }}</td>
+                                                <td class="text-nowrap">
+                                                    @if(!empty($unit['released_on']))
+                                                        {{ \Carbon\Carbon::parse($unit['released_on'])->format('M d, Y') }}
+                                                    @else
+                                                        <span class="badge text-bg-warning">Not released{{ ($unit['status'] ?? '') === 'Reserved' ? ' (Reserved)' : '' }}</span>
+                                                    @endif
+                                                </td>
+                                                <td class="text-end text-nowrap">₱{{ number_format((float) ($unit['sold_price'] ?? 0), 2) }}</td>
+                                                <td class="text-end text-nowrap">₱{{ number_format((float) ($unit['unit_cost'] ?? 0), 2) }}</td>
+                                                <td class="text-end text-nowrap">₱{{ number_format((float) ($unit['gross_revenue'] ?? 0), 2) }}</td>
+                                                <td class="text-end text-nowrap {{ $unitProfit < 0 ? 'text-danger' : '' }}">₱{{ number_format($unitProfit, 2) }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                    <tfoot class="table-light fw-bold">
+                                        <tr>
+                                            <td colspan="5">Total</td>
+                                            <td class="text-end text-nowrap">₱{{ number_format((float) $releasedUnits->sum('sold_price'), 2) }}</td>
+                                            <td class="text-end text-nowrap">₱{{ number_format($releasedCosts, 2) }}</td>
+                                            <td class="text-end text-nowrap">₱{{ number_format($releasedRevenue, 2) }}</td>
+                                            <td class="text-end text-nowrap {{ ($releasedRevenue - $releasedCosts) < 0 ? 'text-danger' : '' }}">₱{{ number_format($releasedRevenue - $releasedCosts, 2) }}</td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
                         @endif
                     </div>
                 </div>
@@ -843,7 +929,7 @@
 </div>
 
 <div class="modal fade" id="carSalesUnitsModal" tabindex="-1" aria-labelledby="carSalesUnitsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="carSalesUnitsModalLabel">Sales units</h5>
@@ -851,25 +937,7 @@
             </div>
             <div class="modal-body">
                 <p class="small text-muted mb-3" id="carSalesUnitsModalSubtitle"></p>
-                <div class="table-responsive">
-                    <table class="table table-sm table-striped align-middle mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th style="width:3rem;">#</th>
-                                <th>Plate</th>
-                                <th>Unit</th>
-                                <th>Year</th>
-                                <th>Status</th>
-                                <th>Location</th>
-                                <th id="carSalesUnitsEventHeader">Sale Date</th>
-                                <th class="text-end">Sold Price</th>
-                            </tr>
-                        </thead>
-                        <tbody id="carSalesUnitsModalBody">
-                            <tr><td colspan="8" class="text-muted">No units.</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+                <div id="carSalesUnitsModalContent"></div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
@@ -906,6 +974,50 @@
     transition: box-shadow .15s ease, transform .15s ease, border-color .15s ease;
     border-width: 1px !important;
     text-align: left !important;
+}
+tr.car-sales-row {
+    cursor: pointer;
+}
+.car-sales-compare-list {
+    max-height: 40vh;
+    overflow: auto;
+}
+.car-sales-compare-list thead th { position: sticky; top: 0; z-index: 1; }
+/* Sales (columns 3-4) and Releases (columns 5-6) groups on the Car Sales Tables. */
+table.car-sales-grouped tr:not(.car-sales-group-head) > :nth-child(3),
+table.car-sales-grouped tr:not(.car-sales-group-head) > :nth-child(4) { --bs-table-bg: #e7f1ff; }
+table.car-sales-grouped tr:not(.car-sales-group-head) > :nth-child(5),
+table.car-sales-grouped tr:not(.car-sales-group-head) > :nth-child(6) { --bs-table-bg: #e6f4ea; }
+table.car-sales-grouped tr:not(.car-sales-group-head) > :nth-child(3) { border-left: 2px solid #0d6efd !important; }
+table.car-sales-grouped tr:not(.car-sales-group-head) > :nth-child(4) { border-right: 2px solid #0d6efd !important; }
+table.car-sales-grouped tr:not(.car-sales-group-head) > :nth-child(5) { border-left: 2px solid #198754 !important; }
+table.car-sales-grouped tr:not(.car-sales-group-head) > :nth-child(6) { border-right: 2px solid #198754 !important; }
+table.car-sales-grouped tfoot tr > :nth-child(3),
+table.car-sales-grouped tfoot tr > :nth-child(4) { border-bottom: 2px solid #0d6efd !important; }
+table.car-sales-grouped tfoot tr > :nth-child(5),
+table.car-sales-grouped tfoot tr > :nth-child(6) { border-bottom: 2px solid #198754 !important; }
+.car-sales-group-head th { text-transform: uppercase; letter-spacing: .04em; font-size: .78rem; }
+.car-sales-group-head .car-sales-group-head--sales { --bs-table-bg: #e7f1ff; color: #084298; border: 2px solid #0d6efd !important; border-bottom-width: 0 !important; }
+.car-sales-group-head .car-sales-group-head--releases { --bs-table-bg: #e6f4ea; color: #0f5132; border: 2px solid #198754 !important; border-bottom-width: 0 !important; }
+.car-sales-group-head .car-sales-group-hint { text-transform: none; letter-spacing: normal; font-size: .78rem; color: #495057; margin-top: .15rem; }
+tr.car-sales-row:hover > td {
+    --bs-table-bg-state: rgba(13, 110, 253, .08);
+}
+.sales-units-list {
+    max-height: 55vh;
+    overflow: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+}
+.sales-units-list thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+.sales-units-list tfoot td {
+    position: sticky;
+    bottom: 0;
+    z-index: 1;
 }
 .sales-summary-card:hover,
 .sales-summary-card:focus {
@@ -1030,68 +1142,76 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const title = trigger.getAttribute('data-title') || 'Sales';
             const kind = trigger.getAttribute('data-kind') || 'sales';
-            const isReleases = kind === 'releases';
-            let units = [];
-            try {
-                units = JSON.parse(trigger.getAttribute('data-units') || '[]');
-            } catch (e) {
-                units = [];
-            }
-            if (!Array.isArray(units)) units = [];
-
-            const labelEl = document.getElementById('carSalesUnitsModalLabel');
-            const subtitleEl = document.getElementById('carSalesUnitsModalSubtitle');
-            const eventHeaderEl = document.getElementById('carSalesUnitsEventHeader');
-            const bodyEl = document.getElementById('carSalesUnitsModalBody');
-            if (labelEl) labelEl.textContent = title + (isReleases ? ' — releases' : ' — sales');
-            if (subtitleEl) {
-                subtitleEl.textContent = units.length + (isReleases
-                    ? ' release unit(s) in the selected range.'
-                    : ' sale unit(s) in the selected range.');
-            }
-            if (eventHeaderEl) eventHeaderEl.textContent = isReleases ? 'Release Date' : 'Sale Date';
-            if (!bodyEl) return;
+            const parse = function (raw) {
+                try {
+                    const list = JSON.parse(raw || '[]');
+                    return Array.isArray(list) ? list : [];
+                } catch (e) {
+                    return [];
+                }
+            };
+            // Both lists live on the row (or TOTAL row); the clicked one comes first.
+            const row = trigger.closest('tr');
+            let sales = row && row.hasAttribute('data-sales-units') ? parse(row.getAttribute('data-sales-units')) : null;
+            let releases = row && row.hasAttribute('data-release-units') ? parse(row.getAttribute('data-release-units')) : null;
+            const clicked = parse(trigger.getAttribute('data-units'));
+            if (kind === 'releases') { releases = releases || clicked; sales = sales || []; } else { sales = sales || clicked; releases = releases || []; }
 
             const esc = function (value) {
                 return String(value == null ? '' : value)
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/"/g, '&quot;')
-                    .replace(/'/g, '&#39;');
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
             };
             const money = function (value) {
-                const n = Number(value || 0);
-                return '₱' + n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                return '₱' + Number(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             };
+            const key = u => (u.id && Number(u.id) > 0) ? 'id:' + u.id : 'plate:' + String(u.plate || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+            const saleKeys = new Set(sales.map(key));
+            const releaseKeys = new Set(releases.map(key));
+            const inBoth = sales.filter(u => releaseKeys.has(key(u))).length;
 
-            if (units.length === 0) {
-                bodyEl.innerHTML = '<tr><td colspan="8" class="text-muted">No units found.</td></tr>';
-                return;
-            }
+            const section = function (list, opts) {
+                const otherKeys = opts.otherKeys;
+                let html = '<div class="mb-4">'
+                    + '<div class="d-flex align-items-baseline gap-2 mb-1"><h6 class="mb-0 text-' + opts.tone + '">' + opts.title + ' (' + list.length + ')</h6>'
+                    + '<span class="small text-muted">' + opts.hint + '</span></div>';
+                if (!list.length) return html + '<p class="small text-muted mb-0">None in this range.</p></div>';
+                html += '<div class="car-sales-compare-list border border-' + opts.tone + ' rounded"><table class="table table-sm table-striped align-middle mb-0">'
+                    + '<thead class="table-light"><tr><th style="width:3rem;">#</th><th>Plate</th><th>Unit</th><th>Year</th><th>Status</th><th>Location</th>'
+                    + '<th class="text-nowrap">' + opts.dateLabel + '</th><th class="text-end text-nowrap">Sold Price</th><th>' + opts.matchLabel + '</th></tr></thead><tbody>';
+                list.forEach(function (unit, index) {
+                    const plate = esc(unit.plate || '—');
+                    const plateCell = unit.url ? '<a href="' + esc(unit.url) + '" class="fw-semibold text-decoration-none" target="_blank" rel="noopener">' + plate + '</a>' : plate;
+                    const matched = otherKeys.has(key(unit));
+                    html += '<tr><td>' + (index + 1) + '</td><td>' + plateCell + '</td><td>' + esc(unit.name || 'Unknown unit') + '</td><td>' + esc(unit.year || '—') + '</td>'
+                        + '<td>' + esc(unit.status || '—') + '</td><td>' + esc(unit.location || '—') + '</td><td class="text-nowrap">' + esc(unit.event_date_label || unit.event_date || '—') + '</td>'
+                        + '<td class="text-end text-nowrap">' + money(unit.sold_price) + '</td>'
+                        + '<td>' + (matched ? '<span class="badge text-bg-light border">' + opts.matchYes + '</span>' : '<span class="badge text-bg-warning">' + opts.matchNo + '</span>') + '</td></tr>';
+                });
+                const total = list.reduce((t, u) => t + Number(u.sold_price || 0), 0);
+                return html + '</tbody><tfoot class="table-light fw-bold"><tr><td colspan="7">Total</td><td class="text-end text-nowrap">' + money(total) + '</td><td></td></tr></tfoot></table></div></div>';
+            };
+            const salesSection = section(sales, {
+                title: 'Sales', tone: 'primary', dateLabel: 'Sale Date', otherKeys: releaseKeys,
+                hint: 'Sale is based on the date the car was initially reserved/sold.',
+                matchLabel: 'Released in range?', matchYes: 'Also released', matchNo: 'Not released in range',
+            });
+            const releasesSection = section(releases, {
+                title: 'Releases', tone: 'success', dateLabel: 'Release Date', otherKeys: saleKeys,
+                hint: 'Release is based on the date the car was released.',
+                matchLabel: 'Sold in range?', matchYes: 'Also sold', matchNo: 'Sold outside range',
+            });
 
-            bodyEl.innerHTML = units.map(function (unit, index) {
-                const plate = esc(unit.plate || '—');
-                const name = esc(unit.name || 'Unknown unit');
-                const year = esc(unit.year || '—');
-                const status = esc(unit.status || '—');
-                const location = esc(unit.location || '—');
-                const eventDate = esc(unit.event_date_label || unit.event_date || '—');
-                const plateCell = unit.url
-                    ? '<a href="' + esc(unit.url) + '" class="fw-semibold text-decoration-none">' + plate + '</a>'
-                    : plate;
-
-                return '<tr>'
-                    + '<td>' + (index + 1) + '</td>'
-                    + '<td>' + plateCell + '</td>'
-                    + '<td>' + name + '</td>'
-                    + '<td>' + year + '</td>'
-                    + '<td>' + status + '</td>'
-                    + '<td>' + location + '</td>'
-                    + '<td>' + eventDate + '</td>'
-                    + '<td class="text-end">' + money(unit.sold_price) + '</td>'
-                    + '</tr>';
-            }).join('');
+            const diff = sales.length - releases.length;
+            document.getElementById('carSalesUnitsModalLabel').textContent = title + ' — sales vs releases';
+            document.getElementById('carSalesUnitsModalSubtitle').innerHTML =
+                '<span class="badge text-bg-primary me-1">Sales ' + sales.length + '</span>'
+                + '<span class="badge text-bg-success me-1">Releases ' + releases.length + '</span>'
+                + '<span class="badge text-bg-' + (diff === 0 ? 'secondary' : 'dark') + ' me-2">Difference ' + (diff > 0 ? '+' : '') + diff + '</span>'
+                + inBoth + ' car(s) are in both lists. Cars tagged in yellow are what make the two counts differ.';
+            document.getElementById('carSalesUnitsModalContent').innerHTML = kind === 'releases'
+                ? releasesSection + salesSection
+                : salesSection + releasesSection;
         });
     }
 
@@ -1104,6 +1224,31 @@ document.addEventListener('DOMContentLoaded', function () {
     const filterModeInputs = document.querySelectorAll('input[name="filter_mode"]');
     const updateBtn = document.getElementById('updateReportBtn');
     const carTypePeriod = document.getElementById('carTypePeriod');
+
+    // Month list "Custom date range…" shows From/To in Car Sales Tables mode.
+    function syncCarRangeFields() {
+        const carMonth = document.getElementById('car_month');
+        const selected = document.querySelector('input[name="filter_mode"]:checked');
+        const on = !!carMonth && !carMonth.disabled && carMonth.value === 'range' && selected && selected.value === 'car_type';
+        document.querySelectorAll('.car-range-field').forEach(el => {
+            el.style.display = on ? '' : 'none';
+            el.querySelectorAll('input').forEach(input => {
+                input.disabled = !on;
+                input.required = on;
+            });
+        });
+    }
+    const carMonthSelect = document.getElementById('car_month');
+    if (carMonthSelect) carMonthSelect.addEventListener('change', syncCarRangeFields);
+
+    // Clicking anywhere on a table row opens that row's cars, like its name.
+    document.addEventListener('click', function (event) {
+        if (event.target.closest('a, button, input, select, textarea')) return;
+        const row = event.target.closest('tr.car-sales-row');
+        if (!row) return;
+        const trigger = row.querySelector('.car-sales-units-open');
+        if (trigger) trigger.click();
+    });
 
     function setSectionEnabled(sectionEls, enabled) {
         sectionEls.forEach(el => {
@@ -1163,6 +1308,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         setSectionEnabled(periodFilterFields, mode === 'period');
         setSectionEnabled(carTypeFilterFields, mode === 'car_type');
+        syncCarRangeFields();
 
         if (mode === 'period') {
             toggleRangeFields();

@@ -6,6 +6,25 @@
 <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.css" rel="stylesheet">
 <style>
     .ts-dropdown { z-index: 1065 !important; }
+    .vehicle-heading-plate {
+        display: inline-block;
+        font-size: 2.25rem;
+        font-weight: 800;
+        letter-spacing: .12em;
+        line-height: 1.1;
+        color: #212529;
+        background: #fff;
+        border: 3px solid #212529;
+        border-radius: .5rem;
+        padding: .2rem .9rem;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, .08);
+    }
+    .vehicle-heading-name {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #495057;
+        margin-top: .4rem;
+    }
     .image-card {
         transition: transform 0.2s ease-in-out;
         cursor: pointer;
@@ -210,8 +229,14 @@
                 </div>
             </div>
 
-            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <h1 class="h2">Acquisition</h1>
+            {{-- The layout pads any [class*="content"] by 30px, which catches justify-content-between; cancel it here. --}}
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-3 mb-3 border-bottom gap-3"
+                 style="padding-left: 0 !important; padding-right: 0 !important;">
+                <div>
+                    <h1 class="h2 mb-2">Acquisition</h1>
+                    <div class="vehicle-heading-plate">{{ $vehicle->plate_number ?: 'No plate' }}</div>
+                    <div class="vehicle-heading-name">{{ $vehicle->full_name }}</div>
+                </div>
                 <div class="btn-toolbar mb-2 mb-md-0">
                     <a href="{{ route('vehicles.index') }}" class="btn btn-outline-secondary me-2">
                         <i class="fas fa-arrow-left me-1"></i>Back to Unit Report
@@ -1107,6 +1132,17 @@
                                     @endcanPage
                                     
                                     <!-- Release Information -->
+                                    <div class="d-flex justify-content-between align-items-center rounded px-3 py-2 mb-3" style="background: #ffeb3b;">
+                                        <div>
+                                            <label class="form-label fw-bold mb-0 d-block">Release Date</label>
+                                            <span class="fw-bold" id="releaseDateDisplay">{{ $vehicle->statusDetail->release_date ? $vehicle->statusDetail->release_date->format('F j, Y') : 'Not set' }}</span>
+                                        </div>
+                                        @canPage('vehicles', 'update')
+                                        <button type="button" class="btn btn-sm btn-dark" onclick="editReleaseDate()">
+                                            <i class="fas fa-calendar-alt me-1"></i>Edit Release Date
+                                        </button>
+                                        @endcanPage
+                                    </div>
                                     <div class="row">
                                         <div class="col-md-6 mb-3">
                                             <label class="form-label fw-bold">Sales Person Released (S.E)</label>
@@ -2180,6 +2216,13 @@
                         $acquisitionDocuments = $vehicle->acquisitionDocuments ?? collect();
                     @endphp
                     <h6 class="mb-3"><i class="fas fa-user-tie me-2"></i>Release Information</h6>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="release_release_date" class="form-label">Release Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control" id="release_release_date" name="release_date" required
+                                value="{{ optional($vehicle->statusDetail)->release_date ? $vehicle->statusDetail->release_date->format('Y-m-d') : now()->format('Y-m-d') }}">
+                        </div>
+                    </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label for="release_sales_person_release" class="form-label">Sales Person Released (S.E) <span class="text-danger">*</span></label>
@@ -4034,22 +4077,23 @@ function saveStatusDetails() {
     const form = document.getElementById('statusDetailsForm');
     const formData = new FormData(form);
     
-    // Sale status is always Reserved (fixed)
-    const saleStatus = 'Reserved';
+    // Editing a released vehicle must keep it Released; otherwise this form saves a reservation.
+    const saleStatus = @json($vehicle->status === 'Released' ? 'Released' : 'Reserved');
+    const requiresReservationAmount = saleStatus === 'Reserved';
     
     // Validate required fields for Reserved status
     const saleDate = formData.get('sale_date');
     const salesPersonReserved = formData.get('sales_person_reserved');
     const saleReservationAmount = formData.get('sale_reservation_amount');
     
-    if (!saleDate || !salesPersonReserved || !saleReservationAmount) {
+    if (!saleDate || !salesPersonReserved || (requiresReservationAmount && !saleReservationAmount)) {
         Swal.fire({
             icon: 'error',
             title: 'Validation Error',
             html: 'Please fill in all required fields:<br>' +
                   (!saleDate ? '• Sale Date<br>' : '') +
                   (!salesPersonReserved ? '• Sales Person Reserved ( S.E )<br>' : '') +
-                  (!saleReservationAmount ? '• Sale Reservation Amount' : ''),
+                  (requiresReservationAmount && !saleReservationAmount ? '• Sale Reservation Amount' : ''),
             confirmButtonColor: '#dc3545'
         });
         return;
@@ -4063,7 +4107,7 @@ function saveStatusDetails() {
     
     // Convert FormData to JSON
     const data = {
-        sale_status: saleStatus // Always set to Reserved
+        sale_status: saleStatus
     };
     for (let [key, value] of formData.entries()) {
         if (key === 'good_sales_review') {
@@ -4357,16 +4401,73 @@ function loadReleaseDocuments() {
         });
 }
 
+function editReleaseDate() {
+    const current = @json(optional(optional($vehicle->statusDetail)->release_date)->format('Y-m-d'));
+    const saleDate = @json(optional(optional($vehicle->statusDetail)->sale_date)->format('Y-m-d'));
+    Swal.fire({
+        title: 'Edit Release Date',
+        html: '<div class="text-start">' +
+              '<p class="text-muted mb-3">' + (saleDate ? 'Sale date: ' + saleDate + '. ' : '') + 'Reports will list this vehicle under the month of this date.</p>' +
+              '<label for="editReleaseDateInput" class="form-label fw-bold">Release Date</label>' +
+              '<input type="date" id="editReleaseDateInput" class="form-control mb-3">' +
+              '<label for="editReleaseDateNote" class="form-label fw-bold">Note for overridden date <span class="text-muted fw-normal">(optional)</span></label>' +
+              '<textarea id="editReleaseDateNote" class="form-control" rows="3" maxlength="1000" placeholder="Why was this date changed?"></textarea>' +
+              '</div>',
+        didOpen: () => {
+            const dateInput = document.getElementById('editReleaseDateInput');
+            dateInput.value = current || '';
+            if (saleDate) dateInput.min = saleDate;
+        },
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        confirmButtonText: 'Save',
+        reverseButtons: true,
+        showLoaderOnConfirm: true,
+        allowOutsideClick: () => !Swal.isLoading(),
+        preConfirm: () => {
+            const value = document.getElementById('editReleaseDateInput').value;
+            const note = document.getElementById('editReleaseDateNote').value.trim();
+            if (!value) {
+                Swal.showValidationMessage('Please choose a date.');
+                return false;
+            }
+            if (saleDate && value < saleDate) {
+                Swal.showValidationMessage('Release date cannot be before the sale date.');
+                return false;
+            }
+            return fetch(`{{ route('vehicles.release-date.update', $vehicle) }}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                },
+                body: JSON.stringify({ release_date: value, note: note })
+            }).then(async (response) => {
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || !data.success) {
+                    throw new Error(data.message || 'Could not save the release date.');
+                }
+                return data;
+            }).catch((error) => Swal.showValidationMessage(error.message));
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            location.reload();
+        }
+    });
+}
+
 function saveReleaseVehicle() {
     const form = document.getElementById('releaseVehicleForm');
     const formData = new FormData(form);
     
     // Validate required fields
-    if (!formData.get('sales_person_release') || !formData.get('good_sales_review')) {
+    if (!formData.get('release_date') || !formData.get('sales_person_release') || !formData.get('good_sales_review')) {
         Swal.fire({
             icon: 'error',
             title: 'Validation Error',
-            text: 'Please fill in all required fields: Sales Person Released (S.E) and Good Sales Review.',
+            text: 'Please fill in all required fields: Release Date, Sales Person Released (S.E) and Good Sales Review.',
             confirmButtonColor: '#dc3545'
         });
         return;
@@ -4376,6 +4477,7 @@ function saveReleaseVehicle() {
     const existingStatusDetail = @json($vehicle->statusDetail);
     const data = {
         sale_status: 'Released',
+        release_date: formData.get('release_date'),
         sales_person_release: formData.get('sales_person_release'),
         good_sales_review: formData.get('good_sales_review') === '1' ? true : (formData.get('good_sales_review') === '0' ? false : null),
     };
